@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 typedef enum TokenKind {
+    TOKEN_UNKNOWN,
     TOKEN_EOF,
     TOKEN_INTEGER,
 } TokenKind;
@@ -20,6 +21,7 @@ typedef struct Token {
 typedef enum LexerState {
     LEXER_STATE_FIND_DATA,
     LEXER_STATE_EOF,
+    LEXER_STATE_ERROR,
     LEXER_STATE_INTEGER
 } LexerState;
 
