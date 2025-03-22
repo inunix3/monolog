@@ -11,11 +11,11 @@ set(HEADERS
 
 set(SOURCES
     "${SRC_DIR}/lexer.c"
-    "${SRC_DIR}/main.c"
     "${SRC_DIR}/vector.c"
 )
 
-add_executable(monolog ${HEADERS} ${SOURCES})
+add_library(monolog-obj OBJECT ${HEADERS} ${SOURCES})
+add_executable(monolog-bin "${SRC_DIR}/main.c" $<TARGET_OBJECTS:monolog-obj>)
 
 if (COMPILER STREQUAL "gcc" OR COMPILER STREQUAL "clang")
   set(COMPILE_OPTIONS
@@ -27,15 +27,21 @@ endif()
 
 if (USE_ASAN)
   set(COMPILE_OPTIONS ${COMPILE_OPTIONS} -fsanitize=address)
-  target_link_options(monolog PRIVATE -fsanitize=address)
+  target_link_options(monolog-obj PRIVATE -fsanitize=address)
+  target_link_options(monolog-bin PRIVATE -fsanitize=address)
 elseif (USE_UBSAN)
   set(COMPILE_OPTIONS ${COMPILE_OPTIONS} -fsanitize=undefined)
-  target_link_options(monolog PRIVATE -fsanitize=undefined)
+  target_link_options(monolog-obj PRIVATE -fsanitize=undefined)
+  target_link_options(monolog-bin PRIVATE -fsanitize=undefined)
 endif()
 
 if (WIN32)
-    set_target_properties(monolog PROPERTIES WIN32_EXECUTABLE $<IF:$<CONFIG:Release>,ON,OFF>)
+    set_target_properties(monolog-bin PROPERTIES WIN32_EXECUTABLE $<IF:$<CONFIG:Release>,ON,OFF>)
 endif()
 
-target_compile_options(monolog PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(monolog PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_compile_options(monolog-obj PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(monolog-obj PRIVATE "${PROJECT_SOURCE_DIR}/include")
+
+target_compile_options(monolog-bin PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(monolog-bin PRIVATE "${PROJECT_SOURCE_DIR}/include")
+set_target_properties(monolog-bin PROPERTIES OUTPUT_NAME "monolog")

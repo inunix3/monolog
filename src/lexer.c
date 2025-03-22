@@ -41,9 +41,12 @@ static void read_int(Lexer *self) {
 static void reset_token(Lexer *self, TokenKind kind) {
     self->token.kind = kind;
 
-    assert(self->idx != 0);
+    if (self->idx > 0) {
+        self->token.src = self->data + self->idx - 1;
+    } else {
+        self->token.src = self->data;
+    }
 
-    self->token.src = self->data + self->idx - 1;
     self->token.len = 0;
     self->token.valid = true;
 }
