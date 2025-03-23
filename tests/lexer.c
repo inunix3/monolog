@@ -21,30 +21,77 @@ void tearDown(void) { vec_deinit(&g_tokens); }
 
 void test_empty_string_returns_eof_token() {
     lexer_lex("", 0, &g_tokens);
-    Token expected = {TOKEN_EOF, "", 0, true };
 
-    ASSERT_EQUAL_TOKEN(NTH_TOKEN(0), expected);
+    TEST_ASSERT_EQUAL_size_t(1, g_tokens.len);
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(0).kind);
+    TEST_ASSERT_EQUAL_PTR("", NTH_TOKEN(0).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(0).len);
+    TEST_ASSERT(NTH_TOKEN(0).valid);
 }
 
 void test_whitespaces_return_eof_token() {
     const char *input = "         \t\n\r    \t    \n    \r     ";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    Token expected = {TOKEN_EOF, "", 0, true };
-
-    ASSERT_EQUAL_TOKEN(NTH_TOKEN(0), expected);
+    TEST_ASSERT_EQUAL_size_t(1, g_tokens.len);
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(0).kind);
+    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(0).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(0).len);
+    TEST_ASSERT(NTH_TOKEN(0).valid);
 }
 
 void test_integer_returns_integer_token() {
     const char *input = "123456789";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    Token expected1 = { TOKEN_INTEGER, input, strlen(input), true };
-    Token expected2 = { TOKEN_EOF, "", 0, true };
+    TEST_ASSERT_EQUAL_size_t(2, g_tokens.len);
 
-    printf("%s\n", NTH_TOKEN(0).src);
-    ASSERT_EQUAL_TOKEN(NTH_TOKEN(0), expected1);
-    ASSERT_EQUAL_TOKEN(NTH_TOKEN(1), expected2);
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(0).kind);
+    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
+    TEST_ASSERT_EQUAL_size_t(9, NTH_TOKEN(0).len);
+    TEST_ASSERT(NTH_TOKEN(0).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(1).kind);
+    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(1).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(1).len);
+    TEST_ASSERT(NTH_TOKEN(1).valid);
+}
+
+void test_integers_separated_by_whitespace() {
+    const char *input = "123 456\n 789\t111\r\n\t34";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    TEST_ASSERT_EQUAL_size_t(6, g_tokens.len);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(0).kind);
+    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
+    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(0).len);
+    TEST_ASSERT(NTH_TOKEN(0).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(1).kind);
+    TEST_ASSERT_EQUAL_PTR(input + 4, NTH_TOKEN(1).src);
+    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(1).len);
+    TEST_ASSERT(NTH_TOKEN(1).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(2).kind);
+    TEST_ASSERT_EQUAL_PTR(input + 9, NTH_TOKEN(2).src);
+    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(2).len);
+    TEST_ASSERT(NTH_TOKEN(2).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(3).kind);
+    TEST_ASSERT_EQUAL_PTR(input + 13, NTH_TOKEN(3).src);
+    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(3).len);
+    TEST_ASSERT(NTH_TOKEN(3).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(4).kind);
+    TEST_ASSERT_EQUAL_PTR(input + 19, NTH_TOKEN(4).src);
+    TEST_ASSERT_EQUAL_size_t(2, NTH_TOKEN(4).len);
+    TEST_ASSERT(NTH_TOKEN(4).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(5).kind);
+    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(5).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(5).len);
+    TEST_ASSERT(NTH_TOKEN(5).valid);
 }
 
 int main(void) {
@@ -53,6 +100,7 @@ int main(void) {
     RUN_TEST(test_empty_string_returns_eof_token);
     RUN_TEST(test_whitespaces_return_eof_token);
     RUN_TEST(test_integer_returns_integer_token);
+    RUN_TEST(test_integers_separated_by_whitespace);
 
     return 0;
 }
