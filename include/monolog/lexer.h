@@ -16,6 +16,7 @@ typedef enum TokenKind {
     TOKEN_UNKNOWN,
     TOKEN_EOF,
     TOKEN_INTEGER,
+    TOKEN_IDENTIFIER
 } TokenKind;
 
 typedef struct Token {
@@ -29,7 +30,8 @@ typedef enum LexerState {
     LEXER_STATE_FIND_DATA,
     LEXER_STATE_EOF,
     LEXER_STATE_ERROR,
-    LEXER_STATE_INTEGER
+    LEXER_STATE_INTEGER,
+    LEXER_STATE_IDENTIFIER,
 } LexerState;
 
 typedef struct Lexer {

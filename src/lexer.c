@@ -10,12 +10,30 @@
 #include <assert.h>
 #include <string.h>
 
-static bool at_eof(const Lexer *self) { return self->ch == '\0' && self->idx >= self->len; }
+static bool at_eof(const Lexer *self) {
+    return self->ch == '\0' && self->idx >= self->len;
+}
 
 static bool is_digit(char ch) { return ch >= '0' && ch <= '9'; }
 
 static bool is_ws(char ch) {
-    return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+    switch (ch) {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool is_alpha(char ch) {
+    return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+}
+
+static bool is_identifier(char ch) {
+    return is_alpha(ch) || ch == '_' || ch == '?';
 }
 
 static char advance(Lexer *self) {
@@ -81,6 +99,10 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
                 reset_token(&lexer, TOKEN_INTEGER);
 
                 lexer.state = LEXER_STATE_INTEGER;
+            } else if (is_identifier(ch)) {
+                reset_token(&lexer, TOKEN_IDENTIFIER);
+
+                lexer.state = LEXER_STATE_IDENTIFIER;
             } else if (!is_ws(ch)) {
                 reset_token(&lexer, TOKEN_UNKNOWN);
                 lexer.token.valid = false;
@@ -124,6 +146,22 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
             } else if (!is_digit(ch)) {
                 lexer.token.valid = false;
                 lexer.state = LEXER_STATE_ERROR;
+
+                break;
+            }
+
+            ++lexer.token.len;
+
+            break;
+        case LEXER_STATE_IDENTIFIER:
+            if (at_eof(&lexer)) {
+                push_token(&lexer, tokens);
+                lexer.state = LEXER_STATE_EOF;
+
+                break;
+            } else if (is_ws(ch)) {
+                push_token(&lexer, tokens);
+                lexer.state = LEXER_STATE_FIND_DATA;
 
                 break;
             }
