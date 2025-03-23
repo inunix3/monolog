@@ -1,5 +1,7 @@
-# Copyright (c) 2024-present inunix3.
-# This file is distributed under the MIT license (https://opensource.org/license/mit/)
+# Copyright (c) 2025-present inunix3
+#
+# This file is licensed under the MIT License (Expat)
+# (see LICENSE.md in the root of project).
 
 set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include/monolog")
 set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")

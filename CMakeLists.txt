@@ -1,3 +1,8 @@
+# Copyright (c) 2025-present inunix3
+#
+# This file is licensed under the MIT License (Expat)
+# (see LICENSE.md in the root of project).
+
 cmake_minimum_required(VERSION 3.11)
 
 project(monolog LANGUAGES C VERSION 1.0.0)
