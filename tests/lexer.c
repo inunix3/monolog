@@ -41,10 +41,28 @@ void test_whitespaces_return_eof_token(void) {
     lexer_lex(input, strlen(input), &g_tokens);
 
     TEST_ASSERT_EQUAL_size_t(1, g_tokens.len);
+
     TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(0).kind);
     TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(0).src);
     TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(0).len);
     TEST_ASSERT(NTH_TOKEN(0).valid);
+}
+
+void test_invalid_characters(void) {
+    const char *input = "`~!@#$%^&";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    TEST_ASSERT_EQUAL_size_t(2, g_tokens.len);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_UNKNOWN, NTH_TOKEN(0).kind);
+    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
+    TEST_ASSERT_EQUAL_size_t(strlen(input), NTH_TOKEN(0).len);
+    TEST_ASSERT(!NTH_TOKEN(0).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(1).kind);
+    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(1).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(1).len);
+    TEST_ASSERT(NTH_TOKEN(1).valid);
 }
 
 void test_integer_returns_integer_token(void) {
@@ -65,10 +83,10 @@ void test_integer_returns_integer_token(void) {
 }
 
 void test_integers_separated_by_whitespace(void) {
-    const char *input = "123 456\n 789\t111\r\n\t34";
+    const char *input = "123 456\n 789\t111\r\n\t34 @#$$$";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(6, g_tokens.len);
+    TEST_ASSERT_EQUAL_size_t(7, g_tokens.len);
 
     TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(0).kind);
     TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
@@ -95,10 +113,15 @@ void test_integers_separated_by_whitespace(void) {
     TEST_ASSERT_EQUAL_size_t(2, NTH_TOKEN(4).len);
     TEST_ASSERT(NTH_TOKEN(4).valid);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(5).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(5).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(5).len);
-    TEST_ASSERT(NTH_TOKEN(5).valid);
+    TEST_ASSERT_EQUAL_INT(TOKEN_UNKNOWN, NTH_TOKEN(5).kind);
+    TEST_ASSERT_EQUAL_PTR(input + 22, NTH_TOKEN(5).src);
+    TEST_ASSERT_EQUAL_size_t(5, NTH_TOKEN(5).len);
+    TEST_ASSERT(!NTH_TOKEN(5).valid);
+
+    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(6).kind);
+    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(6).src);
+    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(6).len);
+    TEST_ASSERT(NTH_TOKEN(6).valid);
 }
 
 void test_identifier_returns_identifier_token(void) {
@@ -155,6 +178,7 @@ int main(void) {
 
     RUN_TEST(test_empty_string_returns_eof_token);
     RUN_TEST(test_whitespaces_return_eof_token);
+    RUN_TEST(test_invalid_characters);
     RUN_TEST(test_integer_returns_integer_token);
     RUN_TEST(test_integers_separated_by_whitespace);
     RUN_TEST(test_identifier_returns_identifier_token);
