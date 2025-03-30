@@ -28,6 +28,29 @@ static bool is_ws(char ch) {
     }
 }
 
+static bool is_operator(char ch) {
+    switch (ch) {
+    case ',':
+    case ';':
+    case '(':
+    case ')':
+    case ']':
+    case '[':
+    case '{':
+    case '}':
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%':
+    case '"':
+    case '\'':
+        return true;
+    default:
+        return false;
+    }
+}
+
 static bool is_alpha(char ch) {
     return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }
@@ -103,6 +126,14 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
                 reset_token(&lexer, TOKEN_IDENTIFIER);
 
                 lexer.state = LEXER_STATE_IDENTIFIER;
+            } else if (is_operator(ch)) {
+                reset_token(&lexer, TOKEN_OPERATOR);
+                ++lexer.token.len;
+                push_token(&lexer, tokens);
+
+                lexer.state = LEXER_STATE_FIND_DATA;
+
+                break;
             } else if (!is_ws(ch)) {
                 reset_token(&lexer, TOKEN_UNKNOWN);
                 lexer.token.valid = false;
@@ -164,6 +195,16 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
                 lexer.state = LEXER_STATE_FIND_DATA;
 
                 break;
+            } else if (is_operator(ch)) {
+                push_token(&lexer, tokens);
+
+                // reset_token(&lexer, TOKEN_OPERATOR);
+                // ++lexer.token.len;
+                // push_token(&lexer, tokens);
+
+                lexer.state = LEXER_STATE_FIND_DATA;
+
+                    continue;
             }
 
             ++lexer.token.len;

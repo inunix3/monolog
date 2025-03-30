@@ -16,7 +16,8 @@ typedef enum TokenKind {
     TOKEN_UNKNOWN,
     TOKEN_EOF,
     TOKEN_INTEGER,
-    TOKEN_IDENTIFIER
+    TOKEN_IDENTIFIER,
+    TOKEN_OPERATOR
 } TokenKind;
 
 typedef struct Token {
