@@ -56,7 +56,7 @@ static bool is_alpha(char ch) {
 }
 
 static bool is_identifier(char ch) {
-    return is_alpha(ch) || ch == '_' || ch == '?';
+    return is_alpha(ch) || ch == '_';
 }
 
 static char advance(Lexer *self) {

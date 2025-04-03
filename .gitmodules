@@ -1,3 +1,3 @@
-[submodule "third-party/Unity"]
-	path = third-party/Unity
-	url = https://github.com/ThrowTheSwitch/Unity.git
+[submodule "third-party/greatest"]
+	path = third-party/greatest
+	url = https://github.com/silentbicycle/greatest.git

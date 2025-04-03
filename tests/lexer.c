@@ -7,198 +7,201 @@
 
 #include <monolog/lexer.h>
 
-#include <unity.h>
+#include <greatest.h>
 
 #include <stdbool.h>
 #include <string.h>
 
 static Vector g_tokens;
 
-void setUp(void) { vec_init(&g_tokens, sizeof(Token)); }
+static int token_equal_cb(const void *exp, const void *got, void *udata) {
+    (void)udata;
 
-void tearDown(void) { vec_deinit(&g_tokens); }
+    const Token *exp_tok = exp;
+    const Token *got_tok = got;
+
+    return exp_tok->kind == got_tok->kind && exp_tok->src == got_tok->src &&
+           exp_tok->len == got_tok->len && exp_tok->valid == got_tok->valid;
+}
+
+static int token_printf_cb(const void *data, void *udata) {
+    (void)udata;
+
+    const Token *tok = data;
+
+    return printf(
+        "{ kind = %d; src = %p; len = %zu; valid = %s; }", tok->kind, tok->src,
+        tok->len, tok->valid ? "true" : "false"
+    );
+}
+
+static greatest_type_info g_token_type_info = {token_equal_cb, token_printf_cb};
+
+void set_up(void *udata) {
+    (void)udata;
+
+    vec_init(&g_tokens, sizeof(Token));
+}
+
+void tear_down(void *udata) {
+    (void)udata;
+
+    vec_deinit(&g_tokens);
+}
 
 #define NTH_TOKEN(_idx) (((Token *)g_tokens.data)[_idx])
 
-#define ASSERT_EQUAL_TOKEN(_tok, _expected)                                    \
-    TEST_ASSERT_EQUAL_INT(_tok.kind, _expected.kind);                          \
-    TEST_ASSERT_EQUAL_PTR(_tok.src, _expected.src);                            \
-    TEST_ASSERT_EQUAL_size_t(_tok.len, _expected.len);                         \
-    TEST_ASSERT(_tok.valid == _expected.valid)
+TEST empty_string_returns_eof_token(void) {
+    const char *input = "";
+    lexer_lex(input, 0, &g_tokens);
 
-void test_empty_string_returns_eof_token(void) {
-    lexer_lex("", 0, &g_tokens);
+    ASSERT_EQ(1, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_size_t(1, g_tokens.len);
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR("", NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected = {TOKEN_EOF, input, 0, true};
+    ASSERT_EQUAL_T(&expected, &NTH_TOKEN(0), &g_token_type_info, NULL);
+
+    PASS();
 }
 
-void test_whitespaces_return_eof_token(void) {
+TEST whitespaces_return_eof_token(void) {
     const char *input = "         \t\n\r    \t    \n    \r     ";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(1, g_tokens.len);
+    ASSERT_EQ(1, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected = {TOKEN_EOF, input + strlen(input), 0, true};
+    ASSERT_EQUAL_T(&expected, &NTH_TOKEN(0), &g_token_type_info, NULL);
+
+    PASS();
 }
 
-void test_invalid_characters(void) {
+TEST invalid_characters(void) {
     const char *input = "`~!@#$%^&";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(2, g_tokens.len);
+    ASSERT_EQ(2, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_UNKNOWN, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(strlen(input), NTH_TOKEN(0).len);
-    TEST_ASSERT(!NTH_TOKEN(0).valid);
+    Token expected[] = {
+        {TOKEN_UNKNOWN, input, strlen(input), false},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(1).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(1).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(1).len);
-    TEST_ASSERT(NTH_TOKEN(1).valid);
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
 }
 
-void test_integer_returns_integer_token(void) {
+TEST integer_returns_integer_token(void) {
     const char *input = "123456789";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(2, g_tokens.len);
+    ASSERT_EQ(2, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(9, NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected[] = {
+        {TOKEN_INTEGER, input, 9, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(1).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(1).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(1).len);
-    TEST_ASSERT(NTH_TOKEN(1).valid);
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
 }
 
-void test_integers_separated_by_whitespace(void) {
+TEST integers_separated_by_whitespace(void) {
     const char *input = "123 456\n 789\t111\r\n\t34 @#$$$";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(7, g_tokens.len);
+    ASSERT_EQ(7, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected[] = {
+        {TOKEN_INTEGER, input, 3, true},
+        {TOKEN_INTEGER, input + 4, 3, true},
+        {TOKEN_INTEGER, input + 9, 3, true},
+        {TOKEN_INTEGER, input + 13, 3, true},
+        {TOKEN_INTEGER, input + 19, 2, true},
+        {TOKEN_UNKNOWN, input + 22, 5, false},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(1).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 4, NTH_TOKEN(1).src);
-    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(1).len);
-    TEST_ASSERT(NTH_TOKEN(1).valid);
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(2).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 9, NTH_TOKEN(2).src);
-    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(2).len);
-    TEST_ASSERT(NTH_TOKEN(2).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(3).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 13, NTH_TOKEN(3).src);
-    TEST_ASSERT_EQUAL_size_t(3, NTH_TOKEN(3).len);
-    TEST_ASSERT(NTH_TOKEN(3).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_INTEGER, NTH_TOKEN(4).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 19, NTH_TOKEN(4).src);
-    TEST_ASSERT_EQUAL_size_t(2, NTH_TOKEN(4).len);
-    TEST_ASSERT(NTH_TOKEN(4).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_UNKNOWN, NTH_TOKEN(5).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 22, NTH_TOKEN(5).src);
-    TEST_ASSERT_EQUAL_size_t(5, NTH_TOKEN(5).len);
-    TEST_ASSERT(!NTH_TOKEN(5).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(6).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(6).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(6).len);
-    TEST_ASSERT(NTH_TOKEN(6).valid);
+    PASS();
 }
 
-void test_identifier_returns_identifier_token(void) {
+TEST identifier_returns_identifier_token(void) {
     const char *input = "abcdefAFGHJK__34343sdf231";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(2, g_tokens.len);
+    ASSERT_EQ(2, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(strlen(input), NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected[] = {
+        {TOKEN_IDENTIFIER, input, strlen(input), true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
 }
 
-void test_identifiers_separated_by_whitespace(void) {
+TEST identifiers_separated_by_whitespace(void) {
     const char *input = "_asdasd123 hello\n  WORLD\t__int128\r\n\t_3__";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(6, g_tokens.len);
+    ASSERT_EQ(6, g_tokens.len);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(0).kind);
-    TEST_ASSERT_EQUAL_PTR(input, NTH_TOKEN(0).src);
-    TEST_ASSERT_EQUAL_size_t(10, NTH_TOKEN(0).len);
-    TEST_ASSERT(NTH_TOKEN(0).valid);
+    Token expected[] = {
+        {TOKEN_IDENTIFIER, input, 10, true},
+        {TOKEN_IDENTIFIER, input + 11, 5, true},
+        {TOKEN_IDENTIFIER, input + 19, 5, true},
+        {TOKEN_IDENTIFIER, input + 25, 8, true},
+        {TOKEN_IDENTIFIER, input + 36, 4, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(1).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 11, NTH_TOKEN(1).src);
-    TEST_ASSERT_EQUAL_size_t(5, NTH_TOKEN(1).len);
-    TEST_ASSERT(NTH_TOKEN(1).valid);
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(2).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 19, NTH_TOKEN(2).src);
-    TEST_ASSERT_EQUAL_size_t(5, NTH_TOKEN(2).len);
-    TEST_ASSERT(NTH_TOKEN(2).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(3).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 25, NTH_TOKEN(3).src);
-    TEST_ASSERT_EQUAL_size_t(8, NTH_TOKEN(3).len);
-    TEST_ASSERT(NTH_TOKEN(3).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_IDENTIFIER, NTH_TOKEN(4).kind);
-    TEST_ASSERT_EQUAL_PTR(input + 36, NTH_TOKEN(4).src);
-    TEST_ASSERT_EQUAL_size_t(4, NTH_TOKEN(4).len);
-    TEST_ASSERT(NTH_TOKEN(4).valid);
-
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(5).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(5).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(5).len);
-    TEST_ASSERT(NTH_TOKEN(5).valid);
+    PASS();
 }
 
-void test_operator_returns_operator_token(void) {
+TEST operator_returns_operator_token(void) {
     const char *input = ",;+-/%()[]{}\"'";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(strlen(input) + 1, g_tokens.len);
+    ASSERT_EQ(strlen(input) + 1, g_tokens.len);
 
     for (int i = 0; i < strlen(input); ++i) {
-        TEST_ASSERT_EQUAL_INT(TOKEN_OPERATOR, NTH_TOKEN(i).kind);
-        TEST_ASSERT_EQUAL_PTR(input + i, NTH_TOKEN(i).src);
-        TEST_ASSERT_EQUAL_size_t(1, NTH_TOKEN(i).len);
-        TEST_ASSERT(NTH_TOKEN(i).valid);
+        ASSERT_EQ(TOKEN_OPERATOR, NTH_TOKEN(i).kind);
+        ASSERT_EQ(input + i, NTH_TOKEN(i).src);
+        ASSERT_EQ(1, NTH_TOKEN(i).len);
+        ASSERT(NTH_TOKEN(i).valid);
     }
 
     const size_t eof_idx = strlen(input);
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(eof_idx).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(eof_idx).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(eof_idx).len);
-    TEST_ASSERT(NTH_TOKEN(eof_idx).valid);
+    ASSERT_EQ(TOKEN_EOF, NTH_TOKEN(eof_idx).kind);
+    ASSERT_EQ(input + strlen(input), NTH_TOKEN(eof_idx).src);
+    ASSERT_EQ(0, NTH_TOKEN(eof_idx).len);
+    ASSERT(NTH_TOKEN(eof_idx).valid);
+
+    PASS();
 }
 
-void test_identifiers_and_operators(void) {
+TEST identifiers_and_operators(void) {
     const char *input = "{printf(fmt),puts(strings[idx])*__int128+-/%t_3__;}";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(23, g_tokens.len);
+    ASSERT_EQ(23, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_OPERATOR, input, 1, true},        /* { */
@@ -226,25 +229,27 @@ void test_identifiers_and_operators(void) {
     };
 
     for (int i = 0; i < 22; ++i) {
-        TEST_ASSERT_EQUAL_INT(expected[i].kind, NTH_TOKEN(i).kind);
-        TEST_ASSERT_EQUAL_PTR(expected[i].src, NTH_TOKEN(i).src);
-        TEST_ASSERT_EQUAL_size_t(expected[i].len, NTH_TOKEN(i).len);
-        TEST_ASSERT(expected[i].valid == NTH_TOKEN(i).valid);
+        ASSERT_EQ(expected[i].kind, NTH_TOKEN(i).kind);
+        ASSERT_EQ(expected[i].src, NTH_TOKEN(i).src);
+        ASSERT_EQ(expected[i].len, NTH_TOKEN(i).len);
+        ASSERT(expected[i].valid == NTH_TOKEN(i).valid);
     }
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(22).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(22).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(22).len);
-    TEST_ASSERT(NTH_TOKEN(22).valid);
+    ASSERT_EQ(TOKEN_EOF, NTH_TOKEN(22).kind);
+    ASSERT_EQ(input + strlen(input), NTH_TOKEN(22).src);
+    ASSERT_EQ(0, NTH_TOKEN(22).len);
+    ASSERT(NTH_TOKEN(22).valid);
+
+    PASS();
 }
 
-void test_identifiers_and_operators_separated_by_whitespaces(void) {
+TEST identifiers_and_operators_separated_by_whitespaces(void) {
     const char *input = "{\tprintf   ( fmt )   \t,\n\rputs  ( strings   "
                         "[\nidx\r]  ) * __int128   +"
                         "    -  /  %     t_3__ ;\t}\n";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    TEST_ASSERT_EQUAL_size_t(23, g_tokens.len);
+    ASSERT_EQ(23, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_OPERATOR, input, 1, true},        /* { */
@@ -272,31 +277,42 @@ void test_identifiers_and_operators_separated_by_whitespaces(void) {
     };
 
     for (int i = 0; i < 22; ++i) {
-        TEST_ASSERT_EQUAL_INT(expected[i].kind, NTH_TOKEN(i).kind);
-        TEST_ASSERT_EQUAL_PTR(expected[i].src, NTH_TOKEN(i).src);
-        TEST_ASSERT_EQUAL_size_t(expected[i].len, NTH_TOKEN(i).len);
-        TEST_ASSERT(expected[i].valid == NTH_TOKEN(i).valid);
+        ASSERT_EQ(expected[i].kind, NTH_TOKEN(i).kind);
+        ASSERT_EQ(expected[i].src, NTH_TOKEN(i).src);
+        ASSERT_EQ(expected[i].len, NTH_TOKEN(i).len);
+        ASSERT(expected[i].valid == NTH_TOKEN(i).valid);
     }
 
-    TEST_ASSERT_EQUAL_INT(TOKEN_EOF, NTH_TOKEN(22).kind);
-    TEST_ASSERT_EQUAL_PTR(input + strlen(input), NTH_TOKEN(22).src);
-    TEST_ASSERT_EQUAL_size_t(0, NTH_TOKEN(22).len);
-    TEST_ASSERT(NTH_TOKEN(22).valid);
+    ASSERT_EQ(TOKEN_EOF, NTH_TOKEN(22).kind);
+    ASSERT_EQ(input + strlen(input), NTH_TOKEN(22).src);
+    ASSERT_EQ(0, NTH_TOKEN(22).len);
+    ASSERT(NTH_TOKEN(22).valid);
+
+    PASS();
 }
 
-int main(void) {
-    UNITY_BEGIN();
+SUITE(g_test_suite) {
+    GREATEST_SET_SETUP_CB(set_up, NULL);
+    GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 
-    RUN_TEST(test_empty_string_returns_eof_token);
-    RUN_TEST(test_whitespaces_return_eof_token);
-    RUN_TEST(test_invalid_characters);
-    RUN_TEST(test_integer_returns_integer_token);
-    RUN_TEST(test_integers_separated_by_whitespace);
-    RUN_TEST(test_identifier_returns_identifier_token);
-    RUN_TEST(test_identifiers_separated_by_whitespace);
-    RUN_TEST(test_operator_returns_operator_token);
-    RUN_TEST(test_identifiers_and_operators);
-    RUN_TEST(test_identifiers_and_operators_separated_by_whitespaces);
+    RUN_TEST(empty_string_returns_eof_token);
+    RUN_TEST(whitespaces_return_eof_token);
+    RUN_TEST(invalid_characters);
+    RUN_TEST(integer_returns_integer_token);
+    RUN_TEST(integers_separated_by_whitespace);
+    RUN_TEST(identifier_returns_identifier_token);
+    RUN_TEST(identifiers_separated_by_whitespace);
+    RUN_TEST(operator_returns_operator_token);
+    RUN_TEST(identifiers_and_operators);
+    RUN_TEST(identifiers_and_operators_separated_by_whitespaces);
+}
 
-    return 0;
+GREATEST_MAIN_DEFS();
+
+int main(int argc, char *argv[]) {
+    GREATEST_MAIN_BEGIN();
+
+    RUN_SUITE(g_test_suite);
+
+    GREATEST_MAIN_END();
 }

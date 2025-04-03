@@ -16,7 +16,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_subdirectory(src)
 
 if (BUILD_TESTS)
-    add_subdirectory(third-party/Unity)
+    add_subdirectory(third-party)
 
     enable_testing()
     add_subdirectory(tests)
