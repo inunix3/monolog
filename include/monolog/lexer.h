@@ -17,6 +17,7 @@ typedef enum TokenKind {
     TOKEN_EOF,
     TOKEN_INTEGER,
     TOKEN_IDENTIFIER,
+    TOKEN_STRING,
     TOKEN_OP_COMMA,
     TOKEN_OP_SEMICOLON,
     TOKEN_OP_LPAREN,
@@ -30,7 +31,6 @@ typedef enum TokenKind {
     TOKEN_OP_ASTERISK,
     TOKEN_OP_DIV,
     TOKEN_OP_MOD,
-    TOKEN_OP_QUOTE,
     TOKEN_OP_QUESTION_MARK,
     TOKEN_OP_HASHTAG,
     TOKEN_OP_DOLAR
@@ -49,6 +49,7 @@ typedef enum LexerState {
     LEXER_STATE_ERROR,
     LEXER_STATE_INTEGER,
     LEXER_STATE_IDENTIFIER,
+    LEXER_STATE_STRING,
 } LexerState;
 
 typedef struct Lexer {

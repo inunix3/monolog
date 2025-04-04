@@ -43,7 +43,6 @@ static bool is_operator(char ch) {
     case '*':
     case '/':
     case '%':
-    case '"':
     case '?':
     case '#':
     case '$':
@@ -55,15 +54,14 @@ static bool is_operator(char ch) {
 
 static TokenKind char_op_kind(char ch) {
     static const TokenKind kinds[] = {
-        [','] = TOKEN_OP_COMMA,         [';'] = TOKEN_OP_SEMICOLON,
-        ['('] = TOKEN_OP_LPAREN,        [')'] = TOKEN_OP_RPAREN,
-        ['['] = TOKEN_OP_LBRACKET,      [']'] = TOKEN_OP_RBRACKET,
-        ['{'] = TOKEN_OP_LBRACE,        ['}'] = TOKEN_OP_RBRACE,
-        ['+'] = TOKEN_OP_PLUS,          ['-'] = TOKEN_OP_MINUS,
-        ['*'] = TOKEN_OP_ASTERISK,      ['/'] = TOKEN_OP_DIV,
-        ['%'] = TOKEN_OP_MOD,        ['"'] = TOKEN_OP_QUOTE,
-        ['?'] = TOKEN_OP_QUESTION_MARK, ['#'] = TOKEN_OP_HASHTAG,
-        ['$'] = TOKEN_OP_DOLAR
+        [','] = TOKEN_OP_COMMA,    [';'] = TOKEN_OP_SEMICOLON,
+        ['('] = TOKEN_OP_LPAREN,   [')'] = TOKEN_OP_RPAREN,
+        ['['] = TOKEN_OP_LBRACKET, [']'] = TOKEN_OP_RBRACKET,
+        ['{'] = TOKEN_OP_LBRACE,   ['}'] = TOKEN_OP_RBRACE,
+        ['+'] = TOKEN_OP_PLUS,     ['-'] = TOKEN_OP_MINUS,
+        ['*'] = TOKEN_OP_ASTERISK, ['/'] = TOKEN_OP_DIV,
+        ['%'] = TOKEN_OP_MOD,      ['?'] = TOKEN_OP_QUESTION_MARK,
+        ['#'] = TOKEN_OP_HASHTAG,  ['$'] = TOKEN_OP_DOLAR
     };
 
     return kinds[ch];
@@ -127,6 +125,7 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
 
     for (;;) {
         char ch = lexer.ch;
+        char prev_ch = lexer.prev_ch;
 
         switch (lexer.state) {
         case LEXER_STATE_FIND_DATA:
@@ -142,6 +141,10 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
                 reset_token(&lexer, TOKEN_IDENTIFIER);
 
                 lexer.state = LEXER_STATE_IDENTIFIER;
+            } else if (ch == '\"') {
+                reset_token(&lexer, TOKEN_STRING);
+
+                lexer.state = LEXER_STATE_STRING;
             } else if (is_operator(ch)) {
                 reset_token(&lexer, char_op_kind(ch));
                 ++lexer.token.len;
@@ -214,16 +217,30 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
             } else if (is_operator(ch)) {
                 push_token(&lexer, tokens);
 
-                // reset_token(&lexer, TOKEN_OPERATOR);
-                // ++lexer.token.len;
-                // push_token(&lexer, tokens);
-
                 lexer.state = LEXER_STATE_FIND_DATA;
 
                 continue;
             }
 
             ++lexer.token.len;
+
+            break;
+        case LEXER_STATE_STRING:
+            if (at_eof(&lexer)) {
+                lexer.token.valid = false;
+
+                push_token(&lexer, tokens);
+                lexer.state = LEXER_STATE_EOF;
+
+                break;
+            }
+
+            ++lexer.token.len;
+
+            if (ch == '"' && prev_ch != '\\') {
+                push_token(&lexer, tokens);
+                lexer.state = LEXER_STATE_FIND_DATA;
+            }
 
             break;
         }

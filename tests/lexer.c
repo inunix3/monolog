@@ -51,7 +51,7 @@ void tear_down(void *udata) {
 
 #define NTH_TOKEN(_idx) (((Token *)g_tokens.data)[_idx])
 
-TEST empty_string_returns_eof_token(void) {
+TEST empty_input_returns_eof_token(void) {
     const char *input = "";
     lexer_lex(input, 0, &g_tokens);
 
@@ -175,7 +175,7 @@ TEST identifiers_separated_by_whitespace(void) {
 }
 
 TEST operator_returns_operator_token(void) {
-    const char *input = ",;+-/%()[]{}\"$#?";
+    const char *input = ",;+-/%()[]{}$#?";
     lexer_lex(input, strlen(input), &g_tokens);
 
     ASSERT_EQ(strlen(input) + 1, g_tokens.len);
@@ -193,10 +193,9 @@ TEST operator_returns_operator_token(void) {
         {TOKEN_OP_RBRACKET, input + 9, 1, true},
         {TOKEN_OP_LBRACE, input + 10, 1, true},
         {TOKEN_OP_RBRACE, input + 11, 1, true},
-        {TOKEN_OP_QUOTE, input + 12, 1, true},
-        {TOKEN_OP_DOLAR, input + 13, 1, true},
-        {TOKEN_OP_HASHTAG, input + 14, 1, true},
-        {TOKEN_OP_QUESTION_MARK, input + 15, 1, true},
+        {TOKEN_OP_DOLAR, input + 12, 1, true},
+        {TOKEN_OP_HASHTAG, input + 13, 1, true},
+        {TOKEN_OP_QUESTION_MARK, input + 14, 1, true},
         {TOKEN_EOF, input + strlen(input), 0, true}
     };
 
@@ -287,11 +286,119 @@ TEST identifiers_and_operators_separated_by_whitespaces(void) {
     PASS();
 }
 
+TEST empty_string_returns_string_token(void) {
+    const char *input = "\"\"";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 2, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST string_returns_string_token(void) {
+    const char *input = "\"Hello, World!\"";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 15, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST open_string(void) {
+    const char *input = "\"Hello, World!";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 14, false},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST multiline_string(void) {
+    const char *input = "\"Hello\nWo\nrld\"";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 14, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST multiline_open_string(void) {
+    const char *input = "\"Hello\nWo\nrld";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 13, false},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST embedded_strings(void) {
+    const char *input = "\"Hello, \\\"World!\\\"\"";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_STRING, input, 19, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
 SUITE(g_test_suite) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 
-    RUN_TEST(empty_string_returns_eof_token);
+    RUN_TEST(empty_input_returns_eof_token);
     RUN_TEST(whitespaces_return_eof_token);
     RUN_TEST(invalid_characters);
     RUN_TEST(integer_returns_integer_token);
@@ -301,6 +408,12 @@ SUITE(g_test_suite) {
     RUN_TEST(operator_returns_operator_token);
     RUN_TEST(identifiers_and_operators);
     RUN_TEST(identifiers_and_operators_separated_by_whitespaces);
+    RUN_TEST(empty_string_returns_string_token);
+    RUN_TEST(string_returns_string_token);
+    RUN_TEST(open_string);
+    RUN_TEST(multiline_string);
+    RUN_TEST(multiline_open_string);
+    RUN_TEST(embedded_strings);
 }
 
 GREATEST_MAIN_DEFS();
