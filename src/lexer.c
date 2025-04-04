@@ -44,7 +44,9 @@ static bool is_operator(char ch) {
     case '/':
     case '%':
     case '"':
-    case '\'':
+    case '?':
+    case '#':
+    case '$':
         return true;
     default:
         return false;

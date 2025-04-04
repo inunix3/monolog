@@ -175,7 +175,7 @@ TEST identifiers_separated_by_whitespace(void) {
 }
 
 TEST operator_returns_operator_token(void) {
-    const char *input = ",;+-/%()[]{}\"'";
+    const char *input = ",;+-/%()[]{}\"$#?`";
     lexer_lex(input, strlen(input), &g_tokens);
 
     ASSERT_EQ(strlen(input) + 1, g_tokens.len);
