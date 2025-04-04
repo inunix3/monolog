@@ -53,13 +53,27 @@ static bool is_operator(char ch) {
     }
 }
 
+static TokenKind char_op_kind(char ch) {
+    static const TokenKind kinds[] = {
+        [','] = TOKEN_OP_COMMA,         [';'] = TOKEN_OP_SEMICOLON,
+        ['('] = TOKEN_OP_LPAREN,        [')'] = TOKEN_OP_RPAREN,
+        ['['] = TOKEN_OP_LBRACKET,      [']'] = TOKEN_OP_RBRACKET,
+        ['{'] = TOKEN_OP_LBRACE,        ['}'] = TOKEN_OP_RBRACE,
+        ['+'] = TOKEN_OP_PLUS,          ['-'] = TOKEN_OP_MINUS,
+        ['*'] = TOKEN_OP_ASTERISK,      ['/'] = TOKEN_OP_DIV,
+        ['%'] = TOKEN_OP_MOD,        ['"'] = TOKEN_OP_QUOTE,
+        ['?'] = TOKEN_OP_QUESTION_MARK, ['#'] = TOKEN_OP_HASHTAG,
+        ['$'] = TOKEN_OP_DOLAR
+    };
+
+    return kinds[ch];
+}
+
 static bool is_alpha(char ch) {
     return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }
 
-static bool is_identifier(char ch) {
-    return is_alpha(ch) || ch == '_';
-}
+static bool is_identifier(char ch) { return is_alpha(ch) || ch == '_'; }
 
 static char advance(Lexer *self) {
     if (at_eof(self)) {
@@ -129,7 +143,7 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
 
                 lexer.state = LEXER_STATE_IDENTIFIER;
             } else if (is_operator(ch)) {
-                reset_token(&lexer, TOKEN_OPERATOR);
+                reset_token(&lexer, char_op_kind(ch));
                 ++lexer.token.len;
                 push_token(&lexer, tokens);
 
@@ -206,7 +220,7 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
 
                 lexer.state = LEXER_STATE_FIND_DATA;
 
-                    continue;
+                continue;
             }
 
             ++lexer.token.len;
