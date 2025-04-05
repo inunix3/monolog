@@ -451,6 +451,36 @@ TEST keywords_case_sensitivity(void) {
     PASS();
 }
 
+TEST oneline_comment_at_the_beginning(void) {
+    const char *input = "// this is a oneline comment.";
+    lexer_lex(input, 0, &g_tokens);
+
+    ASSERT_EQ(1, g_tokens.len);
+
+    Token expected = {TOKEN_EOF, input + strlen(input), 0, true};
+    ASSERT_EQUAL_T(&expected, &NTH_TOKEN(0), &g_token_type_info, NULL);
+
+    PASS();
+}
+
+TEST oneline_comment_at_the_end(void) {
+    const char *input = "123456789 // some integer";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(2, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_INTEGER, input, 9, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
 SUITE(g_test_suite) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -473,6 +503,8 @@ SUITE(g_test_suite) {
     RUN_TEST(embedded_strings);
     RUN_TEST(keywords);
     RUN_TEST(keywords_case_sensitivity);
+    RUN_TEST(oneline_comment_at_the_beginning);
+    RUN_TEST(oneline_comment_at_the_end);
 }
 
 GREATEST_MAIN_DEFS();

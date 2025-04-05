@@ -105,8 +105,18 @@ static char advance(Lexer *self) {
     return ch;
 }
 
+static char peek_next(Lexer *self) {
+    return at_eof(self) ? '\0' : self->data[self->next_ch_idx];
+}
+
 static void skip_ws(Lexer *self) {
     while (is_ws(self->ch)) {
+        advance(self);
+    }
+}
+
+static void skip_comment(Lexer *self) {
+    while (!at_eof(self) && self->ch != '\n') {
         advance(self);
     }
 }
@@ -184,8 +194,22 @@ static Token lex_string(Lexer *self) {
     return tok;
 }
 
+static void find_begin_of_data(Lexer *self) {
+    for (;;) {
+        if (is_ws(self->ch)) {
+            advance(self);
+        } else if (self->ch == '/' && peek_next(self) == '/') {
+            while (!at_eof(self) && self->ch != '\n') {
+                advance(self);
+            }
+        } else {
+            break;
+        }
+    }
+}
+
 Token next_token(Lexer *self) {
-    skip_ws(self);
+    find_begin_of_data(self);
 
     if (at_eof(self)) {
         return (Token){TOKEN_EOF, self->data + self->next_ch_idx - 1, 0, true};
