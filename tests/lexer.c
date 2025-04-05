@@ -75,8 +75,8 @@ TEST whitespaces_return_eof_token(void) {
     PASS();
 }
 
-TEST invalid_characters(void) {
-    const char *input = "`~!@#$%^&";
+TEST invalid_token(void) {
+    const char *input = "`~!@^adsfd#$!3432";
     lexer_lex(input, strlen(input), &g_tokens);
 
     ASSERT_EQ(2, g_tokens.len);
@@ -112,10 +112,10 @@ TEST integer_returns_integer_token(void) {
 }
 
 TEST integers_separated_by_whitespace(void) {
-    const char *input = "123 456\n 789\t111\r\n\t34 @#$$$";
+    const char *input = "123 456\n 789\t111\r\n\t34";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    ASSERT_EQ(7, g_tokens.len);
+    ASSERT_EQ(6, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_INTEGER, input, 3, true},
@@ -123,7 +123,6 @@ TEST integers_separated_by_whitespace(void) {
         {TOKEN_INTEGER, input + 9, 3, true},
         {TOKEN_INTEGER, input + 13, 3, true},
         {TOKEN_INTEGER, input + 19, 2, true},
-        {TOKEN_UNKNOWN, input + 22, 5, false},
         {TOKEN_EOF, input + strlen(input), 0, true}
     };
 
@@ -458,7 +457,7 @@ SUITE(g_test_suite) {
 
     RUN_TEST(empty_input_returns_eof_token);
     RUN_TEST(whitespaces_return_eof_token);
-    RUN_TEST(invalid_characters);
+    RUN_TEST(invalid_token);
     RUN_TEST(integer_returns_integer_token);
     RUN_TEST(integers_separated_by_whitespace);
     RUN_TEST(identifier_returns_identifier_token);
