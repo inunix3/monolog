@@ -213,28 +213,28 @@ TEST identifiers_and_operators(void) {
     ASSERT_EQ(23, g_tokens.len);
 
     Token expected[] = {
-        {TOKEN_OP_LBRACE, input, 1, true},         /* { */
-        {TOKEN_IDENTIFIER, input + 1, 6, true},    /* printf */
-        {TOKEN_OP_LPAREN, input + 7, 1, true},     /* ( */
-        {TOKEN_IDENTIFIER, input + 8, 3, true},    /* fmt */
-        {TOKEN_OP_RPAREN, input + 11, 1, true},    /* ) */
-        {TOKEN_OP_COMMA, input + 12, 1, true},     /* , */
-        {TOKEN_IDENTIFIER, input + 13, 4, true},   /* puts */
-        {TOKEN_OP_LPAREN, input + 17, 1, true},    /* ( */
-        {TOKEN_IDENTIFIER, input + 18, 7, true},   /* strings */
-        {TOKEN_OP_LBRACKET, input + 25, 1, true},  /* [ */
-        {TOKEN_IDENTIFIER, input + 26, 3, true},   /* idx */
-        {TOKEN_OP_RBRACKET, input + 29, 1, true},  /* ] */
-        {TOKEN_OP_RPAREN, input + 30, 1, true},    /* ) */
-        {TOKEN_OP_ASTERISK, input + 31, 1, true},  /* * */
-        {TOKEN_IDENTIFIER, input + 32, 8, true},   /* __int128 */
-        {TOKEN_OP_PLUS, input + 40, 1, true},      /* + */
-        {TOKEN_OP_MINUS, input + 41, 1, true},     /* - */
-        {TOKEN_OP_DIV, input + 42, 1, true},       /* / */
-        {TOKEN_OP_MOD, input + 43, 1, true},       /* % */
-        {TOKEN_IDENTIFIER, input + 44, 5, true},   /* t_3__ */
-        {TOKEN_OP_SEMICOLON, input + 49, 1, true}, /* ; */
-        {TOKEN_OP_RBRACE, input + 50, 1, true},    /* } */
+        {TOKEN_OP_LBRACE, input, 1, true},
+        {TOKEN_IDENTIFIER, input + 1, 6, true}, /* printf */
+        {TOKEN_OP_LPAREN, input + 7, 1, true},
+        {TOKEN_IDENTIFIER, input + 8, 3, true}, /* fmt */
+        {TOKEN_OP_RPAREN, input + 11, 1, true},
+        {TOKEN_OP_COMMA, input + 12, 1, true},
+        {TOKEN_IDENTIFIER, input + 13, 4, true}, /* puts */
+        {TOKEN_OP_LPAREN, input + 17, 1, true},
+        {TOKEN_IDENTIFIER, input + 18, 7, true}, /* strings */
+        {TOKEN_OP_LBRACKET, input + 25, 1, true},
+        {TOKEN_IDENTIFIER, input + 26, 3, true}, /* idx */
+        {TOKEN_OP_RBRACKET, input + 29, 1, true},
+        {TOKEN_OP_RPAREN, input + 30, 1, true},
+        {TOKEN_OP_ASTERISK, input + 31, 1, true},
+        {TOKEN_IDENTIFIER, input + 32, 8, true}, /* __int128 */
+        {TOKEN_OP_PLUS, input + 40, 1, true},
+        {TOKEN_OP_MINUS, input + 41, 1, true},
+        {TOKEN_OP_DIV, input + 42, 1, true},
+        {TOKEN_OP_MOD, input + 43, 1, true},
+        {TOKEN_IDENTIFIER, input + 44, 5, true}, /* t_3__ */
+        {TOKEN_OP_SEMICOLON, input + 49, 1, true},
+        {TOKEN_OP_RBRACE, input + 50, 1, true},
         {TOKEN_EOF, input + strlen(input), 0, true}
     };
 
@@ -254,28 +254,28 @@ TEST identifiers_and_operators_separated_by_whitespaces(void) {
     ASSERT_EQ(23, g_tokens.len);
 
     Token expected[] = {
-        {TOKEN_OP_LBRACE, input, 1, true},         /* { */
-        {TOKEN_IDENTIFIER, input + 2, 6, true},    /* printf */
-        {TOKEN_OP_LPAREN, input + 11, 1, true},    /* ( */
-        {TOKEN_IDENTIFIER, input + 13, 3, true},   /* fmt */
-        {TOKEN_OP_RPAREN, input + 17, 1, true},    /* ) */
-        {TOKEN_OP_COMMA, input + 22, 1, true},     /* , */
-        {TOKEN_IDENTIFIER, input + 25, 4, true},   /* puts */
-        {TOKEN_OP_LPAREN, input + 31, 1, true},    /* ( */
-        {TOKEN_IDENTIFIER, input + 33, 7, true},   /* strings */
-        {TOKEN_OP_LBRACKET, input + 43, 1, true},  /* [ */
-        {TOKEN_IDENTIFIER, input + 45, 3, true},   /* idx */
-        {TOKEN_OP_RBRACKET, input + 49, 1, true},  /* ] */
-        {TOKEN_OP_RPAREN, input + 52, 1, true},    /* ) */
-        {TOKEN_OP_ASTERISK, input + 54, 1, true},  /* * */
-        {TOKEN_IDENTIFIER, input + 56, 8, true},   /* __int128 */
-        {TOKEN_OP_PLUS, input + 67, 1, true},      /* + */
-        {TOKEN_OP_MINUS, input + 72, 1, true},     /* - */
-        {TOKEN_OP_DIV, input + 75, 1, true},       /* / */
-        {TOKEN_OP_MOD, input + 78, 1, true},       /* % */
-        {TOKEN_IDENTIFIER, input + 84, 5, true},   /* t_3__ */
-        {TOKEN_OP_SEMICOLON, input + 90, 1, true}, /* ; */
-        {TOKEN_OP_RBRACE, input + 92, 1, true},    /* } */
+        {TOKEN_OP_LBRACE, input, 1, true},
+        {TOKEN_IDENTIFIER, input + 2, 6, true}, /* printf */
+        {TOKEN_OP_LPAREN, input + 11, 1, true},
+        {TOKEN_IDENTIFIER, input + 13, 3, true}, /* fmt */
+        {TOKEN_OP_RPAREN, input + 17, 1, true},
+        {TOKEN_OP_COMMA, input + 22, 1, true},
+        {TOKEN_IDENTIFIER, input + 25, 4, true}, /* puts */
+        {TOKEN_OP_LPAREN, input + 31, 1, true},
+        {TOKEN_IDENTIFIER, input + 33, 7, true}, /* strings */
+        {TOKEN_OP_LBRACKET, input + 43, 1, true},
+        {TOKEN_IDENTIFIER, input + 45, 3, true}, /* idx */
+        {TOKEN_OP_RBRACKET, input + 49, 1, true},
+        {TOKEN_OP_RPAREN, input + 52, 1, true},
+        {TOKEN_OP_ASTERISK, input + 54, 1, true},
+        {TOKEN_IDENTIFIER, input + 56, 8, true}, /* __int128 */
+        {TOKEN_OP_PLUS, input + 67, 1, true},
+        {TOKEN_OP_MINUS, input + 72, 1, true},
+        {TOKEN_OP_DIV, input + 75, 1, true},
+        {TOKEN_OP_MOD, input + 78, 1, true},
+        {TOKEN_IDENTIFIER, input + 84, 5, true}, /* t_3__ */
+        {TOKEN_OP_SEMICOLON, input + 90, 1, true},
+        {TOKEN_OP_RBRACE, input + 92, 1, true},
         {TOKEN_EOF, input + strlen(input), 0, true}
     };
 
@@ -394,6 +394,64 @@ TEST embedded_strings(void) {
     PASS();
 }
 
+TEST keywords(void) {
+    const char *input =
+        "if else for while return break continue nil int void string";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(12, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_KW_IF, input, 2, true},
+        {TOKEN_KW_ELSE, input + 3, 4, true},
+        {TOKEN_KW_FOR, input + 8, 3, true},
+        {TOKEN_KW_WHILE, input + 12, 5, true},
+        {TOKEN_KW_RETURN, input + 18, 6, true},
+        {TOKEN_KW_BREAK, input + 25, 5, true},
+        {TOKEN_KW_CONTINUE, input + 31, 8, true},
+        {TOKEN_KW_NIL, input + 40, 3, true},
+        {TOKEN_KW_INT, input + 44, 3, true},
+        {TOKEN_KW_VOID, input + 48, 4, true},
+        {TOKEN_KW_STRING, input + 53, 6, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST keywords_case_sensitivity(void) {
+    const char *input =
+        "iF ELse fOr WhIlE REtuRn BrEAK ContInuE Nil Int VoId sTRIng";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(12, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_IDENTIFIER, input, 2, true},
+        {TOKEN_IDENTIFIER, input + 3, 4, true},
+        {TOKEN_IDENTIFIER, input + 8, 3, true},
+        {TOKEN_IDENTIFIER, input + 12, 5, true},
+        {TOKEN_IDENTIFIER, input + 18, 6, true},
+        {TOKEN_IDENTIFIER, input + 25, 5, true},
+        {TOKEN_IDENTIFIER, input + 31, 8, true},
+        {TOKEN_IDENTIFIER, input + 40, 3, true},
+        {TOKEN_IDENTIFIER, input + 44, 3, true},
+        {TOKEN_IDENTIFIER, input + 48, 4, true},
+        {TOKEN_IDENTIFIER, input + 53, 6, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
 SUITE(g_test_suite) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -414,6 +472,8 @@ SUITE(g_test_suite) {
     RUN_TEST(multiline_string);
     RUN_TEST(multiline_open_string);
     RUN_TEST(embedded_strings);
+    RUN_TEST(keywords);
+    RUN_TEST(keywords_case_sensitivity);
 }
 
 GREATEST_MAIN_DEFS();

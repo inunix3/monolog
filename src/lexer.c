@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <string.h>
 
+#define ARRAY_SIZE(_a) (sizeof(_a) / (sizeof((_a)[0])))
+
 static bool at_eof(const Lexer *self) {
     return self->ch == '\0' && self->idx >= self->len;
 }
@@ -52,6 +54,30 @@ static bool is_operator(char ch) {
     }
 }
 
+static const char *g_keywords[] = {"if",     "else",  "for",      "while",
+                                   "return", "break", "continue", "nil",
+                                   "int",    "void",  "string"};
+
+static bool is_keyword(const char *s, size_t len) {
+    for (int i = 0; i < sizeof(g_keywords) / sizeof(g_keywords[0]); ++i) {
+        if (strncmp(s, g_keywords[i], len) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static TokenKind keyword_kind(const char *s, size_t len) {
+    for (int i = 0; i < ARRAY_SIZE(g_keywords); ++i) {
+        if (strncmp(s, g_keywords[i], len) == 0) {
+            return TOKEN_KW_IF + i;
+        }
+    }
+
+    return TOKEN_UNKNOWN;
+}
+
 static TokenKind char_op_kind(char ch) {
     static const TokenKind kinds[] = {
         [','] = TOKEN_OP_COMMA,    [';'] = TOKEN_OP_SEMICOLON,
@@ -86,6 +112,14 @@ static char advance(Lexer *self) {
 }
 
 static void push_token(Lexer *self, Vector *tokens) {
+    if (self->token.kind == TOKEN_IDENTIFIER) {
+        TokenKind kind = keyword_kind(self->token.src, self->token.len);
+
+        if (kind != TOKEN_UNKNOWN) {
+            self->token.kind = kind;
+        }
+    }
+
     vec_push(tokens, &self->token);
     memset(&self->token, 0, sizeof(self->token));
 }
@@ -216,7 +250,6 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
                 break;
             } else if (is_operator(ch)) {
                 push_token(&lexer, tokens);
-
                 lexer.state = LEXER_STATE_FIND_DATA;
 
                 continue;

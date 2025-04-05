@@ -33,7 +33,18 @@ typedef enum TokenKind {
     TOKEN_OP_MOD,
     TOKEN_OP_QUESTION_MARK,
     TOKEN_OP_HASHTAG,
-    TOKEN_OP_DOLAR
+    TOKEN_OP_DOLAR,
+    TOKEN_KW_IF,
+    TOKEN_KW_ELSE,
+    TOKEN_KW_FOR,
+    TOKEN_KW_WHILE,
+    TOKEN_KW_RETURN,
+    TOKEN_KW_BREAK,
+    TOKEN_KW_CONTINUE,
+    TOKEN_KW_NIL,
+    TOKEN_KW_INT,
+    TOKEN_KW_VOID,
+    TOKEN_KW_STRING
 } TokenKind;
 
 typedef struct Token {
