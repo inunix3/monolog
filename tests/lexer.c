@@ -10,6 +10,7 @@
 #include <greatest.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 static Vector g_tokens;
@@ -93,7 +94,7 @@ TEST invalid_token(void) {
     PASS();
 }
 
-TEST integer_returns_integer_token(void) {
+TEST integer(void) {
     const char *input = "123456789";
     lexer_lex(input, strlen(input), &g_tokens);
 
@@ -111,7 +112,7 @@ TEST integer_returns_integer_token(void) {
     PASS();
 }
 
-TEST integers_separated_by_whitespace(void) {
+TEST integers_separated_with_whitespace(void) {
     const char *input = "123 456\n 789\t111\r\n\t34";
     lexer_lex(input, strlen(input), &g_tokens);
 
@@ -133,7 +134,7 @@ TEST integers_separated_by_whitespace(void) {
     PASS();
 }
 
-TEST identifier_returns_identifier_token(void) {
+TEST identifier(void) {
     const char *input = "abcdefAFGHJK__34343sdf231";
     lexer_lex(input, strlen(input), &g_tokens);
 
@@ -151,7 +152,7 @@ TEST identifier_returns_identifier_token(void) {
     PASS();
 }
 
-TEST identifiers_separated_by_whitespace(void) {
+TEST identifiers_separated_with_whitespace(void) {
     const char *input = "_asdasd123 hello\n  WORLD\t__int128\r\n\t_3__";
     lexer_lex(input, strlen(input), &g_tokens);
 
@@ -173,28 +174,92 @@ TEST identifiers_separated_by_whitespace(void) {
     PASS();
 }
 
-TEST operator_returns_operator_token(void) {
-    const char *input = ",;+-/%()[]{}$#?";
+TEST single_operators(void) {
+    const char *input = "=,;+-/%()[]{}$#?!&|<>";
     lexer_lex(input, strlen(input), &g_tokens);
 
     ASSERT_EQ(strlen(input) + 1, g_tokens.len);
 
     Token expected[] = {
-        {TOKEN_OP_COMMA, input, 1, true},
-        {TOKEN_OP_SEMICOLON, input + 1, 1, true},
-        {TOKEN_OP_PLUS, input + 2, 1, true},
-        {TOKEN_OP_MINUS, input + 3, 1, true},
-        {TOKEN_OP_DIV, input + 4, 1, true},
-        {TOKEN_OP_MOD, input + 5, 1, true},
-        {TOKEN_OP_LPAREN, input + 6, 1, true},
-        {TOKEN_OP_RPAREN, input + 7, 1, true},
-        {TOKEN_OP_LBRACKET, input + 8, 1, true},
-        {TOKEN_OP_RBRACKET, input + 9, 1, true},
-        {TOKEN_OP_LBRACE, input + 10, 1, true},
-        {TOKEN_OP_RBRACE, input + 11, 1, true},
-        {TOKEN_OP_DOLAR, input + 12, 1, true},
-        {TOKEN_OP_HASHTAG, input + 13, 1, true},
-        {TOKEN_OP_QUESTION_MARK, input + 14, 1, true},
+        {TOKEN_OP_ASSIGN, input, 1, true},
+        {TOKEN_OP_COMMA, input + 1, 1, true},
+        {TOKEN_OP_SEMICOLON, input + 2, 1, true},
+        {TOKEN_OP_PLUS, input + 3, 1, true},
+        {TOKEN_OP_MINUS, input + 4, 1, true},
+        {TOKEN_OP_DIV, input + 5, 1, true},
+        {TOKEN_OP_MOD, input + 6, 1, true},
+        {TOKEN_OP_LPAREN, input + 7, 1, true},
+        {TOKEN_OP_RPAREN, input + 8, 1, true},
+        {TOKEN_OP_LBRACKET, input + 9, 1, true},
+        {TOKEN_OP_RBRACKET, input + 10, 1, true},
+        {TOKEN_OP_LBRACE, input + 11, 1, true},
+        {TOKEN_OP_RBRACE, input + 12, 1, true},
+        {TOKEN_OP_DOLAR, input + 13, 1, true},
+        {TOKEN_OP_HASHTAG, input + 14, 1, true},
+        {TOKEN_OP_QUEST, input + 15, 1, true},
+        {TOKEN_OP_EXCL, input + 16, 1, true},
+        {TOKEN_OP_AMP, input + 17, 1, true},
+        {TOKEN_OP_PIPE, input + 18, 1, true},
+        {TOKEN_OP_LESS, input + 19, 1, true},
+        {TOKEN_OP_GREATER, input + 20, 1, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST double_operators(void) {
+    const char *input = "!= == <= >= ++ -- && ||";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(9, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_OP_NOT_EQUAL, input, 2, true},
+        {TOKEN_OP_EQUAL, input + 3, 2, true},
+        {TOKEN_OP_LESS_EQUAL, input + 6, 2, true},
+        {TOKEN_OP_GREATER_EQUAL, input + 9, 2, true},
+        {TOKEN_OP_INC, input + 12, 2, true},
+        {TOKEN_OP_DEC, input + 15, 2, true},
+        {TOKEN_OP_AND, input + 18, 2, true},
+        {TOKEN_OP_OR, input + 21, 2, true},
+        {TOKEN_EOF, input + strlen(input), 0, true}
+    };
+
+    for (int i = 0; i < g_tokens.len; ++i) {
+        ASSERT_EQUAL_T(&expected[i], &NTH_TOKEN(i), &g_token_type_info, NULL);
+    }
+
+    PASS();
+}
+
+TEST double_operators_cannot_be_splitted(void) {
+    const char *input = "! = =\n= <\t= >    = + + - - & & |  |";
+    lexer_lex(input, strlen(input), &g_tokens);
+
+    ASSERT_EQ(17, g_tokens.len);
+
+    Token expected[] = {
+        {TOKEN_OP_EXCL, input, 1, true},
+        {TOKEN_OP_ASSIGN, input + 2, 1, true},
+        {TOKEN_OP_ASSIGN, input + 4, 1, true},
+        {TOKEN_OP_ASSIGN, input + 6, 1, true},
+        {TOKEN_OP_LESS, input + 8, 1, true},
+        {TOKEN_OP_ASSIGN, input + 10, 1, true},
+        {TOKEN_OP_GREATER, input + 12, 1, true},
+        {TOKEN_OP_ASSIGN, input + 17, 1, true},
+        {TOKEN_OP_PLUS, input + 19, 1, true},
+        {TOKEN_OP_PLUS, input + 21, 1, true},
+        {TOKEN_OP_MINUS, input + 23, 1, true},
+        {TOKEN_OP_MINUS, input + 25, 1, true},
+        {TOKEN_OP_AMP, input + 27, 1, true},
+        {TOKEN_OP_AMP, input + 29, 1, true},
+        {TOKEN_OP_PIPE, input + 31, 1, true},
+        {TOKEN_OP_PIPE, input + 34, 1, true},
         {TOKEN_EOF, input + strlen(input), 0, true}
     };
 
@@ -244,7 +309,7 @@ TEST identifiers_and_operators(void) {
     PASS();
 }
 
-TEST identifiers_and_operators_separated_by_whitespaces(void) {
+TEST identifiers_and_operators_separated_with_whitespaces(void) {
     const char *input = "{\tprintf   ( fmt )   \t,\n\rputs  ( strings   "
                         "[\nidx\r]  ) * __int128   +"
                         "    -  /  %     t_3__ ;\t}\n";
@@ -464,7 +529,7 @@ TEST oneline_comment_at_the_beginning(void) {
 }
 
 TEST oneline_comment_at_the_end(void) {
-    const char *input = "123456789 // some integer";
+    const char *input = "123456789 //some //\tinteger";
     lexer_lex(input, strlen(input), &g_tokens);
 
     ASSERT_EQ(2, g_tokens.len);
@@ -488,13 +553,15 @@ SUITE(g_test_suite) {
     RUN_TEST(empty_input_returns_eof_token);
     RUN_TEST(whitespaces_return_eof_token);
     RUN_TEST(invalid_token);
-    RUN_TEST(integer_returns_integer_token);
-    RUN_TEST(integers_separated_by_whitespace);
-    RUN_TEST(identifier_returns_identifier_token);
-    RUN_TEST(identifiers_separated_by_whitespace);
-    RUN_TEST(operator_returns_operator_token);
+    RUN_TEST(integer);
+    RUN_TEST(integers_separated_with_whitespace);
+    RUN_TEST(identifier);
+    RUN_TEST(identifiers_separated_with_whitespace);
+    RUN_TEST(single_operators);
+    RUN_TEST(double_operators);
+    RUN_TEST(double_operators_cannot_be_splitted);
     RUN_TEST(identifiers_and_operators);
-    RUN_TEST(identifiers_and_operators_separated_by_whitespaces);
+    RUN_TEST(identifiers_and_operators_separated_with_whitespaces);
     RUN_TEST(empty_string_returns_string_token);
     RUN_TEST(string_returns_string_token);
     RUN_TEST(open_string);

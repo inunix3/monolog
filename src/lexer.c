@@ -45,6 +45,12 @@ static bool is_operator(char ch) {
     case '*':
     case '/':
     case '%':
+    case '!':
+    case '&':
+    case '|':
+    case '<':
+    case '>':
+    case '=':
     case '?':
     case '#':
     case '$':
@@ -68,7 +74,30 @@ static TokenKind keyword_kind(const char *s, size_t len) {
     return TOKEN_UNKNOWN;
 }
 
-static TokenKind char_op_kind(char ch) {
+static TokenKind double_operator_kind(char ch1, char ch2) {
+    if (ch1 == '+' && ch2 == '+') {
+        return TOKEN_OP_INC;
+    } else if (ch1 == '-' && ch2 == '-') {
+        return TOKEN_OP_DEC;
+    } else if (ch1 == '=' && ch2 == '=') {
+        return TOKEN_OP_EQUAL;
+    } else if (ch1 == '!' && ch2 == '=') {
+        return TOKEN_OP_NOT_EQUAL;
+    } else if (ch1 == '<' && ch2 == '=') {
+        return TOKEN_OP_LESS_EQUAL;
+    } else if (ch1 == '>' && ch2 == '=') {
+        return TOKEN_OP_GREATER_EQUAL;
+    } else if (ch1 == '&' && ch2 == '&') {
+        return TOKEN_OP_AND;
+    } else if (ch1 == '|' && ch2 == '|') {
+        return TOKEN_OP_OR;
+    }
+
+    return TOKEN_UNKNOWN;
+}
+
+static TokenKind single_operator_kind(char ch) {
+
     static const TokenKind kinds[] = {
         [','] = TOKEN_OP_COMMA,    [';'] = TOKEN_OP_SEMICOLON,
         ['('] = TOKEN_OP_LPAREN,   [')'] = TOKEN_OP_RPAREN,
@@ -76,7 +105,10 @@ static TokenKind char_op_kind(char ch) {
         ['{'] = TOKEN_OP_LBRACE,   ['}'] = TOKEN_OP_RBRACE,
         ['+'] = TOKEN_OP_PLUS,     ['-'] = TOKEN_OP_MINUS,
         ['*'] = TOKEN_OP_ASTERISK, ['/'] = TOKEN_OP_DIV,
-        ['%'] = TOKEN_OP_MOD,      ['?'] = TOKEN_OP_QUESTION_MARK,
+        ['%'] = TOKEN_OP_MOD,      ['!'] = TOKEN_OP_EXCL,
+        ['&'] = TOKEN_OP_AMP,      ['|'] = TOKEN_OP_PIPE,
+        ['<'] = TOKEN_OP_LESS,     ['>'] = TOKEN_OP_GREATER,
+        ['='] = TOKEN_OP_ASSIGN,   ['?'] = TOKEN_OP_QUEST,
         ['#'] = TOKEN_OP_HASHTAG,  ['$'] = TOKEN_OP_DOLAR
     };
 
@@ -208,6 +240,27 @@ static void find_begin_of_data(Lexer *self) {
     }
 }
 
+static Token lex_operator(Lexer *self) {
+    Token tok = new_token(self, TOKEN_UNKNOWN);
+
+    char ch2 = peek_next(self);
+    TokenKind kind = double_operator_kind(self->ch, ch2);
+
+    if (kind != TOKEN_UNKNOWN) {
+        advance(self);
+        ++tok.len;
+
+        tok.kind = kind;
+    } else {
+        tok.kind = single_operator_kind(self->ch);
+    }
+
+    advance(self);
+    ++tok.len;
+
+    return tok;
+}
+
 Token next_token(Lexer *self) {
     find_begin_of_data(self);
 
@@ -218,12 +271,7 @@ Token next_token(Lexer *self) {
     } else if (is_identifier(self->ch)) {
         return lex_identifier(self);
     } else if (is_operator(self->ch)) {
-        Token tok = new_token(self, char_op_kind(self->ch));
-
-        advance(self);
-        ++tok.len;
-
-        return tok;
+        return lex_operator(self);
     } else if (self->ch == '"') {
         return lex_string(self);
     }
