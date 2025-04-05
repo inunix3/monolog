@@ -66,7 +66,7 @@ static TokenKind keyword_kind(const char *s, size_t len) {
                                      "int",    "void",  "string"};
 
     for (int i = 0; i < ARRAY_SIZE(keywords); ++i) {
-        if (strncmp(s, keywords[i], len) == 0) {
+        if (strlen(keywords[i]) == len && strncmp(s, keywords[i], len) == 0) {
             return TOKEN_KW_IF + i;
         }
     }
