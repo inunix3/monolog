@@ -60,7 +60,7 @@ static bool is_operator(char ch) {
     }
 }
 
-static TokenKind keyword_kind(const char *s, size_t len) {
+static TokenKind identifier_kind(const char *s, size_t len) {
     static const char *keywords[] = {"if",     "else",  "for",      "while",
                                      "return", "break", "continue", "nil",
                                      "int",    "void",  "string"};
@@ -71,7 +71,7 @@ static TokenKind keyword_kind(const char *s, size_t len) {
         }
     }
 
-    return TOKEN_UNKNOWN;
+    return TOKEN_IDENTIFIER;
 }
 
 static TokenKind double_operator_kind(char ch1, char ch2) {
@@ -97,14 +97,13 @@ static TokenKind double_operator_kind(char ch1, char ch2) {
 }
 
 static TokenKind single_operator_kind(char ch) {
-
     static const TokenKind kinds[] = {
         [','] = TOKEN_OP_COMMA,    [';'] = TOKEN_OP_SEMICOLON,
         ['('] = TOKEN_OP_LPAREN,   [')'] = TOKEN_OP_RPAREN,
         ['['] = TOKEN_OP_LBRACKET, [']'] = TOKEN_OP_RBRACKET,
         ['{'] = TOKEN_OP_LBRACE,   ['}'] = TOKEN_OP_RBRACE,
         ['+'] = TOKEN_OP_PLUS,     ['-'] = TOKEN_OP_MINUS,
-        ['*'] = TOKEN_OP_ASTERISK, ['/'] = TOKEN_OP_DIV,
+        ['*'] = TOKEN_OP_MUL,      ['/'] = TOKEN_OP_DIV,
         ['%'] = TOKEN_OP_MOD,      ['!'] = TOKEN_OP_EXCL,
         ['&'] = TOKEN_OP_AMP,      ['|'] = TOKEN_OP_PIPE,
         ['<'] = TOKEN_OP_LESS,     ['>'] = TOKEN_OP_GREATER,
@@ -122,7 +121,8 @@ static bool is_alpha(char ch) {
 static bool is_identifier(char ch) { return is_alpha(ch) || ch == '_'; }
 
 static Token new_token(const Lexer *self, TokenKind kind) {
-    return (Token){kind, self->data + self->next_ch_idx - 1, 0, true};
+    return (Token
+    ){kind, self->data + self->next_ch_idx - 1, 0, true, self->line, self->col};
 }
 
 static char advance(Lexer *self) {
@@ -133,6 +133,13 @@ static char advance(Lexer *self) {
     self->prev_ch = self->ch;
     char ch = self->data[self->next_ch_idx++];
     self->ch = ch;
+
+    if (ch == '\n') {
+        self->col = 0;
+        ++self->line;
+    } else {
+        ++self->col;
+    }
 
     return ch;
 }
@@ -188,11 +195,7 @@ static Token lex_identifier(Lexer *self) {
         ++tok.len;
     }
 
-    TokenKind kind = keyword_kind(tok.src, tok.len);
-
-    if (kind != TOKEN_UNKNOWN) {
-        tok.kind = kind;
-    }
+    tok.kind = identifier_kind(tok.src, tok.len);
 
     return tok;
 }
@@ -265,7 +268,9 @@ Token next_token(Lexer *self) {
     find_begin_of_data(self);
 
     if (at_eof(self)) {
-        return (Token){TOKEN_EOF, self->data + self->next_ch_idx - 1, 0, true};
+        return (Token){TOKEN_EOF,  self->data + self->next_ch_idx - 1,
+                       0,          true,
+                       self->line, self->col};
     } else if (is_digit(self->ch)) {
         return lex_int(self);
     } else if (is_identifier(self->ch)) {
@@ -287,6 +292,8 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
     lexer.len = len;
     lexer.ch = *data;
     lexer.next_ch_idx = 1;
+    lexer.line = 1;
+    lexer.col = 1;
 
     for (;;) {
         Token tok = next_token(&lexer);

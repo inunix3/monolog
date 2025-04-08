@@ -16,22 +16,23 @@ int main(void) {
 
     vec_init(&tokens, sizeof(Token));
 
-    const char *src = "123\t      \n1\n 45";
-    lexer_lex(src, strlen(src), &tokens);
+    const char *input = "int x = 5;\nprintf(\"%d\\n\", x);";
+    lexer_lex(input, strlen(input), &tokens);
 
     for (size_t i = 0; i < tokens.len; ++i) {
         const Token *toks = tokens.data;
         const Token *tok = &toks[i];
 
-        printf("id: %d\n", tok->kind);
-        printf("len: %zu\n", tok->len);
-        printf("src: \n");
+        printf("Token %zu:\n", i + 1);
+        printf("  kind: %d\n", tok->kind);
+        printf("  len: %zu\n", tok->len);
+        printf("  src: '");
 
         for (size_t j = 0; j < tok->len; ++j) {
             putchar(tok->src[j]);
         }
 
-        putchar('\n');
+        puts("'\n");
     }
 
     vec_deinit(&tokens);

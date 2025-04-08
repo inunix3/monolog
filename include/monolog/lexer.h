@@ -28,7 +28,7 @@ typedef enum TokenKind {
     TOKEN_OP_RBRACE,
     TOKEN_OP_PLUS,
     TOKEN_OP_MINUS,
-    TOKEN_OP_ASTERISK,
+    TOKEN_OP_MUL,
     TOKEN_OP_DIV,
     TOKEN_OP_MOD,
     TOKEN_OP_INC,
@@ -66,6 +66,8 @@ typedef struct Token {
     const char *src;
     size_t len;
     bool valid;
+    size_t line;
+    size_t col;
 } Token;
 
 typedef struct Lexer {
@@ -74,6 +76,8 @@ typedef struct Lexer {
     size_t len;
     char ch;
     char prev_ch;
+    char line;
+    char col;
 } Lexer;
 
 void lexer_lex(const char *data, size_t len, Vector *tokens);
