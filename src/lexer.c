@@ -264,7 +264,7 @@ static Token lex_operator(Lexer *self) {
     return tok;
 }
 
-Token next_token(Lexer *self) {
+static Token next_token(Lexer *self) {
     find_begin_of_data(self);
 
     if (at_eof(self)) {
@@ -304,4 +304,27 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
             break;
         }
     }
+}
+
+const char *token_kind_to_str(TokenKind kind) {
+    const char *strs[] = {
+        "TOKEN_UNKNOWN",      "TOKEN_EOF",           "TOKEN_INTEGER",
+        "TOKEN_IDENTIFIER",   "TOKEN_STRING",        "TOKEN_OP_COMMA",
+        "TOKEN_OP_SEMICOLON", "TOKEN_OP_LPAREN",     "TOKEN_OP_RPAREN",
+        "TOKEN_OP_LBRACKET",  "TOKEN_OP_RBRACKET",   "TOKEN_OP_LBRACE",
+        "TOKEN_OP_RBRACE",    "TOKEN_OP_PLUS",       "TOKEN_OP_MINUS",
+        "TOKEN_OP_MUL",       "TOKEN_OP_DIV",        "TOKEN_OP_MOD",
+        "TOKEN_OP_INC",       "TOKEN_OP_DEC",        "TOKEN_OP_EXCL",
+        "TOKEN_OP_AMP",       "TOKEN_OP_PIPE",       "TOKEN_OP_LESS",
+        "TOKEN_OP_GREATER",   "TOKEN_OP_ASSIGN",     "TOKEN_OP_EQUAL",
+        "TOKEN_OP_NOT_EQUAL", "TOKEN_OP_LESS_EQUAL", "TOKEN_OP_GREATER_EQUAL",
+        "TOKEN_OP_AND",       "TOKEN_OP_OR",         "TOKEN_OP_QUEST",
+        "TOKEN_OP_HASHTAG",   "TOKEN_OP_DOLAR",      "TOKEN_KW_IF",
+        "TOKEN_KW_ELSE",      "TOKEN_KW_FOR",        "TOKEN_KW_WHILE",
+        "TOKEN_KW_RETURN",    "TOKEN_KW_BREAK",      "TOKEN_KW_CONTINUE",
+        "TOKEN_KW_NIL",       "TOKEN_KW_INT",        "TOKEN_KW_VOID",
+        "TOKEN_KW_STRING"
+    };
+
+    return strs[kind];
 }
