@@ -62,6 +62,7 @@ typedef enum TokenKind {
 } TokenKind;
 
 const char *token_kind_to_str(TokenKind kind);
+const char *token_kind_to_name(TokenKind kind);
 
 typedef struct Token {
     TokenKind kind;

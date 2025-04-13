@@ -1,0 +1,8 @@
+unary (-):
+  grouping:
+    unary (-):
+      grouping:
+        unary (+):
+          grouping:
+            unary (-):
+              literal 5

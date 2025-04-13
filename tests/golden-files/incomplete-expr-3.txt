@@ -1,0 +1,6 @@
+binary (*):
+  literal 5
+  grouping:
+    binary (+):
+      literal 3
+      error

@@ -7,12 +7,18 @@ set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include/monolog")
 set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 
 set(HEADERS
+    "${INCLUDE_DIR}/ast.h"
     "${INCLUDE_DIR}/lexer.h"
+    "${INCLUDE_DIR}/parser.h"
+    "${INCLUDE_DIR}/utils.h"
     "${INCLUDE_DIR}/vector.h"
 )
 
 set(SOURCES
+    "${SRC_DIR}/ast.c"
     "${SRC_DIR}/lexer.c"
+    "${SRC_DIR}/parser.c"
+    "${SRC_DIR}/utils.c"
     "${SRC_DIR}/vector.c"
 )
 

@@ -1,0 +1,9 @@
+binary (-):
+  binary (+):
+    literal 1
+    binary (*):
+      literal 2
+      literal 3
+  binary (/):
+    literal 4
+    literal 10

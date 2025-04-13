@@ -41,13 +41,13 @@ static int token_printf_cb(const void *data, void *udata) {
 
 static greatest_type_info g_token_type_info = {token_equal_cb, token_printf_cb};
 
-void set_up(void *udata) {
+static void set_up(void *udata) {
     (void)udata;
 
     vec_init(&g_tokens, sizeof(Token));
 }
 
-void tear_down(void *udata) {
+static void tear_down(void *udata) {
     (void)udata;
 
     vec_deinit(&g_tokens);
@@ -615,7 +615,7 @@ TEST prog1_factorial(void) {
     PASS();
 }
 
-SUITE(g_test_suite) {
+SUITE(lexer) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 
@@ -649,7 +649,7 @@ GREATEST_MAIN_DEFS();
 int main(int argc, char *argv[]) {
     GREATEST_MAIN_BEGIN();
 
-    RUN_SUITE(g_test_suite);
+    RUN_SUITE(lexer);
 
     GREATEST_MAIN_END();
 }

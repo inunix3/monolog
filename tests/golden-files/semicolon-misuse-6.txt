@@ -1,0 +1,4 @@
+binary (/):
+  literal 1
+  literal 2
+literal 3

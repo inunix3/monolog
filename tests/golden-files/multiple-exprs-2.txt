@@ -1,0 +1,12 @@
+grouping:
+  grouping:
+    literal 1
+binary (+):
+  literal 2
+  literal 3
+binary (*):
+  literal 4
+  grouping:
+    binary (+):
+      literal 5
+      literal 6

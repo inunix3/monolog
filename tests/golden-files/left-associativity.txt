@@ -1,0 +1,9 @@
+binary (-):
+  binary (-):
+    binary (+):
+      binary (+):
+        literal 115
+        literal 94
+      literal 3
+    literal 1
+  literal 10

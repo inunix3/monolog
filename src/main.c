@@ -6,28 +6,14 @@
  */
 
 #include <monolog/lexer.h>
+#include <monolog/parser.h>
+#include <monolog/utils.h>
 #include <monolog/vector.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static long file_size(FILE *file) {
-    if (fseek(file, 0, SEEK_END) != 0) {
-        return -1;
-    }
-
-    long pos = ftell(file);
-
-    if (pos < 0) {
-        return -1;
-    }
-
-    rewind(file);
-
-    return pos;
-}
 
 static void cmd_tokenize(char *buf, size_t size) {
     Vector tokens;
@@ -55,8 +41,17 @@ static void cmd_tokenize(char *buf, size_t size) {
 }
 
 static void cmd_parse(char *buf, size_t size) {
-    (void)buf;
-    (void)size;
+    Vector tokens;
+    vec_init(&tokens, sizeof(Token));
+
+    lexer_lex(buf, size, &tokens);
+
+    Parser parser = parser_new(tokens.data, tokens.len);
+    Ast ast = parser_parse(&parser);
+
+    ast_dump(&ast, stdout);
+
+    vec_deinit(&tokens);
 }
 
 static void print_help(void) {
@@ -78,45 +73,18 @@ int main(int argc, char **argv) {
     const char *cmd = argv[1];
     const char *filename = argv[2];
 
-    FILE *file = fopen(filename, "r");
-
-    if (!file) {
-        fprintf(stderr, "cannot open '%s': %s\n", filename, strerror(errno));
-
-        return EXIT_FAILURE;
-    }
-
-    long size = file_size(file);
-
-    if (size < 0) {
-        fprintf(stderr, "cannot get file size: %s\n", strerror(errno));
-        fclose(file);
-
-        return EXIT_FAILURE;
-    }
-
-    char *buf = malloc(size + 1);
-
-    if (!buf) {
-        fprintf(stderr, "cannot allocate buffer: %s\n", strerror(errno));
-        fclose(file);
-
-        return EXIT_FAILURE;
-    }
-
-    fread(buf, sizeof(*buf), size, file);
-    buf[size] = 0;
+    char *input = read_file(filename);
+    size_t size = strlen(input);
 
     if (strcmp(cmd, "tokenize") == 0) {
-        cmd_tokenize(buf, size);
+        cmd_tokenize(input, size);
     } else if (strcmp(cmd, "parse") == 0) {
-        cmd_parse(buf, size);
+        cmd_parse(input, size);
     } else {
         fprintf(stderr, "bad command\n");
     }
 
-    free(buf);
-    fclose(file);
+    free(input);
 
     return EXIT_SUCCESS;
 }

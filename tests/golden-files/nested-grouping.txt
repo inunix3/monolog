@@ -1,0 +1,15 @@
+binary (/):
+  grouping:
+    binary (-):
+      grouping:
+        binary (%):
+          grouping:
+            binary (*):
+              grouping:
+                binary (+):
+                  literal 94
+                  literal 115
+              literal 2
+          literal 2
+      literal 1
+  literal 0
