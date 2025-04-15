@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lexer.h"
+#include "strbuf.h"
 #include "vector.h"
 
 #include <stdint.h>
@@ -9,6 +10,7 @@
 typedef enum AstNodeKind {
     AST_NODE_ERROR,
     AST_NODE_INTEGER,
+    AST_NODE_STRING,
     AST_NODE_UNARY,
     AST_NODE_BINARY,
     AST_NODE_GROUPING
@@ -20,6 +22,7 @@ typedef struct AstNode {
     union {
         union {
             int64_t i;
+            StrBuf str;
         } literal;
 
         struct {

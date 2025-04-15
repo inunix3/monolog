@@ -1,4 +1,5 @@
 #include <monolog/parser.h>
+#include <monolog/strbuf.h>
 #include <monolog/vector.h>
 
 #include <stdarg.h>
@@ -6,7 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static AstNode *literal(Parser *self);
+static AstNode *integer_literal(Parser *self);
+static AstNode *string_literal(Parser *self);
 static AstNode *unary(Parser *self);
 static AstNode *prefix(Parser *self, PrecedenceLevel prec);
 static AstNode *binary(Parser *self, AstNode *left);
@@ -15,9 +17,9 @@ static AstNode *grouping(Parser *self);
 static ParseRule g_rules[] = {
     [TOKEN_UNKNOWN] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
-    [TOKEN_INTEGER] = {literal, NULL, PREC_NONE},
+    [TOKEN_INTEGER] = {integer_literal, NULL, PREC_NONE},
     [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_STRING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_STRING] = {string_literal, NULL, PREC_NONE},
     [TOKEN_OP_COMMA] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_LPAREN] = {grouping, NULL, PREC_SUFFIX},
@@ -81,7 +83,7 @@ static void error(Parser *self, const char *fmt, ...) {
 static void advance(Parser *self) {
     Token *tok = &self->toks[self->tok_idx];
 
-    if (tok->kind != TOKEN_EOF || self->tok_idx < self->tok_count) {
+    if (tok->kind != TOKEN_EOF && self->tok_idx < self->tok_count) {
         ++self->tok_idx;
     }
 
@@ -116,7 +118,7 @@ static bool expect(Parser *self, TokenKind kind) {
 
 static AstNode *expression(Parser *self, PrecedenceLevel prec);
 
-static AstNode *literal(Parser *self) {
+static AstNode *integer_literal(Parser *self) {
     char buf[65] = {0};
     strncpy(buf, self->curr->src, self->curr->len);
 
@@ -124,6 +126,23 @@ static AstNode *literal(Parser *self) {
 
     AstNode *node = astnode_new(AST_NODE_INTEGER);
     node->literal.i = value;
+
+    advance(self);
+
+    return node;
+}
+
+static AstNode *string_literal(Parser *self) {
+    if (!self->curr->valid) {
+        error(self, "unterminated string");
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    AstNode *node = astnode_new(AST_NODE_STRING);
+
+    /* TODO: handle escaped characters */
+    str_initn(&node->literal.str, self->curr->src + 1, self->curr->len - 2);
 
     advance(self);
 

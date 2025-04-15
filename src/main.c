@@ -10,7 +10,6 @@
 #include <monolog/utils.h>
 #include <monolog/vector.h>
 
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,13 +27,7 @@ static void cmd_tokenize(char *buf, size_t size) {
         printf("Token %zu:\n", i + 1);
         printf("  kind: %s (%d)\n", token_kind_to_str(tok->kind), tok->kind);
         printf("  len: %zu\n", tok->len);
-        printf("  src excerpt: '");
-
-        for (size_t j = 0; j < tok->len; ++j) {
-            putchar(tok->src[j]);
-        }
-
-        puts("'\n");
+        printf("  src excerpt: '%.*s'\n", (int) tok->len, tok->src);
     }
 
     vec_deinit(&tokens);

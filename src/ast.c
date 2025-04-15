@@ -21,6 +21,10 @@ void astnode_destroy(AstNode *self) {
     case AST_NODE_ERROR:
     case AST_NODE_INTEGER:
         break;
+    case AST_NODE_STRING:
+        str_deinit(&self->literal.str);
+
+        break;
     case AST_NODE_UNARY:
         astnode_destroy(self->unary.right);
         self->unary.right = NULL;
@@ -55,6 +59,10 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         break;
     case AST_NODE_INTEGER:
         fprintf(out, "literal %" PRId64 "\n", node->literal.i);
+
+        break;
+    case AST_NODE_STRING:
+        fprintf(out, "literal \"%s\"\n", node->literal.str.data);
 
         break;
     case AST_NODE_UNARY:

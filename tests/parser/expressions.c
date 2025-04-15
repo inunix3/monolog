@@ -79,6 +79,14 @@ TEST_STRING_AGAINST_FILE(
     "combination.txt"
 )
 
+TEST_STRING_AGAINST_FILE(
+    string, "\"Hello, World! This is a one-line string\"", "string.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    multiline_string, "\"Hello\n        World!\"", "multiline-string.txt"
+)
+
 SUITE(expressions) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -103,4 +111,6 @@ SUITE(expressions) {
     RUN_TEST(grouping);
     RUN_TEST(nested_grouping);
     RUN_TEST(combination);
+    RUN_TEST(string);
+    RUN_TEST(multiline_string);
 }

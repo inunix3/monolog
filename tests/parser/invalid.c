@@ -29,6 +29,10 @@ TEST_STRING_AGAINST_FILE(invalid_expr_2, "1 + ;", "invalid-expr-2.txt")
 TEST_STRING_AGAINST_FILE(invalid_expr_3, "1 2", "invalid-expr-3.txt")
 TEST_STRING_AGAINST_FILE(invalid_expr_4, "()", "invalid-expr-4.txt")
 
+TEST_STRING_AGAINST_FILE(
+    unterminated_string, "\"Hello, World!", "unterminated-string.txt"
+)
+
 SUITE(invalid) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -44,4 +48,5 @@ SUITE(invalid) {
     RUN_TEST(invalid_expr_2);
     RUN_TEST(invalid_expr_3);
     RUN_TEST(invalid_expr_4);
+    RUN_TEST(unterminated_string);
 }
