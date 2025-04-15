@@ -221,22 +221,46 @@ static AstNode *expression(Parser *self, PrecedenceLevel prec) {
 }
 
 static AstNode *statement(Parser *self) {
-    /* Allow empty statements */
     if (self->curr->kind == TOKEN_OP_SEMICOLON) {
         advance(self);
 
         return NULL;
     }
 
-    AstNode *expr = expression(self, PREC_NONE);
+    AstNode *stmt = NULL;
+
+    switch (self->curr->kind) {
+    case TOKEN_OP_SEMICOLON:
+        advance(self);
+
+        return NULL;
+    case TOKEN_KW_PRINT:
+    case TOKEN_KW_PRINTLN:
+        advance(self);
+        expect(self, TOKEN_OP_LPAREN);
+
+        stmt = astnode_new(
+            self->curr->kind == TOKEN_KW_PRINT ? AST_NODE_PRINT
+                                               : AST_NODE_PRINTLN
+        );
+        stmt->kw_print.expr = expression(self, PREC_NONE);
+
+        expect(self, TOKEN_OP_RPAREN);
+
+        break;
+    default:
+        stmt = expression(self, PREC_NONE);
+
+        break;
+    }
 
     if (self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
-        astnode_destroy(expr);
+        astnode_destroy(stmt);
 
         return astnode_new(AST_NODE_ERROR);
     }
 
-    return expr;
+    return stmt;
 }
 
 static void sync(Parser *self) {

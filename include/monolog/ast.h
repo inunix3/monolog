@@ -13,7 +13,9 @@ typedef enum AstNodeKind {
     AST_NODE_STRING,
     AST_NODE_UNARY,
     AST_NODE_BINARY,
-    AST_NODE_GROUPING
+    AST_NODE_GROUPING,
+    AST_NODE_PRINT,
+    AST_NODE_PRINTLN,
 } AstNodeKind;
 
 typedef struct AstNode {
@@ -39,6 +41,10 @@ typedef struct AstNode {
         struct {
             struct AstNode *expr;
         } grouping;
+
+        struct {
+            struct AstNode *expr;
+        } kw_print;
     };
 } AstNode;
 

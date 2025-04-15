@@ -42,6 +42,12 @@ void astnode_destroy(AstNode *self) {
         self->grouping.expr = NULL;
 
         break;
+    case AST_NODE_PRINT:
+    case AST_NODE_PRINTLN:
+        astnode_destroy(self->kw_print.expr);
+        self->kw_print.expr = NULL;
+
+        break;
     }
 
     free(self);
@@ -81,6 +87,16 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
     case AST_NODE_GROUPING:
         fprintf(out, "grouping:\n");
         print_node(node->grouping.expr, out, indent + 1);
+
+        break;
+    case AST_NODE_PRINT:
+        fprintf(out, "print:\n");
+        print_node(node->kw_print.expr, out, indent + 1);
+
+        break;
+    case AST_NODE_PRINTLN:
+        fprintf(out, "println:\n");
+        print_node(node->kw_print.expr, out, indent + 1);
 
         break;
     }

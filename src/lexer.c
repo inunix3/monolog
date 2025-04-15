@@ -63,7 +63,8 @@ static bool is_operator(char ch) {
 static TokenKind identifier_kind(const char *s, size_t len) {
     static const char *keywords[] = {"if",     "else",  "for",      "while",
                                      "return", "break", "continue", "nil",
-                                     "int",    "void",  "string"};
+                                     "int",    "void",  "string",   "print",
+                                     "println"};
 
     for (int i = 0; i < ARRAY_SIZE(keywords); ++i) {
         if (strlen(keywords[i]) == len && strncmp(s, keywords[i], len) == 0) {
@@ -317,7 +318,7 @@ const char *token_kind_to_str(TokenKind kind) {
         "&&",      "||",       "?",       "#",          "$",
         "if",      "else",     "for",     "while",      "return",
         "break",   "continue", "nil",     "int",        "void",
-        "string"
+        "string",  "print",    "println"
     };
 
     return strs[kind];
@@ -370,7 +371,9 @@ const char *token_kind_to_name(TokenKind kind) {
         "keyword nil",
         "keyword int",
         "keyword void",
-        "keyword string"
+        "keyword string",
+        "keyword print",
+        "keyword println"
     };
 
     return names[kind];
