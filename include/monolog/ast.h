@@ -14,8 +14,12 @@ typedef enum AstNodeKind {
     AST_NODE_UNARY,
     AST_NODE_BINARY,
     AST_NODE_GROUPING,
+    AST_NODE_BLOCK,
     AST_NODE_PRINT,
     AST_NODE_PRINTLN,
+    AST_NODE_IF,
+    AST_NODE_WHILE,
+    AST_NODE_FOR,
 } AstNodeKind;
 
 typedef struct AstNode {
@@ -43,8 +47,30 @@ typedef struct AstNode {
         } grouping;
 
         struct {
+            Vector nodes; /* Vector<AstNode *> */
+        } block;
+
+        struct {
             struct AstNode *expr;
         } kw_print;
+
+        struct {
+            struct AstNode *cond;
+            struct AstNode *body;
+            struct AstNode *else_body;
+        } kw_if;
+
+        struct {
+            struct AstNode *cond;
+            struct AstNode *body;
+        } kw_while;
+
+        struct {
+            struct AstNode *init;
+            struct AstNode *cond;
+            struct AstNode *iter;
+            struct AstNode *body;
+        } kw_for;
     };
 } AstNode;
 

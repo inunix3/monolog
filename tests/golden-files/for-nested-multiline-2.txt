@@ -1,0 +1,16 @@
+for:
+  literal 1
+  literal 2
+  literal 3
+  block (1):
+    for:
+      literal 4
+      literal 5
+      literal 6
+      block (1):
+        for:
+          literal 7
+          literal 8
+          literal 9
+          block (1):
+            literal 115

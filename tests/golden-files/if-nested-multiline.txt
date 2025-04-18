@@ -1,0 +1,10 @@
+if:
+  literal 1
+  block (1):
+    if:
+      literal 2
+      block (1):
+        if:
+          literal 3
+          block (1):
+            literal 115

@@ -1,0 +1,6 @@
+for:
+  literal 1
+  literal 2
+  literal 3
+  println:
+    literal "in for"

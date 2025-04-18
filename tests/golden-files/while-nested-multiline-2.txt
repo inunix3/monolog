@@ -1,0 +1,10 @@
+while:
+  literal 1
+  block (1):
+    while:
+      literal 2
+      block (1):
+        while:
+          literal 3
+          block (1):
+            literal 115

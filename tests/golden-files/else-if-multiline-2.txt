@@ -1,0 +1,14 @@
+if-else:
+  literal 1
+  block (1):
+    literal 115
+  if-else:
+    literal 2
+    block (1):
+      literal 94
+    if-else:
+      literal 3
+      block (1):
+        literal 1
+      block (1):
+        literal 4

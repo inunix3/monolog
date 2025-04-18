@@ -1,0 +1,4 @@
+while:
+  literal 1
+  println:
+    literal "Hello, World!"

@@ -17,6 +17,10 @@ AstNode *astnode_new(AstNodeKind kind) {
 }
 
 void astnode_destroy(AstNode *self) {
+    if (!self) {
+        return;
+    }
+
     switch (self->kind) {
     case AST_NODE_ERROR:
     case AST_NODE_INTEGER:
@@ -48,6 +52,50 @@ void astnode_destroy(AstNode *self) {
         self->kw_print.expr = NULL;
 
         break;
+    case AST_NODE_IF:
+        astnode_destroy(self->kw_if.cond);
+        self->kw_if.cond = NULL;
+
+        astnode_destroy(self->kw_if.body);
+        self->kw_if.body = NULL;
+
+        astnode_destroy(self->kw_if.else_body);
+        self->kw_if.else_body = NULL;
+
+        break;
+    case AST_NODE_WHILE:
+        astnode_destroy(self->kw_while.cond);
+        self->kw_while.cond = NULL;
+
+        astnode_destroy(self->kw_while.body);
+        self->kw_while.body = NULL;
+
+        break;
+    case AST_NODE_FOR:
+        astnode_destroy(self->kw_for.init);
+        self->kw_for.init = NULL;
+
+        astnode_destroy(self->kw_for.cond);
+        self->kw_for.cond = NULL;
+
+        astnode_destroy(self->kw_for.iter);
+        self->kw_for.iter = NULL;
+
+        astnode_destroy(self->kw_for.body);
+        self->kw_for.body = NULL;
+
+        break;
+    case AST_NODE_BLOCK: {
+        AstNode **nodes = self->block.nodes.data;
+
+        for (size_t i = 0; i < self->block.nodes.len; ++i) {
+            astnode_destroy(nodes[i]);
+        }
+
+        vec_deinit(&self->block.nodes);
+
+        break;
+    }
     }
 
     free(self);
@@ -56,6 +104,12 @@ void astnode_destroy(AstNode *self) {
 static void print_node(const AstNode *node, FILE *out, int indent) {
     for (int i = 0; i < indent; ++i) {
         fprintf(out, "  ");
+    }
+
+    if (!node) {
+        fprintf(out, "null\n");
+
+        return;
     }
 
     switch (node->kind) {
@@ -97,6 +151,47 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
     case AST_NODE_PRINTLN:
         fprintf(out, "println:\n");
         print_node(node->kw_print.expr, out, indent + 1);
+
+        break;
+    case AST_NODE_IF:
+        if (node->kw_if.else_body) {
+            fprintf(out, "if-else:\n");
+        } else {
+            fprintf(out, "if:\n");
+        }
+
+        print_node(node->kw_if.cond, out, indent + 1);
+        print_node(node->kw_if.body, out, indent + 1);
+
+        if (node->kw_if.else_body) {
+            print_node(node->kw_if.else_body, out, indent + 1);
+        }
+
+        break;
+    case AST_NODE_BLOCK: {
+        fprintf(out, "block (%zu):\n", node->block.nodes.len);
+
+        AstNode **nodes = node->block.nodes.data;
+
+        for (size_t i = 0; i < node->block.nodes.len; ++i) {
+            print_node(nodes[i], out, indent + 1);
+        }
+
+        break;
+    }
+    case AST_NODE_WHILE:
+        fprintf(out, "while:\n");
+
+        print_node(node->kw_while.cond, out, indent + 1);
+        print_node(node->kw_while.body, out, indent + 1);
+
+        break;
+    case AST_NODE_FOR:
+        fprintf(out, "for:\n");
+        print_node(node->kw_for.init, out, indent + 1);
+        print_node(node->kw_for.cond, out, indent + 1);
+        print_node(node->kw_for.iter, out, indent + 1);
+        print_node(node->kw_for.body, out, indent + 1);
 
         break;
     }

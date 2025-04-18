@@ -1,0 +1,32 @@
+if:
+  binary (/):
+    binary (*):
+      grouping:
+        binary (+):
+          literal 1
+          literal 2
+      grouping:
+        binary (-):
+          literal 3
+          literal 4
+    grouping:
+      binary (*):
+        literal 9
+        unary (-):
+          grouping:
+            binary (%):
+              unary (+):
+                literal 10000
+              grouping:
+                binary (-):
+                  literal 34
+                  unary (-):
+                    literal 99999
+  block (2):
+    binary (+):
+      binary (+):
+        literal 2
+        literal 3
+      literal 4
+    println:
+      literal "Hello, World!"

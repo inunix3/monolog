@@ -1,0 +1,8 @@
+block (3):
+  println:
+    literal "aaabbbbccccddeeefff"
+  binary (+):
+    literal 2
+    literal 2
+  print:
+    literal ""

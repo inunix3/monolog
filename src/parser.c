@@ -13,6 +13,8 @@ static AstNode *unary(Parser *self);
 static AstNode *prefix(Parser *self, PrecedenceLevel prec);
 static AstNode *binary(Parser *self, AstNode *left);
 static AstNode *grouping(Parser *self);
+static AstNode *block(Parser *self);
+static AstNode *statement(Parser *self);
 
 static ParseRule g_rules[] = {
     [TOKEN_UNKNOWN] = {NULL, NULL, PREC_NONE},
@@ -60,10 +62,16 @@ static ParseRule g_rules[] = {
     [TOKEN_KW_NIL] = {NULL, NULL, PREC_NONE},
     [TOKEN_KW_INT] = {NULL, NULL, PREC_NONE},
     [TOKEN_KW_VOID] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_STRING] = {NULL, NULL, PREC_NONE}
+    [TOKEN_KW_STRING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_KW_PRINT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_KW_PRINTLN] = {NULL, NULL, PREC_NONE}
 };
 
 static void error(Parser *self, const char *fmt, ...) {
+    if (self->panic_mode) {
+        return;
+    }
+
     if (self->log_errors) {
         va_list vargs;
 
@@ -105,10 +113,7 @@ static bool match(Parser *self, TokenKind kind) {
 
 static bool expect(Parser *self, TokenKind kind) {
     if (!match(self, kind)) {
-        error(
-            self, "expected %s, got %s", token_kind_to_str(kind),
-            token_kind_to_str(self->curr->kind)
-        );
+        error(self, "expected %s", token_kind_to_str(kind));
 
         return false;
     }
@@ -192,6 +197,32 @@ static AstNode *grouping(Parser *self) {
     return node;
 }
 
+static AstNode *block(Parser *self) {
+    AstNode *block = astnode_new(AST_NODE_BLOCK);
+    vec_init(&block->block.nodes, sizeof(AstNode *));
+
+    for (;;) {
+        if (self->curr->kind == TOKEN_OP_RBRACE) {
+            break;
+        } else if (self->curr->kind == TOKEN_EOF) {
+            error(self, "unterminated block");
+            astnode_destroy(block);
+
+            return astnode_new(AST_NODE_ERROR);
+        }
+
+        AstNode *stmt = statement(self);
+
+        if (stmt) {
+            vec_push(&block->block.nodes, &stmt);
+        }
+    }
+
+    advance(self);
+
+    return block;
+}
+
 static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     ParseRule *prefix_rule = &g_rules[self->curr->kind];
 
@@ -220,32 +251,127 @@ static AstNode *expression(Parser *self, PrecedenceLevel prec) {
     return prefix(self, prec);
 }
 
-static AstNode *statement(Parser *self) {
-    if (self->curr->kind == TOKEN_OP_SEMICOLON) {
-        advance(self);
+static AstNode *if_statement(Parser *self) {
+    advance(self);
 
-        return NULL;
+    expect(self, TOKEN_OP_LPAREN);
+    AstNode *cond = expression(self, PREC_NONE);
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_IF);
+    stmt->kw_if.cond = cond;
+    stmt->kw_if.body = statement(self);
+
+    if (match(self, TOKEN_KW_ELSE)) {
+        stmt->kw_if.else_body = statement(self);
     }
 
-    AstNode *stmt = NULL;
+    return stmt;
+}
 
-    switch (self->curr->kind) {
+static AstNode *for_statement(Parser *self) {
+    advance(self);
+
+    expect(self, TOKEN_OP_LPAREN);
+
+    AstNode *init = NULL;
+    AstNode *cond = NULL;
+    AstNode *iter = NULL;
+
+    if (self->curr->kind != TOKEN_OP_SEMICOLON) {
+        init = expression(self, PREC_NONE);
+    }
+
+    expect(self, TOKEN_OP_SEMICOLON);
+
+    if (self->curr->kind != TOKEN_OP_SEMICOLON) {
+        cond = expression(self, PREC_NONE);
+    }
+
+    expect(self, TOKEN_OP_SEMICOLON);
+
+    if (self->curr->kind != TOKEN_OP_RPAREN) {
+        iter = expression(self, PREC_NONE);
+    }
+
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_FOR);
+    stmt->kw_for.init = init;
+    stmt->kw_for.cond = cond;
+    stmt->kw_for.iter = iter;
+    stmt->kw_for.body = statement(self);
+
+    return stmt;
+}
+
+static AstNode *while_statement(Parser *self) {
+    advance(self);
+
+    expect(self, TOKEN_OP_LPAREN);
+    AstNode *cond = expression(self, PREC_NONE);
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_WHILE);
+    stmt->kw_while.cond = cond;
+    stmt->kw_while.body = statement(self);
+
+    return stmt;
+}
+
+static AstNode *print_statement(Parser *self) {
+    advance(self);
+
+    expect(self, TOKEN_OP_LPAREN);
+    AstNode *expr = expression(self, PREC_NONE);
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_PRINT);
+    stmt->kw_print.expr = expr;
+
+    return stmt;
+}
+
+static AstNode *println_statement(Parser *self) {
+    advance(self);
+
+    expect(self, TOKEN_OP_LPAREN);
+    AstNode *expr = expression(self, PREC_NONE);
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_PRINTLN);
+    stmt->kw_print.expr = expr;
+
+    return stmt;
+}
+
+static AstNode *statement(Parser *self) {
+    AstNode *stmt = NULL;
+    TokenKind stmt_kind = self->curr->kind;
+
+    switch (stmt_kind) {
     case TOKEN_OP_SEMICOLON:
+        /* Allow empty statements */
         advance(self);
 
         return NULL;
+    case TOKEN_KW_IF:
+        return if_statement(self);
+    case TOKEN_KW_WHILE:
+        return while_statement(self);
+    case TOKEN_KW_FOR:
+        return for_statement(self);
     case TOKEN_KW_PRINT:
+        stmt = print_statement(self);
+
+        break;
     case TOKEN_KW_PRINTLN:
+        stmt = println_statement(self);
+
+        break;
+    case TOKEN_OP_LBRACE:
         advance(self);
-        expect(self, TOKEN_OP_LPAREN);
-
-        stmt = astnode_new(
-            self->curr->kind == TOKEN_KW_PRINT ? AST_NODE_PRINT
-                                               : AST_NODE_PRINTLN
-        );
-        stmt->kw_print.expr = expression(self, PREC_NONE);
-
-        expect(self, TOKEN_OP_RPAREN);
+        stmt = block(self);
 
         break;
     default:
@@ -254,7 +380,8 @@ static AstNode *statement(Parser *self) {
         break;
     }
 
-    if (self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
+    if (self->prev && self->prev->kind != TOKEN_OP_RBRACE &&
+        self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
         astnode_destroy(stmt);
 
         return astnode_new(AST_NODE_ERROR);
@@ -268,6 +395,17 @@ static void sync(Parser *self) {
 
     while (self->curr->kind != TOKEN_EOF) {
         if (self->prev && self->prev->kind == TOKEN_OP_SEMICOLON) {
+            break;
+        }
+
+        switch (self->curr->kind) {
+        case TOKEN_KW_IF:
+        case TOKEN_KW_FOR:
+        case TOKEN_KW_WHILE:
+        case TOKEN_KW_PRINT:
+        case TOKEN_KW_PRINTLN:
+            return;
+        default:
             break;
         }
 
@@ -298,7 +436,9 @@ Ast parser_parse(Parser *self) {
             vec_push(&ast.nodes, &node);
         }
 
-        sync(self);
+        if (self->panic_mode) {
+            sync(self);
+        }
     }
 
     return ast;

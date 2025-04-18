@@ -1,0 +1,4 @@
+block (1):
+  binary (+):
+    literal 2
+    literal 2

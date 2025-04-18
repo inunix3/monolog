@@ -23,14 +23,8 @@ target_link_libraries(parser_test PRIVATE greatest)
 
 add_custom_command(
     TARGET parser_test
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E rm -rf
-    "${CMAKE_CURRENT_BINARY_DIR}/golden-files"
-)
-
-add_custom_command(
-    TARGET parser_test
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_CURRENT_SOURCE_DIR}/golden-files" "${CMAKE_CURRENT_BINARY_DIR}/golden-files"
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
+    "$<TARGET_FILE_DIR:parser_test>/golden-files"
 )

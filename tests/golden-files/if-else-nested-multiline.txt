@@ -1,0 +1,9 @@
+if:
+  literal 1
+  block (1):
+    if-else:
+      literal 2
+      block (1):
+        literal 115
+      block (1):
+        literal 94

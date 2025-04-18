@@ -1,0 +1,7 @@
+while:
+  literal 1
+  while:
+    literal 2
+    while:
+      literal 3
+      literal 115

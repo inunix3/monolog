@@ -1,0 +1,23 @@
+for:
+  binary (+):
+    literal 1
+    binary (*):
+      literal 3
+      unary (-):
+        grouping:
+          binary (-):
+            literal 3
+            literal 4
+  binary (-):
+    unary (+):
+      literal 4
+    unary (-):
+      literal 115
+  literal 94
+  block (3):
+    println:
+      literal "in for 1x"
+    println:
+      literal "in for 2x"
+    println:
+      literal "in for 3x"

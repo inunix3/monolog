@@ -40,6 +40,8 @@ static void cmd_parse(char *buf, size_t size) {
     lexer_lex(buf, size, &tokens);
 
     Parser parser = parser_new(tokens.data, tokens.len);
+    parser.log_errors = true;
+
     Ast ast = parser_parse(&parser);
 
     ast_dump(&ast, stdout);

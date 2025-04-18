@@ -1,0 +1,6 @@
+if:
+  literal 1
+  if-else:
+    literal 2
+    literal 115
+    literal 94
