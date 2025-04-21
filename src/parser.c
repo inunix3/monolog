@@ -9,6 +9,7 @@
 
 static AstNode *integer_literal(Parser *self);
 static AstNode *string_literal(Parser *self);
+static AstNode *identifier(Parser *self);
 static AstNode *unary(Parser *self);
 static AstNode *prefix(Parser *self, PrecedenceLevel prec);
 static AstNode *binary(Parser *self, AstNode *left);
@@ -20,7 +21,7 @@ static ParseRule g_rules[] = {
     [TOKEN_UNKNOWN] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
     [TOKEN_INTEGER] = {integer_literal, NULL, PREC_NONE},
-    [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = {identifier, NULL, PREC_NONE},
     [TOKEN_STRING] = {string_literal, NULL, PREC_NONE},
     [TOKEN_OP_COMMA] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_SEMICOLON] = {NULL, NULL, PREC_NONE},
@@ -219,7 +220,16 @@ static AstNode *string_literal(Parser *self) {
     /* TODO: handle escaped characters */
     str_initn(&node->literal.str, self->curr->src + 1, self->curr->len - 2);
 
-    advance(self);
+    advance(self); /* consume the string */
+
+    return node;
+}
+
+static AstNode *identifier(Parser *self) {
+    AstNode *node = astnode_new(AST_NODE_IDENT);
+    str_initn(&node->ident.str, self->curr->src, self->curr->len);
+
+    advance(self); /* consume the integer */
 
     return node;
 }

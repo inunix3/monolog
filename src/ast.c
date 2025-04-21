@@ -29,6 +29,10 @@ void astnode_destroy(AstNode *self) {
         str_deinit(&self->literal.str);
 
         break;
+    case AST_NODE_IDENT:
+        str_deinit(&self->ident.str);
+
+        break;
     case AST_NODE_UNARY:
         astnode_destroy(self->unary.right);
         self->unary.right = NULL;
@@ -123,6 +127,10 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         break;
     case AST_NODE_STRING:
         fprintf(out, "literal \"%s\"\n", node->literal.str.data);
+
+        break;
+    case AST_NODE_IDENT:
+        fprintf(out, "identifier %s\n", node->ident.str.data);
 
         break;
     case AST_NODE_UNARY:

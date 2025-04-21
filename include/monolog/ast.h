@@ -11,6 +11,7 @@ typedef enum AstNodeKind {
     AST_NODE_ERROR,
     AST_NODE_INTEGER,
     AST_NODE_STRING,
+    AST_NODE_IDENT,
     AST_NODE_UNARY,
     AST_NODE_BINARY,
     AST_NODE_GROUPING,
@@ -30,6 +31,10 @@ typedef struct AstNode {
             int64_t i;
             StrBuf str;
         } literal;
+
+        struct {
+            StrBuf str;
+        } ident;
 
         struct {
             TokenKind op;
