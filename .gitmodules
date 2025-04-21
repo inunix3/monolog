@@ -1,3 +1,6 @@
 [submodule "third-party/greatest"]
 	path = third-party/greatest
 	url = https://github.com/silentbicycle/greatest.git
+[submodule "third-party/isocline"]
+	path = third-party/isocline
+	url = https://github.com/daanx/isocline.git

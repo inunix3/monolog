@@ -22,3 +22,4 @@ typedef struct Vector {
 bool vec_init(Vector *self, size_t element_size);
 void vec_deinit(Vector *self);
 void vec_push(Vector *self, void *data);
+void vec_clear(Vector *self);

@@ -55,3 +55,5 @@ target_include_directories(monolog-obj PRIVATE "${PROJECT_SOURCE_DIR}/include")
 target_compile_options(monolog-bin PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(monolog-bin PRIVATE "${PROJECT_SOURCE_DIR}/include")
 set_target_properties(monolog-bin PROPERTIES OUTPUT_NAME "monolog")
+
+target_link_libraries(monolog-bin PRIVATE isocline)

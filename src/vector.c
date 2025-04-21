@@ -37,3 +37,8 @@ void vec_push(Vector *self, void *data) {
 
     memcpy(self->data + self->len++ * self->element_size, data, self->element_size);
 }
+
+void vec_clear(Vector *self) {
+    memset(self->data, 0, self->cap * self->element_size);
+    self->len = 0;
+}
