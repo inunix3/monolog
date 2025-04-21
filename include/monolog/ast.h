@@ -2,6 +2,7 @@
 
 #include "lexer.h"
 #include "strbuf.h"
+#include "type.h"
 #include "vector.h"
 
 #include <stdint.h>
@@ -21,6 +22,7 @@ typedef enum AstNodeKind {
     AST_NODE_IF,
     AST_NODE_WHILE,
     AST_NODE_FOR,
+    AST_NODE_VAR_DECL,
 } AstNodeKind;
 
 typedef struct AstNode {
@@ -76,6 +78,12 @@ typedef struct AstNode {
             struct AstNode *iter;
             struct AstNode *body;
         } kw_for;
+
+        struct {
+            TokenKind type; /* TODO: change to TypeId */
+            struct AstNode *name;
+            struct AstNode *rvalue;
+        } var_decl;
     };
 } AstNode;
 

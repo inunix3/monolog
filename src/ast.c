@@ -100,6 +100,14 @@ void astnode_destroy(AstNode *self) {
 
         break;
     }
+    case AST_NODE_VAR_DECL:
+        astnode_destroy(self->var_decl.name);
+        self->var_decl.name = NULL;
+
+        astnode_destroy(self->var_decl.rvalue);
+        self->var_decl.rvalue = NULL;
+
+        break;
     }
 
     free(self);
@@ -200,6 +208,12 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         print_node(node->kw_for.cond, out, indent + 1);
         print_node(node->kw_for.iter, out, indent + 1);
         print_node(node->kw_for.body, out, indent + 1);
+
+        break;
+    case AST_NODE_VAR_DECL:
+        fprintf(out, "var-decl (%s):\n", token_kind_to_name(node->var_decl.type));
+        print_node(node->var_decl.name, out, indent + 1);
+        print_node(node->var_decl.rvalue, out, indent + 1);
 
         break;
     }

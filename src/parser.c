@@ -16,6 +16,7 @@ static AstNode *binary(Parser *self, AstNode *left);
 static AstNode *grouping(Parser *self);
 static AstNode *block(Parser *self);
 static AstNode *statement(Parser *self);
+static AstNode *declaration(Parser *self);
 
 static ParseRule g_rules[] = {
     [TOKEN_UNKNOWN] = {NULL, NULL, PREC_NONE},
@@ -43,7 +44,7 @@ static ParseRule g_rules[] = {
     [TOKEN_OP_PIPE] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_LESS] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_GREATER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_ASSIGN] = {NULL, NULL, PREC_NONE},
+    [TOKEN_OP_ASSIGN] = {NULL, binary, PREC_ASSIGN},
     [TOKEN_OP_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_NOT_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_LESS_EQUAL] = {NULL, NULL, PREC_NONE},
@@ -229,7 +230,7 @@ static AstNode *identifier(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_IDENT);
     str_initn(&node->ident.str, self->curr->src, self->curr->len);
 
-    advance(self); /* consume the integer */
+    advance(self); /* consume the identifier */
 
     return node;
 }
@@ -248,12 +249,11 @@ static AstNode *unary(Parser *self) {
 }
 
 static AstNode *binary(Parser *self, AstNode *left) {
+    advance(self); /* consume the operator */
+
+    ParseRule *op_rule = &g_rules[self->prev->kind];
+
     AstNode *node = astnode_new(AST_NODE_BINARY);
-
-    ParseRule *op_rule = &g_rules[self->curr->kind];
-
-    advance(self);
-
     node->binary.op = self->prev->kind;
     node->binary.left = left;
     node->binary.right = expression(self, op_rule->prec);
@@ -307,7 +307,7 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     ParseRule *prefix_rule = &g_rules[self->curr->kind];
 
     if (!prefix_rule->prefix) {
-        error(self, "unexpected token %.*s", self->curr->len, self->curr->src);
+        error(self, "unexpected %.*s", self->curr->len, self->curr->src);
         advance(self);
         stop_after(self, TOKEN_OP_SEMICOLON, TOKEN_OP_RPAREN);
 
@@ -496,6 +496,11 @@ static AstNode *statement(Parser *self) {
         stmt = block(self);
 
         break;
+    case TOKEN_KW_INT:
+    case TOKEN_KW_STRING:
+        stmt = declaration(self);
+
+        break;
     default:
         stmt = expression(self, PREC_NONE);
 
@@ -511,6 +516,43 @@ static AstNode *statement(Parser *self) {
     }
 
     return stmt;
+}
+
+static AstNode *declaration(Parser *self) {
+    TokenKind type = self->curr->kind;
+
+    advance(self);
+
+    if (self->curr->kind != TOKEN_IDENTIFIER) {
+        error(self, "expected identifier");
+        sync(self);
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    AstNode *name = identifier(self);
+    AstNode *rvalue = NULL;
+
+    if (self->curr->kind == TOKEN_OP_ASSIGN) {
+        advance(self);
+
+        rvalue = expression(self, PREC_NONE);
+    } else if (self->curr->kind != TOKEN_OP_SEMICOLON) {
+        error(self, "expected assignment or semicolon");
+        rvalue = astnode_new(AST_NODE_ERROR);
+    }
+
+    if (rvalue && rvalue->kind == AST_NODE_ERROR) {
+        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+    }
+
+    AstNode *node = astnode_new(AST_NODE_VAR_DECL);
+
+    node->var_decl.type = type;
+    node->var_decl.name = name;
+    node->var_decl.rvalue = rvalue;
+
+    return node;
 }
 
 Parser parser_new(Token *toks, size_t tok_count) {
