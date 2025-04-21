@@ -1,4 +1,2 @@
-binary (*):
-  unary (+):
-    error
-  literal 3
+unary (+):
+  error

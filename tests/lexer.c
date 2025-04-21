@@ -79,15 +79,22 @@ TEST whitespaces_return_eof_token(void) {
     PASS();
 }
 
-TEST invalid_token(void) {
-    const char *input = "`~!@^adsfd#$!3432";
+TEST invalid_tokens(void) {
+    const char *input = "`~~@^,ads*`fd#$~3432";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    ASSERT_EQ(2, g_tokens.len);
+    ASSERT_EQ(9, g_tokens.len);
 
     Token expected[] = {
-        {TOKEN_UNKNOWN, input, strlen(input), false, 1, 1},
-        {TOKEN_EOF, input + strlen(input), 0, true, 1, 18}
+        {TOKEN_UNKNOWN, input, 5, false, 1, 1},
+        {TOKEN_OP_COMMA, input + 5, 1, true, 1, 6},
+        {TOKEN_IDENTIFIER, input + 6, 3, true, 1, 7},
+        {TOKEN_OP_MUL, input + 9, 1, true, 1, 10},
+        {TOKEN_UNKNOWN, input + 10, 3, false, 1, 11},
+        {TOKEN_OP_HASHTAG, input + 13, 1, true, 1, 14},
+        {TOKEN_OP_DOLAR, input + 14, 1, true, 1, 15},
+        {TOKEN_UNKNOWN, input + 15, 5, false, 1, 16},
+        {TOKEN_EOF, input + strlen(input), 0, true, 1, 21}
     };
 
     for (int i = 0; i < g_tokens.len; ++i) {
@@ -625,7 +632,7 @@ SUITE(lexer) {
 
     RUN_TEST(empty_input_returns_eof_token);
     RUN_TEST(whitespaces_return_eof_token);
-    RUN_TEST(invalid_token);
+    RUN_TEST(invalid_tokens);
     RUN_TEST(integer);
     RUN_TEST(integers_separated_with_whitespace);
     RUN_TEST(identifier);

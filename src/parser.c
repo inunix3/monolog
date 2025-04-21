@@ -67,25 +67,35 @@ static ParseRule g_rules[] = {
     [TOKEN_KW_PRINTLN] = {NULL, NULL, PREC_NONE}
 };
 
-static void error(Parser *self, const char *fmt, ...) {
+static void verror(Parser *self, const char *fmt, va_list vargs) {
     if (self->panic_mode) {
         return;
     }
 
     if (self->log_errors) {
-        va_list vargs;
-
         fputs("error: ", stderr);
-
-        va_start(vargs, fmt);
         vfprintf(stderr, fmt, vargs);
-        va_end(vargs);
-
         fputc('\n', stderr);
     }
 
     self->error_state = true;
     self->panic_mode = true;
+}
+
+static void error(Parser *self, const char *fmt, ...) {
+    va_list vargs;
+
+    va_start(vargs, fmt);
+    verror(self, fmt, vargs);
+    va_end(vargs);
+}
+
+static void error_at(Parser *self, int line, int col, const char *fmt, ...) {
+    va_list vargs;
+
+    va_start(vargs, fmt);
+    verror(self, fmt, vargs);
+    va_end(vargs);
 }
 
 static void advance(Parser *self) {
@@ -113,7 +123,10 @@ static bool match(Parser *self, TokenKind kind) {
 
 static bool expect(Parser *self, TokenKind kind) {
     if (!match(self, kind)) {
-        error(self, "expected %s", token_kind_to_str(kind));
+        error(
+            self, "expected %s but got %s", token_kind_to_str(kind),
+            token_kind_to_str(self->curr->kind)
+        );
 
         return false;
     }
@@ -121,9 +134,66 @@ static bool expect(Parser *self, TokenKind kind) {
     return true;
 }
 
+static void
+skip_to(Parser *self, TokenKind safe_point1, TokenKind safe_point2) {
+    while (self->curr->kind != TOKEN_EOF) {
+        if (self->curr->kind == safe_point1 ||
+            self->curr->kind == safe_point2) {
+            break;
+        }
+
+        advance(self);
+    }
+}
+
+static void
+stop_after(Parser *self, TokenKind safe_point1, TokenKind safe_point2) {
+    while (self->curr->kind != TOKEN_EOF) {
+        if (self->prev && (self->prev->kind == safe_point1 ||
+                           self->prev->kind == safe_point2)) {
+            break;
+        }
+
+        advance(self);
+    }
+}
+
+static void sync(Parser *self) {
+    self->panic_mode = false;
+
+    while (self->curr->kind != TOKEN_EOF) {
+        if (self->prev && (self->prev->kind == TOKEN_OP_SEMICOLON ||
+                           self->prev->kind == TOKEN_OP_RBRACE)) {
+            break;
+        }
+
+        switch (self->curr->kind) {
+        case TOKEN_KW_IF:
+        case TOKEN_KW_FOR:
+        case TOKEN_KW_WHILE:
+        case TOKEN_KW_PRINT:
+        case TOKEN_KW_PRINTLN:
+        case TOKEN_OP_LBRACE:
+            return;
+        default:
+            break;
+        }
+
+        advance(self);
+    }
+}
+
 static AstNode *expression(Parser *self, PrecedenceLevel prec);
 
 static AstNode *integer_literal(Parser *self) {
+    if (!self->curr->valid) {
+        error(self, "invalid integer literal");
+        advance(self);
+        sync(self);
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
     char buf[65] = {0};
     strncpy(buf, self->curr->src, self->curr->len);
 
@@ -132,7 +202,7 @@ static AstNode *integer_literal(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_INTEGER);
     node->literal.i = value;
 
-    advance(self);
+    advance(self); /* consume the integer */
 
     return node;
 }
@@ -159,7 +229,7 @@ static AstNode *unary(Parser *self) {
 
     ParseRule *op_rule = &g_rules[self->curr->kind];
 
-    advance(self);
+    advance(self); /* consume the operator */
 
     node->unary.op = self->prev->kind;
     node->unary.right = expression(self, PREC_PREFIX);
@@ -184,7 +254,7 @@ static AstNode *binary(Parser *self, AstNode *left) {
 static AstNode *grouping(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_GROUPING);
 
-    advance(self);
+    advance(self); /* consume left paren */
 
     node->grouping.expr = expression(self, PREC_NONE);
 
@@ -218,7 +288,7 @@ static AstNode *block(Parser *self) {
         }
     }
 
-    advance(self);
+    advance(self); /* consume right brace */
 
     return block;
 }
@@ -227,7 +297,9 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     ParseRule *prefix_rule = &g_rules[self->curr->kind];
 
     if (!prefix_rule->prefix) {
-        error(self, "unexpected token %s", token_kind_to_str(self->curr->kind));
+        error(self, "unexpected token %.*s", self->curr->len, self->curr->src);
+        advance(self);
+        stop_after(self, TOKEN_OP_SEMICOLON, TOKEN_OP_RPAREN);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -251,16 +323,40 @@ static AstNode *expression(Parser *self, PrecedenceLevel prec) {
     return prefix(self, prec);
 }
 
-static AstNode *if_statement(Parser *self) {
-    advance(self);
+static AstNode *wrapped_expression(Parser *self) {
+    AstNode *expr = NULL;
 
-    expect(self, TOKEN_OP_LPAREN);
-    AstNode *cond = expression(self, PREC_NONE);
-    expect(self, TOKEN_OP_RPAREN);
+    if (!expect(self, TOKEN_OP_LPAREN)) {
+        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    expr = expression(self, PREC_NONE);
+
+    if (expr->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
+        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+
+        astnode_destroy(expr);
+        expr = astnode_new(AST_NODE_ERROR);
+    }
+
+    return expr;
+}
+
+static AstNode *if_statement(Parser *self) {
+    advance(self); /* consume if keyword */
 
     AstNode *stmt = astnode_new(AST_NODE_IF);
+    AstNode *cond = wrapped_expression(self);
+    AstNode *body = statement(self);
+
+    if (body && body->kind == AST_NODE_ERROR) {
+        sync(self);
+    }
+
     stmt->kw_if.cond = cond;
-    stmt->kw_if.body = statement(self);
+    stmt->kw_if.body = body;
 
     if (match(self, TOKEN_KW_ELSE)) {
         stmt->kw_if.else_body = statement(self);
@@ -269,58 +365,74 @@ static AstNode *if_statement(Parser *self) {
     return stmt;
 }
 
+static AstNode *while_statement(Parser *self) {
+    advance(self); /* consume while keyword */
+
+    AstNode *stmt = astnode_new(AST_NODE_WHILE);
+    AstNode *cond = wrapped_expression(self);
+    AstNode *body = statement(self);
+
+    if (body && body->kind == AST_NODE_ERROR) {
+        sync(self);
+    }
+
+    stmt->kw_while.cond = cond;
+    stmt->kw_while.body = body;
+
+    return stmt;
+}
+
+static AstNode *
+optional_expression_with_delimiter(Parser *self, TokenKind delim) {
+    AstNode *expr = NULL;
+
+    if (self->curr->kind != delim) {
+        expr = expression(self, PREC_NONE);
+    } else {
+        advance(self);
+    }
+
+    if (expr && expr->kind != AST_NODE_ERROR && !expect(self, delim)) {
+        stop_after(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+
+        astnode_destroy(expr);
+        expr = astnode_new(AST_NODE_ERROR);
+    }
+
+    return expr;
+}
+
 static AstNode *for_statement(Parser *self) {
     advance(self);
 
-    expect(self, TOKEN_OP_LPAREN);
+    if (!expect(self, TOKEN_OP_LPAREN)) {
+        sync(self);
 
-    AstNode *init = NULL;
-    AstNode *cond = NULL;
-    AstNode *iter = NULL;
-
-    if (self->curr->kind != TOKEN_OP_SEMICOLON) {
-        init = expression(self, PREC_NONE);
+        return astnode_new(AST_NODE_ERROR);
     }
 
-    expect(self, TOKEN_OP_SEMICOLON);
+    AstNode *init =
+        optional_expression_with_delimiter(self, TOKEN_OP_SEMICOLON);
+    AstNode *cond =
+        optional_expression_with_delimiter(self, TOKEN_OP_SEMICOLON);
+    AstNode *iter = optional_expression_with_delimiter(self, TOKEN_OP_RPAREN);
+    AstNode *body = statement(self);
 
-    if (self->curr->kind != TOKEN_OP_SEMICOLON) {
-        cond = expression(self, PREC_NONE);
+    if (body && body->kind == AST_NODE_ERROR) {
+        sync(self);
     }
-
-    expect(self, TOKEN_OP_SEMICOLON);
-
-    if (self->curr->kind != TOKEN_OP_RPAREN) {
-        iter = expression(self, PREC_NONE);
-    }
-
-    expect(self, TOKEN_OP_RPAREN);
 
     AstNode *stmt = astnode_new(AST_NODE_FOR);
     stmt->kw_for.init = init;
     stmt->kw_for.cond = cond;
     stmt->kw_for.iter = iter;
-    stmt->kw_for.body = statement(self);
-
-    return stmt;
-}
-
-static AstNode *while_statement(Parser *self) {
-    advance(self);
-
-    expect(self, TOKEN_OP_LPAREN);
-    AstNode *cond = expression(self, PREC_NONE);
-    expect(self, TOKEN_OP_RPAREN);
-
-    AstNode *stmt = astnode_new(AST_NODE_WHILE);
-    stmt->kw_while.cond = cond;
-    stmt->kw_while.body = statement(self);
+    stmt->kw_for.body = body;
 
     return stmt;
 }
 
 static AstNode *print_statement(Parser *self) {
-    advance(self);
+    advance(self); /* consume print keyword */
 
     expect(self, TOKEN_OP_LPAREN);
     AstNode *expr = expression(self, PREC_NONE);
@@ -333,7 +445,7 @@ static AstNode *print_statement(Parser *self) {
 }
 
 static AstNode *println_statement(Parser *self) {
-    advance(self);
+    advance(self); /* consume println keyword */
 
     expect(self, TOKEN_OP_LPAREN);
     AstNode *expr = expression(self, PREC_NONE);
@@ -380,37 +492,15 @@ static AstNode *statement(Parser *self) {
         break;
     }
 
-    if (self->prev && self->prev->kind != TOKEN_OP_RBRACE &&
-        self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
+    if (stmt->kind != AST_NODE_ERROR && self->prev &&
+        self->prev->kind != TOKEN_OP_RBRACE && self->curr->kind != TOKEN_EOF &&
+        !expect(self, TOKEN_OP_SEMICOLON)) {
         astnode_destroy(stmt);
 
         return astnode_new(AST_NODE_ERROR);
     }
 
     return stmt;
-}
-
-static void sync(Parser *self) {
-    self->panic_mode = false;
-
-    while (self->curr->kind != TOKEN_EOF) {
-        if (self->prev && self->prev->kind == TOKEN_OP_SEMICOLON) {
-            break;
-        }
-
-        switch (self->curr->kind) {
-        case TOKEN_KW_IF:
-        case TOKEN_KW_FOR:
-        case TOKEN_KW_WHILE:
-        case TOKEN_KW_PRINT:
-        case TOKEN_KW_PRINTLN:
-            return;
-        default:
-            break;
-        }
-
-        advance(self);
-    }
 }
 
 Parser parser_new(Token *toks, size_t tok_count) {

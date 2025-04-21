@@ -165,7 +165,7 @@ static Token lex_invalid(Lexer *self) {
     Token tok = new_token(self, TOKEN_UNKNOWN);
     tok.valid = false;
 
-    while (!at_eof(self) && !is_ws(self->ch)) {
+    while (!at_eof(self) && !is_ws(self->ch) && !is_operator(self->ch)) {
         advance(self);
         ++tok.len;
     }

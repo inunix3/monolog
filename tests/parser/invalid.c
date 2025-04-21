@@ -33,6 +33,30 @@ TEST_STRING_AGAINST_FILE(
     unterminated_string, "\"Hello, World!", "unterminated-string.txt"
 )
 
+TEST_STRING_AGAINST_FILE(
+    if_missing_cond,
+    "if 42;",
+    "if-missing-cond.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    extra_else,
+    "else 115;",
+    "extra-else.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    while_missing_cond,
+    "while 115;",
+    "while-missing-cond.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    for_missing_all,
+    "for 94;",
+    "for-missing-all.txt"
+)
+
 SUITE(invalid) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -49,4 +73,5 @@ SUITE(invalid) {
     RUN_TEST(invalid_expr_3);
     RUN_TEST(invalid_expr_4);
     RUN_TEST(unterminated_string);
+    RUN_TEST(if_missing_cond);
 }

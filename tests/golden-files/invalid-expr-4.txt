@@ -1,2 +1,1 @@
-grouping:
-  error
+error
