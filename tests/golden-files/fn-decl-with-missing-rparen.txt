@@ -1,0 +1,6 @@
+fn-decl (int):
+  identifier foo
+  param-decl (int):
+    identifier a
+  error
+  error

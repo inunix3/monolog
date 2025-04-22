@@ -101,11 +101,32 @@ void astnode_destroy(AstNode *self) {
         break;
     }
     case AST_NODE_VAR_DECL:
+        self->var_decl.type = TYPE_UNKNOWN;
+
         astnode_destroy(self->var_decl.name);
         self->var_decl.name = NULL;
 
         astnode_destroy(self->var_decl.rvalue);
         self->var_decl.rvalue = NULL;
+
+        break;
+    case AST_NODE_PARAM_DECL:
+        self->param_decl.type = TYPE_UNKNOWN;
+
+        astnode_destroy(self->param_decl.name);
+        self->param_decl.name = NULL;
+
+        break;
+    case AST_NODE_FN_DECL:
+        self->fn_decl.type = TYPE_UNKNOWN;
+
+        astnode_destroy(self->fn_decl.name);
+        self->fn_decl.name = NULL;
+
+        vec_deinit(&self->fn_decl.params);
+
+        astnode_destroy(self->fn_decl.body);
+        self->fn_decl.body = NULL;
 
         break;
     }
@@ -211,11 +232,30 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
 
         break;
     case AST_NODE_VAR_DECL:
-        fprintf(out, "var-decl (%s):\n", token_kind_to_name(node->var_decl.type));
+        fprintf(out, "var-decl (%s):\n", type_to_string(node->var_decl.type));
         print_node(node->var_decl.name, out, indent + 1);
         print_node(node->var_decl.rvalue, out, indent + 1);
 
         break;
+    case AST_NODE_PARAM_DECL:
+        fprintf(
+            out, "param-decl (%s):\n", type_to_string(node->param_decl.type)
+        );
+        print_node(node->param_decl.name, out, indent + 1);
+
+        break;
+    case AST_NODE_FN_DECL: {
+        fprintf(out, "fn-decl (%s):\n", type_to_string(node->fn_decl.type));
+        print_node(node->fn_decl.name, out, indent + 1);
+
+        AstNode **nodes = node->fn_decl.params.data;
+
+        for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
+            print_node(nodes[i], out, indent + 1);
+        }
+
+        print_node(node->fn_decl.body, out, indent + 1);
+    }
     }
 }
 

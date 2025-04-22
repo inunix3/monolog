@@ -87,6 +87,18 @@ TEST_STRING_AGAINST_FILE(
     multiline_string, "\"Hello\n        World!\"", "multiline-string.txt"
 )
 
+TEST_STRING_AGAINST_FILE(
+    assignment_1,
+    "5 = 6",
+    "assignment-1.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    assignment_2,
+    "foo = 5 + 6",
+    "assignment-2.txt"
+)
+
 SUITE(expressions) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -113,4 +125,6 @@ SUITE(expressions) {
     RUN_TEST(combination);
     RUN_TEST(string);
     RUN_TEST(multiline_string);
+    RUN_TEST(assignment_1);
+    RUN_TEST(assignment_2);
 }

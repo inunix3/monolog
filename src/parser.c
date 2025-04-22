@@ -498,6 +498,7 @@ static AstNode *statement(Parser *self) {
         break;
     case TOKEN_KW_INT:
     case TOKEN_KW_STRING:
+    case TOKEN_KW_VOID:
         stmt = declaration(self);
 
         break;
@@ -507,9 +508,9 @@ static AstNode *statement(Parser *self) {
         break;
     }
 
-    if (stmt->kind != AST_NODE_ERROR && self->prev &&
-        self->prev->kind != TOKEN_OP_RBRACE && self->curr->kind != TOKEN_EOF &&
-        !expect(self, TOKEN_OP_SEMICOLON)) {
+    if (stmt->kind != AST_NODE_ERROR && stmt->kind != AST_NODE_FN_DECL &&
+        self->prev && self->prev->kind != TOKEN_OP_RBRACE &&
+        self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
         astnode_destroy(stmt);
 
         return astnode_new(AST_NODE_ERROR);
@@ -518,8 +519,76 @@ static AstNode *statement(Parser *self) {
     return stmt;
 }
 
+static TypeId token_to_type(TokenKind kind) {
+    switch (kind) {
+    case TOKEN_KW_INT:
+        return TYPE_INT;
+    case TOKEN_KW_STRING:
+        return TYPE_STRING;
+    case TOKEN_KW_VOID:
+        return TYPE_VOID;
+    default:
+        return TYPE_UNKNOWN;
+    }
+}
+
+static AstNode *param_decl(Parser *self) {
+    TypeId type = token_to_type(self->curr->kind);
+    advance(self);
+
+    if (self->curr->kind != TOKEN_IDENTIFIER) {
+        error(self, "expected identifier");
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    AstNode *name = identifier(self);
+
+    AstNode *node = astnode_new(AST_NODE_PARAM_DECL);
+    node->param_decl.type = type;
+    node->param_decl.name = name;
+
+    return node;
+}
+
+static bool fn_decl_param_list(Parser *self, Vector *params) {
+    if (self->curr->kind == TOKEN_OP_RPAREN) {
+        advance(self);
+
+        return true;
+    }
+
+    AstNode *param = NULL;
+
+    do {
+        param = param_decl(self);
+        vec_push(params, &param);
+
+        /* TODO: check if param is erroneous */
+
+        if (self->curr->kind != TOKEN_OP_RPAREN) {
+            expect(self, TOKEN_OP_COMMA);
+        }
+    } while (self->curr->kind != TOKEN_EOF &&
+             self->curr->kind != TOKEN_OP_COMMA &&
+             self->curr->kind != TOKEN_OP_RPAREN);
+
+    if (param->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
+        vec_pop(params);
+
+        astnode_destroy(param);
+        param = astnode_new(AST_NODE_ERROR);
+
+        vec_push(params, param);
+
+        return false;
+    }
+
+    return true;
+}
+
 static AstNode *declaration(Parser *self) {
-    TokenKind type = self->curr->kind;
+    TypeId type = token_to_type(self->curr->kind);
 
     advance(self);
 
@@ -537,8 +606,32 @@ static AstNode *declaration(Parser *self) {
         advance(self);
 
         rvalue = expression(self, PREC_NONE);
+    } else if (self->curr->kind == TOKEN_OP_LPAREN) {
+        advance(self);
+
+        Vector params;
+        vec_init(&params, sizeof(AstNode *));
+
+        if (!fn_decl_param_list(self, &params)) {
+            skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+        }
+
+        AstNode *body = statement(self);
+
+        if (body && body->kind == AST_NODE_ERROR) {
+            sync(self);
+        }
+
+        AstNode *node = astnode_new(AST_NODE_FN_DECL);
+
+        node->fn_decl.type = type;
+        node->fn_decl.name = name;
+        node->fn_decl.params = params;
+        node->fn_decl.body = body;
+
+        return node;
     } else if (self->curr->kind != TOKEN_OP_SEMICOLON) {
-        error(self, "expected assignment or semicolon");
+        error(self, "expected assignment, function parameter list or semicolon");
         rvalue = astnode_new(AST_NODE_ERROR);
     }
 

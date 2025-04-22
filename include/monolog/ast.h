@@ -23,6 +23,8 @@ typedef enum AstNodeKind {
     AST_NODE_WHILE,
     AST_NODE_FOR,
     AST_NODE_VAR_DECL,
+    AST_NODE_PARAM_DECL,
+    AST_NODE_FN_DECL
 } AstNodeKind;
 
 typedef struct AstNode {
@@ -80,10 +82,22 @@ typedef struct AstNode {
         } kw_for;
 
         struct {
-            TokenKind type; /* TODO: change to TypeId */
+            TypeId type;
             struct AstNode *name;
             struct AstNode *rvalue;
         } var_decl;
+
+        struct {
+            TypeId type;
+            struct AstNode *name;
+        } param_decl;
+
+        struct {
+            TypeId type;
+            struct AstNode *name;
+            Vector params; /* Vector<AstNode *> */
+            struct AstNode *body;
+        } fn_decl;
     };
 } AstNode;
 

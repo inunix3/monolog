@@ -1,0 +1,5 @@
+fn-decl (string):
+  identifier bar
+  param-decl (int):
+    identifier x
+  null

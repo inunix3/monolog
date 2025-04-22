@@ -1,0 +1,5 @@
+fn-decl (int):
+  identifier foo
+  block (1):
+    println:
+      literal "In foo()"

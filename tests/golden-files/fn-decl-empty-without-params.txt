@@ -1,0 +1,3 @@
+fn-decl (int):
+  identifier foo
+  null

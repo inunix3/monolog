@@ -1,0 +1,30 @@
+var-decl (int):
+  identifier myvar_115
+  binary (/):
+    binary (*):
+      grouping:
+        binary (+):
+          literal 1
+          literal 2
+      grouping:
+        binary (-):
+          literal 3
+          literal 4
+    grouping:
+      binary (*):
+        literal 9
+        unary (-):
+          grouping:
+            binary (%):
+              unary (+):
+                literal 10000
+              grouping:
+                binary (-):
+                  literal 34
+                  unary (-):
+                    literal 99999
+var-decl (string):
+  identifier concat
+  binary (+):
+    literal "Hello "
+    literal "World"

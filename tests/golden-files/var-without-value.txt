@@ -1,0 +1,9 @@
+var-decl (int):
+  identifier a
+  null
+var-decl (string):
+  identifier b
+  null
+var-decl (void):
+  identifier c
+  null

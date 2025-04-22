@@ -250,6 +250,66 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(infinite_for, "for (;;);", "infinite-for.txt")
 
+TEST_STRING_AGAINST_FILE(
+    var_without_value, "int a; string b; void c;", "var-without-value.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    var_with_value,
+    "int SomeIntVariable = 115; string string_var = \"Hello, World!\";",
+    "var-with-value.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    var_with_expression,
+    "int myvar_115 = (1 + 2) * (3 - 4) / (9 * -(+10000 % (34 - -99999))); "
+    "string concat = \"Hello \" + \"World\";",
+    "var-with-expression.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_empty_without_params,
+    "int foo();",
+    "fn-decl-empty-without-params.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_empty_with_1_param,
+    "string bar(int x);",
+    "fn-decl-empty-with-1-param.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_empty_with_params,
+    "void __someFunc115(int x, string bar, int y);",
+    "fn-decl-empty-with-params.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_empty_body,
+    "void foo() {}",
+    "fn-decl-empty-body.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_1_statement,
+    "int foo() {\n"
+    "  println(\"In foo()\");\n"
+    "}",
+    "fn-decl-with-1-statement.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_more_statements,
+    "void foo() {\n"
+    "  println(\"In foo()\");\n"
+    "  int x = 5;\n"
+    "  x = 6 + 8;\n"
+    "  println(\"After x = 14\");\n"
+    "}",
+    "fn-decl-with-more-statements.txt"
+)
+
 SUITE(statements) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -293,4 +353,13 @@ SUITE(statements) {
     RUN_TEST(for_without_iter);
     RUN_TEST(for_without_init_and_iter);
     RUN_TEST(infinite_for);
+    RUN_TEST(var_without_value);
+    RUN_TEST(var_with_value);
+    RUN_TEST(var_with_expression);
+    RUN_TEST(fn_decl_empty_without_params);
+    RUN_TEST(fn_decl_empty_with_1_param);
+    RUN_TEST(fn_decl_empty_with_params);
+    RUN_TEST(fn_decl_empty_body);
+    RUN_TEST(fn_decl_with_1_statement);
+    RUN_TEST(fn_decl_with_more_statements);
 }

@@ -1,0 +1,15 @@
+fn-decl (void):
+  identifier foo
+  block (4):
+    println:
+      literal "In foo()"
+    var-decl (int):
+      identifier x
+      literal 5
+    binary (=):
+      identifier x
+      binary (+):
+        literal 6
+        literal 8
+    println:
+      literal "After x = 14"

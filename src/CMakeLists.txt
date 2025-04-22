@@ -12,6 +12,7 @@ set(HEADERS
     "${INCLUDE_DIR}/parser.h"
     "${INCLUDE_DIR}/utils.h"
     "${INCLUDE_DIR}/strbuf.h"
+    "${INCLUDE_DIR}/type.h"
     "${INCLUDE_DIR}/vector.h"
 )
 
@@ -21,6 +22,7 @@ set(SOURCES
     "${SRC_DIR}/parser.c"
     "${SRC_DIR}/utils.c"
     "${SRC_DIR}/strbuf.c"
+    "${SRC_DIR}/type.c"
     "${SRC_DIR}/vector.c"
 )
 

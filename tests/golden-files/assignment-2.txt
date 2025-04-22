@@ -1,0 +1,5 @@
+binary (=):
+  identifier foo
+  binary (+):
+    literal 5
+    literal 6

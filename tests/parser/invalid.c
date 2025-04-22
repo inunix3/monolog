@@ -57,6 +57,36 @@ TEST_STRING_AGAINST_FILE(
     "for-missing-all.txt"
 )
 
+TEST_STRING_AGAINST_FILE(
+    var_with_bad_name,
+    "int 324 = 5; string @~`; int +; int int; string int;",
+    "var-with-bad-name.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    var_with_bad_assign,
+    "int a + 5; string var var2 \"Stringy var\"; int x string 115; int y while 94;",
+    "var-with-bad-assign.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_bad_name,
+    "int 1231();",
+    "fn-decl-with-bad-name.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_bad_name_block,
+    "int 1231() { 115; }",
+    "fn-decl-with-bad-name-block.txt"
+)
+
+// TEST_STRING_AGAINST_FILE(
+//     fn_decl_with_missing_rparen,
+//     "int foo(int a, int b;",
+//     "fn-decl-with-missing-rparen.txt"
+// )
+
 SUITE(invalid) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -74,4 +104,9 @@ SUITE(invalid) {
     RUN_TEST(invalid_expr_4);
     RUN_TEST(unterminated_string);
     RUN_TEST(if_missing_cond);
+    RUN_TEST(var_with_bad_name);
+    RUN_TEST(var_with_bad_assign);
+    RUN_TEST(fn_decl_with_bad_name);
+    RUN_TEST(fn_decl_with_bad_name_block);
+    // RUN_TEST(fn_decl_with_missing_rparen);
 }

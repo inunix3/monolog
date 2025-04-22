@@ -1,0 +1,6 @@
+var-decl (int):
+  identifier SomeIntVariable
+  literal 115
+var-decl (string):
+  identifier string_var
+  literal "Hello, World!"

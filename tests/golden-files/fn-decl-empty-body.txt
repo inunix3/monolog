@@ -1,0 +1,3 @@
+fn-decl (void):
+  identifier foo
+  block (0):
