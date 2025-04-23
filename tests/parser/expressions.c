@@ -5,6 +5,8 @@
  * (see LICENSE.md in the root of project).
  */
 
+#define SUITE_NAME expressions
+
 #include "shared.h"
 
 TEST empty_string_returns_empty_ast(void) {
@@ -99,7 +101,7 @@ TEST_STRING_AGAINST_FILE(
     "assignment-2.txt"
 )
 
-SUITE(expressions) {
+SUITE(SUITE_NAME) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 

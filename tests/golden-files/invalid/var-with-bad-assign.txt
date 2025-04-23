@@ -1,0 +1,17 @@
+var-decl:
+  int-type
+  identifier a
+  error
+var-decl:
+  string-type
+  identifier var
+  error
+error
+var-decl:
+  string-type
+  identifier str_var
+  null
+error
+while:
+  error
+  null

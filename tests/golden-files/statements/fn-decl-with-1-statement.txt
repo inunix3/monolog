@@ -1,4 +1,5 @@
-fn-decl (int):
+fn-decl:
+  int-type
   identifier foo
   block (1):
     println:

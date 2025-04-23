@@ -50,6 +50,20 @@ void astnode_destroy(AstNode *self) {
         self->grouping.expr = NULL;
 
         break;
+    case AST_NODE_FN_CALL: {
+        astnode_destroy(self->fn_call.name);
+        self->fn_call.name = NULL;
+
+        AstNode **values = self->fn_call.values.data;
+
+        for (size_t i = 0; i < self->fn_call.values.len; ++i) {
+            astnode_destroy(values[i]);
+        }
+
+        vec_deinit(&self->fn_call.values);
+
+        break;
+    }
     case AST_NODE_PRINT:
     case AST_NODE_PRINTLN:
         astnode_destroy(self->kw_print.expr);
@@ -100,8 +114,26 @@ void astnode_destroy(AstNode *self) {
 
         break;
     }
+    case AST_NODE_INT_TYPE:
+    case AST_NODE_STRING_TYPE:
+    case AST_NODE_VOID_TYPE:
+        break;
+    case AST_NODE_OPTION_TYPE:
+        astnode_destroy(self->opt_type.type);
+        self->opt_type.type = NULL;
+
+        break;
+    case AST_NODE_ARRAY_TYPE:
+        astnode_destroy(self->array_type.type);
+        self->array_type.type = NULL;
+
+        astnode_destroy(self->array_type.size);
+        self->array_type.size = NULL;
+
+        break;
     case AST_NODE_VAR_DECL:
-        self->var_decl.type = TYPE_UNKNOWN;
+        astnode_destroy(self->var_decl.type);
+        self->var_decl.type = NULL;
 
         astnode_destroy(self->var_decl.name);
         self->var_decl.name = NULL;
@@ -111,14 +143,16 @@ void astnode_destroy(AstNode *self) {
 
         break;
     case AST_NODE_PARAM_DECL:
-        self->param_decl.type = TYPE_UNKNOWN;
+        astnode_destroy(self->param_decl.type);
+        self->param_decl.type = NULL;
 
         astnode_destroy(self->param_decl.name);
         self->param_decl.name = NULL;
 
         break;
     case AST_NODE_FN_DECL:
-        self->fn_decl.type = TYPE_UNKNOWN;
+        astnode_destroy(self->fn_decl.type);
+        self->fn_decl.type = NULL;
 
         astnode_destroy(self->fn_decl.name);
         self->fn_decl.name = NULL;
@@ -180,6 +214,18 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         print_node(node->grouping.expr, out, indent + 1);
 
         break;
+    case AST_NODE_FN_CALL: {
+        fprintf(out, "fn-call:\n");
+        print_node(node->fn_call.name, out, indent + 1);
+
+        AstNode **values = node->fn_call.values.data;
+
+        for (size_t i = 0; i < node->fn_call.values.len; ++i) {
+            print_node(values[i], out, indent + 1);
+        }
+
+        break;
+    }
     case AST_NODE_PRINT:
         fprintf(out, "print:\n");
         print_node(node->kw_print.expr, out, indent + 1);
@@ -231,21 +277,45 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         print_node(node->kw_for.body, out, indent + 1);
 
         break;
+    case AST_NODE_INT_TYPE:
+        fprintf(out, "int-type\n");
+
+        break;
+    case AST_NODE_STRING_TYPE:
+        fprintf(out, "string-type\n");
+
+        break;
+    case AST_NODE_VOID_TYPE:
+        fprintf(out, "void-type\n");
+
+        break;
+    case AST_NODE_OPTION_TYPE:
+        fprintf(out, "option-type:\n");
+        print_node(node->opt_type.type, out, indent + 1);
+
+        break;
+    case AST_NODE_ARRAY_TYPE:
+        fprintf(out, "array-type:\n");
+        print_node(node->array_type.type, out, indent + 1);
+        print_node(node->array_type.size, out, indent + 1);
+
+        break;
     case AST_NODE_VAR_DECL:
-        fprintf(out, "var-decl (%s):\n", type_to_string(node->var_decl.type));
+        fprintf(out, "var-decl:\n");
+        print_node(node->var_decl.type, out, indent + 1);
         print_node(node->var_decl.name, out, indent + 1);
         print_node(node->var_decl.rvalue, out, indent + 1);
 
         break;
     case AST_NODE_PARAM_DECL:
-        fprintf(
-            out, "param-decl (%s):\n", type_to_string(node->param_decl.type)
-        );
+        fprintf(out, "param-decl:\n");
+        print_node(node->param_decl.type, out, indent + 1);
         print_node(node->param_decl.name, out, indent + 1);
 
         break;
     case AST_NODE_FN_DECL: {
-        fprintf(out, "fn-decl (%s):\n", type_to_string(node->fn_decl.type));
+        fprintf(out, "fn-decl:\n");
+        print_node(node->fn_decl.type, out, indent + 1);
         print_node(node->fn_decl.name, out, indent + 1);
 
         AstNode **nodes = node->fn_decl.params.data;

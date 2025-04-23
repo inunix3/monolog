@@ -2,7 +2,6 @@
 
 #include "lexer.h"
 #include "strbuf.h"
-#include "type.h"
 #include "vector.h"
 
 #include <stdint.h>
@@ -16,12 +15,18 @@ typedef enum AstNodeKind {
     AST_NODE_UNARY,
     AST_NODE_BINARY,
     AST_NODE_GROUPING,
+    AST_NODE_FN_CALL,
     AST_NODE_BLOCK,
     AST_NODE_PRINT,
     AST_NODE_PRINTLN,
     AST_NODE_IF,
     AST_NODE_WHILE,
     AST_NODE_FOR,
+    AST_NODE_INT_TYPE,
+    AST_NODE_STRING_TYPE,
+    AST_NODE_VOID_TYPE,
+    AST_NODE_OPTION_TYPE,
+    AST_NODE_ARRAY_TYPE,
     AST_NODE_VAR_DECL,
     AST_NODE_PARAM_DECL,
     AST_NODE_FN_DECL
@@ -56,6 +61,11 @@ typedef struct AstNode {
         } grouping;
 
         struct {
+            struct AstNode *name;
+            Vector values; /* Vector<AstNode *> */
+        } fn_call;
+
+        struct {
             Vector nodes; /* Vector<AstNode *> */
         } block;
 
@@ -82,18 +92,27 @@ typedef struct AstNode {
         } kw_for;
 
         struct {
-            TypeId type;
+            struct AstNode *type;
+        } opt_type;
+
+        struct {
+            struct AstNode *type;
+            struct AstNode *size;
+        } array_type;
+
+        struct {
+            struct AstNode *type;
             struct AstNode *name;
             struct AstNode *rvalue;
         } var_decl;
 
         struct {
-            TypeId type;
+            struct AstNode *type;
             struct AstNode *name;
         } param_decl;
 
         struct {
-            TypeId type;
+            struct AstNode *type;
             struct AstNode *name;
             Vector params; /* Vector<AstNode *> */
             struct AstNode *body;

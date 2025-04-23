@@ -1,0 +1,13 @@
+fn-decl:
+  void-type
+  identifier __someFunc115
+  param-decl:
+    int-type
+    identifier x
+  param-decl:
+    string-type
+    identifier bar
+  param-decl:
+    int-type
+    identifier y
+  null

@@ -1,3 +1,4 @@
-fn-decl (void):
+fn-decl:
+  void-type
   identifier foo
   block (0):

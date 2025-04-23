@@ -1,4 +1,5 @@
-var-decl (int):
+var-decl:
+  int-type
   identifier myvar_115
   binary (/):
     binary (*):
@@ -23,7 +24,8 @@ var-decl (int):
                   literal 34
                   unary (-):
                     literal 99999
-var-decl (string):
+var-decl:
+  string-type
   identifier concat
   binary (+):
     literal "Hello "

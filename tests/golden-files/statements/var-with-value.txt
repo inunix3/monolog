@@ -1,6 +1,8 @@
-var-decl (int):
+var-decl:
+  int-type
   identifier SomeIntVariable
   literal 115
-var-decl (string):
+var-decl:
+  string-type
   identifier string_var
   literal "Hello, World!"

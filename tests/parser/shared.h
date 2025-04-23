@@ -78,9 +78,27 @@ assert_string_against_file(const char *input, const char *golden_file_name) {
     PASS();
 }
 
+// #define XSTRINGIFY(a) #a
+// #define STRINGIFY(a) XSTRINGIFY(a)
+
+#define XSTRINGIFY(a) #a
+#define STRINGIFY(a) XSTRINGIFY(a)
+
+#ifdef SUITE_NAME
+#define TEST_STRING_AGAINST_FILE(_name, _input, _filename)                     \
+    TEST _name(void) {                                                         \
+        return assert_string_against_file(                                     \
+            _input, GOLDEN_FILES_PATH "/" STRINGIFY(SUITE_NAME) "/" _filename  \
+        );                                                                     \
+    }
+#else
 #define TEST_STRING_AGAINST_FILE(_name, _input, _filename)                     \
     TEST _name(void) {                                                         \
         return assert_string_against_file(                                     \
             _input, GOLDEN_FILES_PATH "/" _filename                            \
         );                                                                     \
     }
+#endif
+
+// #undef STRINGIFY
+// #undef XSTRINGIFY

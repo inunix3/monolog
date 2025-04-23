@@ -1,9 +1,0 @@
-fn-decl (void):
-  identifier __someFunc115
-  param-decl (int):
-    identifier x
-  param-decl (string):
-    identifier bar
-  param-decl (int):
-    identifier y
-  null

@@ -5,6 +5,7 @@
  * (see LICENSE.md in the root of project).
  */
 
+#define SUITE_NAME invalid
 #define PARSER_SHOULD_FAIL 1
 
 #include "shared.h"
@@ -65,7 +66,7 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(
     var_with_bad_assign,
-    "int a + 5; string var var2 \"Stringy var\"; int x string 115; int y while 94;",
+    "int a + 5; string var var2 \"Stringy var\"; int x string str_var; int y while 94;",
     "var-with-bad-assign.txt"
 )
 
@@ -87,7 +88,7 @@ TEST_STRING_AGAINST_FILE(
 //     "fn-decl-with-missing-rparen.txt"
 // )
 
-SUITE(invalid) {
+SUITE(SUITE_NAME) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 

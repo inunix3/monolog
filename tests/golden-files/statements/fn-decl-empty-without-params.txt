@@ -1,3 +1,4 @@
-fn-decl (int):
+fn-decl:
+  int-type
   identifier foo
   null

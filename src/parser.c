@@ -14,6 +14,7 @@ static AstNode *unary(Parser *self);
 static AstNode *prefix(Parser *self, PrecedenceLevel prec);
 static AstNode *binary(Parser *self, AstNode *left);
 static AstNode *grouping(Parser *self);
+static AstNode *fn_call(Parser *self, AstNode *left);
 static AstNode *block(Parser *self);
 static AstNode *statement(Parser *self);
 static AstNode *declaration(Parser *self);
@@ -26,7 +27,7 @@ static ParseRule g_rules[] = {
     [TOKEN_STRING] = {string_literal, NULL, PREC_NONE},
     [TOKEN_OP_COMMA] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_SEMICOLON] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LPAREN] = {grouping, NULL, PREC_SUFFIX},
+    [TOKEN_OP_LPAREN] = {grouping, fn_call, PREC_SUFFIX},
     [TOKEN_OP_RPAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_LBRACKET] = {NULL, NULL, PREC_NONE},
     [TOKEN_OP_RBRACKET] = {NULL, NULL, PREC_NONE},
@@ -113,8 +114,21 @@ static void advance(Parser *self) {
 
 static Token *peek(const Parser *self) { return &self->toks[self->tok_idx]; }
 
-static bool match(Parser *self, TokenKind kind) {
-    if (self->curr->kind != kind) {
+static inline bool match(const Parser *self, TokenKind kind) {
+    return self->curr->kind == kind;
+}
+
+static inline bool match_prev(const Parser *self, TokenKind kind) {
+    return self->prev && self->prev->kind == kind;
+}
+
+static bool expect(Parser *self, TokenKind kind) {
+    if (!match(self, kind)) {
+        error(
+            self, "expected %s, but got %s", token_kind_to_str(kind),
+            token_kind_to_str(self->curr->kind)
+        );
+
         return false;
     }
 
@@ -123,62 +137,75 @@ static bool match(Parser *self, TokenKind kind) {
     return true;
 }
 
-static bool expect(Parser *self, TokenKind kind) {
-    if (!match(self, kind)) {
-        error(
-            self, "expected %s but got %s", token_kind_to_str(kind),
-            token_kind_to_str(self->curr->kind)
-        );
+typedef enum SyncMode {
+    SYNC_TO_SEMICOLON_KEEP = (1u << 0),
+    SYNC_TO_SEMICOLON_SKIP = (1u << 1),
+    SYNC_TO_RBRACE_SKIP = (1u << 2),
+    SYNC_TO_RPAREN_KEEP = (1u << 4),
+    SYNC_TO_RPAREN_SKIP = (1u << 5),
+    SYNC_TO_RBRACKET_KEEP = (1u << 6),
+    SYNC_TO_RBRACKET_SKIP = (1u << 7),
+    SYNC_TO_COMMA_KEEP = (1u << 8),
+    SYNC_TO_BLOCK = (1u << 9),
+    SYNC_TO_STATEMENT = (1u << 10),
+} SyncMode;
 
-        return false;
-    }
-
-    return true;
-}
-
-static void
-skip_to(Parser *self, TokenKind safe_point1, TokenKind safe_point2) {
-    while (self->curr->kind != TOKEN_EOF) {
-        if (self->curr->kind == safe_point1 ||
-            self->curr->kind == safe_point2) {
-            break;
-        }
-
-        advance(self);
-    }
-}
-
-static void
-stop_after(Parser *self, TokenKind safe_point1, TokenKind safe_point2) {
-    while (self->curr->kind != TOKEN_EOF) {
-        if (self->prev && (self->prev->kind == safe_point1 ||
-                           self->prev->kind == safe_point2)) {
-            break;
-        }
-
-        advance(self);
-    }
-}
-
-static void sync(Parser *self) {
+static void sync(Parser *self, unsigned modes) {
     self->panic_mode = false;
 
-    while (self->curr->kind != TOKEN_EOF) {
-        if (self->prev && (self->prev->kind == TOKEN_OP_SEMICOLON ||
-                           self->prev->kind == TOKEN_OP_RBRACE)) {
+    while (!match(self, TOKEN_EOF)) {
+        if (modes & SYNC_TO_SEMICOLON_KEEP && match(self, TOKEN_OP_SEMICOLON)) {
             break;
         }
 
-        switch (self->curr->kind) {
-        case TOKEN_KW_IF:
-        case TOKEN_KW_FOR:
-        case TOKEN_KW_WHILE:
-        case TOKEN_KW_PRINT:
-        case TOKEN_KW_PRINTLN:
-        case TOKEN_OP_LBRACE:
-            return;
-        default:
+        if (modes & SYNC_TO_SEMICOLON_SKIP &&
+            match_prev(self, TOKEN_OP_SEMICOLON)) {
             break;
+        }
+
+        if (modes & SYNC_TO_RBRACE_SKIP && match_prev(self, TOKEN_OP_RBRACE)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_RPAREN_KEEP && match(self, TOKEN_OP_RPAREN)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_RPAREN_SKIP && match_prev(self, TOKEN_OP_RPAREN)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_RBRACKET_KEEP && match(self, TOKEN_OP_RBRACKET)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_RBRACKET_SKIP && match(self, TOKEN_OP_RBRACKET)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_COMMA_KEEP && match(self, TOKEN_OP_COMMA)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_BLOCK && match(self, TOKEN_OP_LBRACE)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_STATEMENT) {
+            switch (self->curr->kind) {
+            case TOKEN_KW_IF:
+            case TOKEN_KW_FOR:
+            case TOKEN_KW_WHILE:
+            case TOKEN_KW_PRINT:
+            case TOKEN_KW_PRINTLN:
+            case TOKEN_KW_INT:
+            case TOKEN_KW_STRING:
+            case TOKEN_KW_VOID:
+            case TOKEN_OP_LBRACKET:
+                return;
+            default:
+                break;
+            }
         }
 
         advance(self);
@@ -191,7 +218,6 @@ static AstNode *integer_literal(Parser *self) {
     if (!self->curr->valid) {
         error(self, "invalid integer literal");
         advance(self);
-        sync(self);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -277,14 +303,80 @@ static AstNode *grouping(Parser *self) {
     return node;
 }
 
+static bool value_list(Parser *self, Vector *values) {
+    if (match(self, TOKEN_OP_RPAREN)) {
+        advance(self);
+
+        return true;
+    }
+
+    AstNode *expr = NULL;
+
+    while (!match(self, TOKEN_EOF) && !match(self, TOKEN_OP_RPAREN)) {
+        expr = expression(self, PREC_NONE);
+        vec_push(values, &expr);
+
+        if (expr->kind == AST_NODE_ERROR) {
+            sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
+
+            if (match(self, TOKEN_OP_COMMA)) {
+                advance(self);
+            }
+        } else {
+            if (match(self, TOKEN_OP_COMMA)) {
+                advance(self);
+            } else if (!match(self, TOKEN_OP_RPAREN)) {
+                error(self, "expected , or )");
+
+                sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
+
+                if (match(self, TOKEN_OP_COMMA)) {
+                    advance(self);
+                }
+            }
+        }
+    }
+
+    if (expr->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
+        return false;
+    }
+
+    return true;
+}
+
+static AstNode *fn_call(Parser *self, AstNode *left) {
+    advance(self); /* consume the ( */
+
+    AstNode *name = left;
+
+    if (name->kind != AST_NODE_IDENT) {
+        error(self, "expected identifier");
+
+        name = astnode_new(AST_NODE_ERROR);
+    }
+
+    Vector values;
+    vec_init(&values, sizeof(AstNode *));
+
+    if (!value_list(self, &values)) {
+        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+    }
+
+    AstNode *node = astnode_new(AST_NODE_FN_CALL);
+    node->fn_call.name = name;
+    node->fn_call.values = values;
+
+    return node;
+}
+
 static AstNode *block(Parser *self) {
     AstNode *block = astnode_new(AST_NODE_BLOCK);
     vec_init(&block->block.nodes, sizeof(AstNode *));
 
     for (;;) {
-        if (self->curr->kind == TOKEN_OP_RBRACE) {
+        if (match(self, TOKEN_OP_RBRACE)) {
             break;
-        } else if (self->curr->kind == TOKEN_EOF) {
+        } else if (match(self, TOKEN_EOF)) {
             error(self, "unterminated block");
             astnode_destroy(block);
 
@@ -309,7 +401,7 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     if (!prefix_rule->prefix) {
         error(self, "unexpected %.*s", self->curr->len, self->curr->src);
         advance(self);
-        stop_after(self, TOKEN_OP_SEMICOLON, TOKEN_OP_RPAREN);
+        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RPAREN_KEEP);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -337,16 +429,12 @@ static AstNode *wrapped_expression(Parser *self) {
     AstNode *expr = NULL;
 
     if (!expect(self, TOKEN_OP_LPAREN)) {
-        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
-
         return astnode_new(AST_NODE_ERROR);
     }
 
     expr = expression(self, PREC_NONE);
 
     if (expr->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
-        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
-
         astnode_destroy(expr);
         expr = astnode_new(AST_NODE_ERROR);
     }
@@ -359,16 +447,26 @@ static AstNode *if_statement(Parser *self) {
 
     AstNode *stmt = astnode_new(AST_NODE_IF);
     AstNode *cond = wrapped_expression(self);
+
+    if (cond->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+    }
+
     AstNode *body = statement(self);
 
     if (body && body->kind == AST_NODE_ERROR) {
-        sync(self);
+        sync(
+            self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_RBRACE_SKIP | SYNC_TO_BLOCK |
+                      SYNC_TO_STATEMENT
+        );
     }
 
     stmt->kw_if.cond = cond;
     stmt->kw_if.body = body;
 
     if (match(self, TOKEN_KW_ELSE)) {
+        advance(self);
+
         stmt->kw_if.else_body = statement(self);
     }
 
@@ -380,10 +478,18 @@ static AstNode *while_statement(Parser *self) {
 
     AstNode *stmt = astnode_new(AST_NODE_WHILE);
     AstNode *cond = wrapped_expression(self);
+
+    if (cond->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+    }
+
     AstNode *body = statement(self);
 
     if (body && body->kind == AST_NODE_ERROR) {
-        sync(self);
+        sync(
+            self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_RBRACE_SKIP | SYNC_TO_BLOCK |
+                      SYNC_TO_STATEMENT
+        );
     }
 
     stmt->kw_while.cond = cond;
@@ -396,14 +502,14 @@ static AstNode *
 optional_expression_with_delimiter(Parser *self, TokenKind delim) {
     AstNode *expr = NULL;
 
-    if (self->curr->kind != delim) {
+    if (!match(self, delim)) {
         expr = expression(self, PREC_NONE);
     } else {
         advance(self);
     }
 
     if (expr && expr->kind != AST_NODE_ERROR && !expect(self, delim)) {
-        stop_after(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
 
         astnode_destroy(expr);
         expr = astnode_new(AST_NODE_ERROR);
@@ -416,7 +522,7 @@ static AstNode *for_statement(Parser *self) {
     advance(self);
 
     if (!expect(self, TOKEN_OP_LPAREN)) {
-        sync(self);
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -429,7 +535,7 @@ static AstNode *for_statement(Parser *self) {
     AstNode *body = statement(self);
 
     if (body && body->kind == AST_NODE_ERROR) {
-        sync(self);
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
     }
 
     AstNode *stmt = astnode_new(AST_NODE_FOR);
@@ -459,6 +565,11 @@ static AstNode *println_statement(Parser *self) {
 
     expect(self, TOKEN_OP_LPAREN);
     AstNode *expr = expression(self, PREC_NONE);
+
+    if (expr->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_RPAREN_KEEP);
+    }
+
     expect(self, TOKEN_OP_RPAREN);
 
     AstNode *stmt = astnode_new(AST_NODE_PRINTLN);
@@ -499,6 +610,7 @@ static AstNode *statement(Parser *self) {
     case TOKEN_KW_INT:
     case TOKEN_KW_STRING:
     case TOKEN_KW_VOID:
+    case TOKEN_OP_LBRACKET:
         stmt = declaration(self);
 
         break;
@@ -509,8 +621,8 @@ static AstNode *statement(Parser *self) {
     }
 
     if (stmt->kind != AST_NODE_ERROR && stmt->kind != AST_NODE_FN_DECL &&
-        self->prev && self->prev->kind != TOKEN_OP_RBRACE &&
-        self->curr->kind != TOKEN_EOF && !expect(self, TOKEN_OP_SEMICOLON)) {
+        !match_prev(self, TOKEN_OP_RBRACE) && !match(self, TOKEN_EOF) &&
+        !expect(self, TOKEN_OP_SEMICOLON)) {
         astnode_destroy(stmt);
 
         return astnode_new(AST_NODE_ERROR);
@@ -519,24 +631,88 @@ static AstNode *statement(Parser *self) {
     return stmt;
 }
 
-static TypeId token_to_type(TokenKind kind) {
-    switch (kind) {
+static AstNode *parse_type(Parser *self) {
+    AstNodeKind type_id;
+
+    switch (self->curr->kind) {
     case TOKEN_KW_INT:
-        return TYPE_INT;
+        type_id = AST_NODE_INT_TYPE;
+
+        break;
     case TOKEN_KW_STRING:
-        return TYPE_STRING;
+        type_id = AST_NODE_STRING_TYPE;
+
+        break;
     case TOKEN_KW_VOID:
-        return TYPE_VOID;
+        type_id = AST_NODE_VOID_TYPE;
+
+        break;
+    case TOKEN_OP_LBRACKET:
+        type_id = AST_NODE_ARRAY_TYPE;
+
+        break;
     default:
-        return TYPE_UNKNOWN;
+        type_id = AST_NODE_ERROR;
+
+        break;
     }
+
+    advance(self);
+
+    AstNode *node = NULL;
+
+    if (type_id == AST_NODE_ERROR) {
+        error(self, "expected type specifier: int, string, void or array");
+
+        return astnode_new(AST_NODE_ERROR);
+    } else if (type_id == AST_NODE_ARRAY_TYPE) {
+        AstNode *type = parse_type(self);
+
+        if (type->kind == AST_NODE_ERROR) {
+            sync(self, SYNC_TO_COMMA_KEEP);
+        }
+
+        AstNode *size = NULL;
+
+        if (!expect(self, TOKEN_OP_COMMA)) {
+            size = astnode_new(AST_NODE_ERROR);
+
+            sync(self, SYNC_TO_RBRACKET_KEEP);
+        } else {
+            size = expression(self, PREC_NONE);
+        }
+
+        if (!expect(self, TOKEN_OP_RBRACKET)) {
+            sync(self, SYNC_TO_RBRACKET_SKIP);
+        }
+
+        node = astnode_new(type_id);
+        node->array_type.type = type;
+        node->array_type.size = size;
+    } else {
+        node = astnode_new(type_id);
+    }
+
+    while (match(self, TOKEN_OP_QUEST)) {
+        advance(self);
+
+        AstNode *parent_node = astnode_new(AST_NODE_OPTION_TYPE);
+        parent_node->opt_type.type = node;
+
+        node = parent_node;
+    }
+
+    return node;
 }
 
 static AstNode *param_decl(Parser *self) {
-    TypeId type = token_to_type(self->curr->kind);
-    advance(self);
+    AstNode *type = parse_type(self);
 
-    if (self->curr->kind != TOKEN_IDENTIFIER) {
+    if (type->kind == AST_NODE_ERROR) {
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    if (!match(self, TOKEN_IDENTIFIER)) {
         error(self, "expected identifier");
 
         return astnode_new(AST_NODE_ERROR);
@@ -552,7 +728,7 @@ static AstNode *param_decl(Parser *self) {
 }
 
 static bool fn_decl_param_list(Parser *self, Vector *params) {
-    if (self->curr->kind == TOKEN_OP_RPAREN) {
+    if (match(self, TOKEN_OP_RPAREN)) {
         advance(self);
 
         return true;
@@ -560,27 +736,32 @@ static bool fn_decl_param_list(Parser *self, Vector *params) {
 
     AstNode *param = NULL;
 
-    do {
+    while (!match(self, TOKEN_EOF) && !match(self, TOKEN_OP_RPAREN)) {
         param = param_decl(self);
         vec_push(params, &param);
 
-        /* TODO: check if param is erroneous */
+        if (param->kind == AST_NODE_ERROR) {
+            sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
 
-        if (self->curr->kind != TOKEN_OP_RPAREN) {
-            expect(self, TOKEN_OP_COMMA);
+            if (match(self, TOKEN_OP_COMMA)) {
+                advance(self);
+            }
+        } else {
+            if (match(self, TOKEN_OP_COMMA)) {
+                advance(self);
+            } else if (!match(self, TOKEN_OP_RPAREN)) {
+                error(self, "expected , or )");
+
+                sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
+
+                if (match(self, TOKEN_OP_COMMA)) {
+                    advance(self);
+                }
+            }
         }
-    } while (self->curr->kind != TOKEN_EOF &&
-             self->curr->kind != TOKEN_OP_COMMA &&
-             self->curr->kind != TOKEN_OP_RPAREN);
+    }
 
     if (param->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
-        vec_pop(params);
-
-        astnode_destroy(param);
-        param = astnode_new(AST_NODE_ERROR);
-
-        vec_push(params, param);
-
         return false;
     }
 
@@ -588,13 +769,11 @@ static bool fn_decl_param_list(Parser *self, Vector *params) {
 }
 
 static AstNode *declaration(Parser *self) {
-    TypeId type = token_to_type(self->curr->kind);
+    AstNode *type = parse_type(self);
 
-    advance(self);
-
-    if (self->curr->kind != TOKEN_IDENTIFIER) {
+    if (!match(self, TOKEN_IDENTIFIER)) {
         error(self, "expected identifier");
-        sync(self);
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -602,24 +781,28 @@ static AstNode *declaration(Parser *self) {
     AstNode *name = identifier(self);
     AstNode *rvalue = NULL;
 
-    if (self->curr->kind == TOKEN_OP_ASSIGN) {
+    if (match(self, TOKEN_OP_ASSIGN)) {
         advance(self);
 
         rvalue = expression(self, PREC_NONE);
-    } else if (self->curr->kind == TOKEN_OP_LPAREN) {
+    } else if (match(self, TOKEN_OP_LPAREN)) {
         advance(self);
 
         Vector params;
         vec_init(&params, sizeof(AstNode *));
 
         if (!fn_decl_param_list(self, &params)) {
-            skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+            sync(
+                self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+            );
         }
 
         AstNode *body = statement(self);
 
         if (body && body->kind == AST_NODE_ERROR) {
-            sync(self);
+            sync(
+                self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+            );
         }
 
         AstNode *node = astnode_new(AST_NODE_FN_DECL);
@@ -630,13 +813,14 @@ static AstNode *declaration(Parser *self) {
         node->fn_decl.body = body;
 
         return node;
-    } else if (self->curr->kind != TOKEN_OP_SEMICOLON) {
-        error(self, "expected assignment, function parameter list or semicolon");
+    } else if (!match(self, TOKEN_OP_SEMICOLON)) {
+        error(self, "expected assignment, function parameter list or ;");
+
         rvalue = astnode_new(AST_NODE_ERROR);
     }
 
     if (rvalue && rvalue->kind == AST_NODE_ERROR) {
-        skip_to(self, TOKEN_OP_SEMICOLON, TOKEN_OP_LBRACE);
+        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
     }
 
     AstNode *node = astnode_new(AST_NODE_VAR_DECL);
@@ -672,7 +856,9 @@ Ast parser_parse(Parser *self) {
         }
 
         if (self->panic_mode) {
-            sync(self);
+            sync(
+                self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+            );
         }
     }
 

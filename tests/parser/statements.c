@@ -5,6 +5,8 @@
  * (see LICENSE.md in the root of project).
  */
 
+#define SUITE_NAME statements
+
 #include "shared.h"
 
 TEST_STRING_AGAINST_FILE(semicolon_misuse_1, ";", "empty.txt")
@@ -310,7 +312,7 @@ TEST_STRING_AGAINST_FILE(
     "fn-decl-with-more-statements.txt"
 )
 
-SUITE(statements) {
+SUITE(SUITE_NAME) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
 

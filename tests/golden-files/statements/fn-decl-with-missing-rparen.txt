@@ -1,6 +1,8 @@
-fn-decl (int):
+fn-decl:
+  int-type
   identifier foo
-  param-decl (int):
+  param-decl:
+    int-type
     identifier a
   error
   error

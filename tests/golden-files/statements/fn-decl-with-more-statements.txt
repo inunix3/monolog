@@ -1,9 +1,11 @@
-fn-decl (void):
+fn-decl:
+  void-type
   identifier foo
   block (4):
     println:
       literal "In foo()"
-    var-decl (int):
+    var-decl:
+      int-type
       identifier x
       literal 5
     binary (=):

@@ -1,0 +1,12 @@
+var-decl:
+  int-type
+  identifier a
+  null
+var-decl:
+  string-type
+  identifier b
+  null
+var-decl:
+  void-type
+  identifier c
+  null
