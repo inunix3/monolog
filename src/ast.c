@@ -45,6 +45,11 @@ void astnode_destroy(AstNode *self) {
         self->binary.right = NULL;
 
         break;
+    case AST_NODE_SUFFIX:
+        astnode_destroy(self->suffix.left);
+        self->suffix.left = NULL;
+
+        break;
     case AST_NODE_GROUPING:
         astnode_destroy(self->grouping.expr);
         self->grouping.expr = NULL;
@@ -64,6 +69,14 @@ void astnode_destroy(AstNode *self) {
 
         break;
     }
+    case AST_NODE_ARRAY_SUBSCRIPT:
+        astnode_destroy(self->array_sub.expr);
+        self->array_sub.expr = NULL;
+
+        astnode_destroy(self->array_sub.left);
+        self->array_sub.left = NULL;
+
+        break;
     case AST_NODE_PRINT:
     case AST_NODE_PRINTLN:
         astnode_destroy(self->kw_print.expr);
@@ -163,6 +176,15 @@ void astnode_destroy(AstNode *self) {
         self->fn_decl.body = NULL;
 
         break;
+    case AST_NODE_RETURN:
+        astnode_destroy(self->kw_return.expr);
+        self->kw_return.expr = NULL;
+
+        break;
+    case AST_NODE_BREAK:
+    case AST_NODE_CONTINUE:
+    case AST_NODE_NIL:
+        break;
     }
 
     free(self);
@@ -197,9 +219,7 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
 
         break;
     case AST_NODE_UNARY:
-        fprintf(
-            out, "unary (%c):\n", node->unary.op == TOKEN_OP_PLUS ? '+' : '-'
-        );
+        fprintf(out, "unary (%s):\n", token_kind_to_str(node->unary.op));
         print_node(node->unary.right, out, indent + 1);
 
         break;
@@ -207,6 +227,11 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         fprintf(out, "binary (%s):\n", token_kind_to_str(node->binary.op));
         print_node(node->binary.left, out, indent + 1);
         print_node(node->binary.right, out, indent + 1);
+
+        break;
+    case AST_NODE_SUFFIX:
+        fprintf(out, "suffix (%s):\n", token_kind_to_str(node->suffix.op));
+        print_node(node->suffix.left, out, indent + 1);
 
         break;
     case AST_NODE_GROUPING:
@@ -226,6 +251,12 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
 
         break;
     }
+    case AST_NODE_ARRAY_SUBSCRIPT:
+        fprintf(out, "array-subscript:\n");
+        print_node(node->array_sub.expr, out, indent + 1);
+        print_node(node->array_sub.left, out, indent + 1);
+
+        break;
     case AST_NODE_PRINT:
         fprintf(out, "print:\n");
         print_node(node->kw_print.expr, out, indent + 1);
@@ -325,7 +356,26 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         }
 
         print_node(node->fn_decl.body, out, indent + 1);
+
+        break;
     }
+    case AST_NODE_RETURN:
+        fprintf(out, "return:\n");
+        print_node(node->kw_return.expr, out, indent + 1);
+
+        break;
+    case AST_NODE_BREAK:
+        fprintf(out, "break\n");
+
+        break;
+    case AST_NODE_CONTINUE:
+        fprintf(out, "continue\n");
+
+        break;
+    case AST_NODE_NIL:
+        fprintf(out, "nil\n");
+
+        break;
     }
 }
 

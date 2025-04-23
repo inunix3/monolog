@@ -12,7 +12,8 @@ typedef enum PrecedenceLevel {
     PREC_ASSIGN,     /* = */
     PREC_OR,         /* || */
     PREC_AND,        /* && */
-    PREC_COMPARISON, /* == != */
+    PREC_EQUALITY,   /* == != */
+    PREC_INEQUALITY, /* < <= > >= */
     PREC_ADD,        /* + - */
     PREC_MUL,        /* * / % */
     PREC_PREFIX,     /* + - ! # $ * ++ -- */
@@ -39,9 +40,11 @@ Ast parser_parse(Parser *self);
 
 typedef AstNode *(*PrefixParseFn)(Parser *self);
 typedef AstNode *(*InfixParseFn)(Parser *self, AstNode *left);
+typedef AstNode *(*SuffixParseFn)(Parser *self, AstNode *left);
 
 typedef struct ParseRule {
     PrefixParseFn prefix;
     InfixParseFn infix;
+    SuffixParseFn suffix;
     PrecedenceLevel prec;
 } ParseRule;

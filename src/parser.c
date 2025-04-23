@@ -10,65 +10,70 @@
 static AstNode *integer_literal(Parser *self);
 static AstNode *string_literal(Parser *self);
 static AstNode *identifier(Parser *self);
+static AstNode *nil_constant(Parser *self);
 static AstNode *unary(Parser *self);
 static AstNode *prefix(Parser *self, PrecedenceLevel prec);
 static AstNode *binary(Parser *self, AstNode *left);
+static AstNode *suffix(Parser *self, AstNode *left);
 static AstNode *grouping(Parser *self);
 static AstNode *fn_call(Parser *self, AstNode *left);
+static AstNode *array_sub(Parser *self, AstNode *left);
 static AstNode *block(Parser *self);
 static AstNode *statement(Parser *self);
 static AstNode *declaration(Parser *self);
 
+/* clang-format off */
 static ParseRule g_rules[] = {
-    [TOKEN_UNKNOWN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
-    [TOKEN_INTEGER] = {integer_literal, NULL, PREC_NONE},
-    [TOKEN_IDENTIFIER] = {identifier, NULL, PREC_NONE},
-    [TOKEN_STRING] = {string_literal, NULL, PREC_NONE},
-    [TOKEN_OP_COMMA] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_SEMICOLON] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LPAREN] = {grouping, fn_call, PREC_SUFFIX},
-    [TOKEN_OP_RPAREN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LBRACKET] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_RBRACKET] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LBRACE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_RBRACE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_PLUS] = {unary, binary, PREC_ADD},
-    [TOKEN_OP_MINUS] = {unary, binary, PREC_ADD},
-    [TOKEN_OP_MUL] = {NULL, binary, PREC_MUL},
-    [TOKEN_OP_DIV] = {NULL, binary, PREC_MUL},
-    [TOKEN_OP_MOD] = {NULL, binary, PREC_MUL},
-    [TOKEN_OP_INC] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_DEC] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_EXCL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_AMP] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_PIPE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LESS] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_GREATER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_ASSIGN] = {NULL, binary, PREC_ASSIGN},
-    [TOKEN_OP_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_NOT_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_LESS_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_GREATER_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_AND] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_OR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_QUEST] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_HASHTAG] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OP_DOLAR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_IF] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_ELSE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_FOR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_WHILE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_RETURN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_BREAK] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_CONTINUE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_NIL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_INT] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_VOID] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_STRING] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_PRINT] = {NULL, NULL, PREC_NONE},
-    [TOKEN_KW_PRINTLN] = {NULL, NULL, PREC_NONE}
+    [TOKEN_UNKNOWN]          = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_EOF]              = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_INTEGER]          = {integer_literal, NULL,    NULL,      PREC_NONE},
+    [TOKEN_IDENTIFIER]       = {identifier,      NULL,    NULL,      PREC_NONE},
+    [TOKEN_STRING]           = {string_literal,  NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_COMMA]         = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_SEMICOLON]     = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_LPAREN]        = {grouping,        fn_call, NULL,      PREC_SUFFIX},
+    [TOKEN_OP_RPAREN]        = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_LBRACKET]      = {NULL,            NULL,    array_sub, PREC_SUFFIX},
+    [TOKEN_OP_RBRACKET]      = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_LBRACE]        = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_RBRACE]        = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_PLUS]          = {unary,           binary,  NULL,      PREC_ADD},
+    [TOKEN_OP_MINUS]         = {unary,           binary,  NULL,      PREC_ADD},
+    [TOKEN_OP_MUL]           = {unary,           binary,  NULL,      PREC_MUL},
+    [TOKEN_OP_DIV]           = {NULL,            binary,  NULL,      PREC_MUL},
+    [TOKEN_OP_MOD]           = {NULL,            binary,  NULL,      PREC_MUL},
+    [TOKEN_OP_INC]           = {unary,           NULL,    suffix,    PREC_SUFFIX},
+    [TOKEN_OP_DEC]           = {unary,           NULL,    suffix,    PREC_SUFFIX},
+    [TOKEN_OP_EXCL]          = {unary,           NULL,    NULL,      PREC_PREFIX},
+    [TOKEN_OP_AMP]           = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_PIPE]          = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_LESS]          = {NULL,            binary,  NULL,      PREC_INEQUALITY},
+    [TOKEN_OP_GREATER]       = {NULL,            binary,  NULL,      PREC_INEQUALITY},
+    [TOKEN_OP_ASSIGN]        = {NULL,            binary,  NULL,      PREC_ASSIGN},
+    [TOKEN_OP_EQUAL]         = {NULL,            binary,  NULL,      PREC_EQUALITY},
+    [TOKEN_OP_NOT_EQUAL]     = {NULL,            binary,  NULL,      PREC_EQUALITY},
+    [TOKEN_OP_LESS_EQUAL]    = {NULL,            binary,  NULL,      PREC_INEQUALITY},
+    [TOKEN_OP_GREATER_EQUAL] = {NULL,            binary,  NULL,      PREC_INEQUALITY},
+    [TOKEN_OP_AND]           = {NULL,            binary,  NULL,      PREC_AND},
+    [TOKEN_OP_OR]            = {NULL,            binary,  NULL,      PREC_OR},
+    [TOKEN_OP_QUEST]         = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_OP_HASHTAG]       = {unary,           NULL,    NULL,      PREC_PREFIX},
+    [TOKEN_OP_DOLAR]         = {unary,           NULL,    NULL,      PREC_PREFIX},
+    [TOKEN_KW_IF]            = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_ELSE]          = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_FOR]           = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_WHILE]         = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_RETURN]        = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_BREAK]         = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_CONTINUE]      = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_NIL]           = {nil_constant,     NULL,    NULL,     PREC_NONE},
+    [TOKEN_KW_INT]           = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_VOID]          = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_STRING]        = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_PRINT]         = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_PRINTLN]       = {NULL,            NULL,    NULL,      PREC_NONE}
 };
+/* clang-format on */
 
 static void verror(Parser *self, const char *fmt, va_list vargs) {
     if (self->panic_mode) {
@@ -261,6 +266,12 @@ static AstNode *identifier(Parser *self) {
     return node;
 }
 
+static AstNode *nil_constant(Parser *self) {
+    advance(self); /* consume the nil keyword */
+
+    return astnode_new(AST_NODE_NIL);
+}
+
 static AstNode *unary(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_UNARY);
 
@@ -283,6 +294,19 @@ static AstNode *binary(Parser *self, AstNode *left) {
     node->binary.op = self->prev->kind;
     node->binary.left = left;
     node->binary.right = expression(self, op_rule->prec);
+
+    return node;
+}
+
+static AstNode *suffix(Parser *self, AstNode *left) {
+    AstNode *node = astnode_new(AST_NODE_SUFFIX);
+
+    ParseRule *op_rule = &g_rules[self->curr->kind];
+
+    advance(self); /* consume the operator */
+
+    node->suffix.op = self->prev->kind;
+    node->suffix.left = left;
 
     return node;
 }
@@ -369,6 +393,24 @@ static AstNode *fn_call(Parser *self, AstNode *left) {
     return node;
 }
 
+static AstNode *array_sub(Parser *self, AstNode *left) {
+    advance(self); /* consume the [ */
+
+    AstNode *expr = expression(self, PREC_NONE);
+
+    if (!expect(self, TOKEN_OP_RBRACKET)) {
+        astnode_destroy(expr);
+
+        return astnode_new(AST_NODE_ERROR);
+    }
+
+    AstNode *node = astnode_new(AST_NODE_ARRAY_SUBSCRIPT);
+    node->array_sub.expr = expr;
+    node->array_sub.left = left;
+
+    return node;
+}
+
 static AstNode *block(Parser *self) {
     AstNode *block = astnode_new(AST_NODE_BLOCK);
     vec_init(&block->block.nodes, sizeof(AstNode *));
@@ -407,6 +449,13 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     }
 
     AstNode *left = prefix_rule->prefix(self);
+    ParseRule *suffix_rule = &g_rules[self->curr->kind];
+
+    while (suffix_rule->suffix && suffix_rule->prec == PREC_SUFFIX) {
+        left = suffix_rule->suffix(self, left);
+
+        suffix_rule = &g_rules[self->curr->kind];
+    }
 
     while (g_rules[self->curr->kind].prec > prec) {
         ParseRule *infix_rule = &g_rules[self->curr->kind];
@@ -498,6 +547,30 @@ static AstNode *while_statement(Parser *self) {
     return stmt;
 }
 
+/* TODO: union optional_var_decl_with_delimiter() and
+ * optional_expression_with_delimiter() */
+
+static AstNode *
+optional_var_decl_with_delimiter(Parser *self, TokenKind delim) {
+    AstNode *decl = NULL;
+
+    if (!match(self, delim)) {
+        /* TODO: allow only variable declarations */
+        decl = declaration(self);
+    } else {
+        advance(self);
+    }
+
+    if (decl && decl->kind != AST_NODE_ERROR && !expect(self, delim)) {
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+
+        astnode_destroy(decl);
+        decl = astnode_new(AST_NODE_ERROR);
+    }
+
+    return decl;
+}
+
 static AstNode *
 optional_expression_with_delimiter(Parser *self, TokenKind delim) {
     AstNode *expr = NULL;
@@ -518,6 +591,18 @@ optional_expression_with_delimiter(Parser *self, TokenKind delim) {
     return expr;
 }
 
+static bool token_is_type(TokenKind tok) {
+    switch (tok) {
+    case TOKEN_KW_INT:
+    case TOKEN_KW_STRING:
+    case TOKEN_KW_VOID:
+    case TOKEN_OP_LBRACKET:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static AstNode *for_statement(Parser *self) {
     advance(self);
 
@@ -527,8 +612,14 @@ static AstNode *for_statement(Parser *self) {
         return astnode_new(AST_NODE_ERROR);
     }
 
-    AstNode *init =
-        optional_expression_with_delimiter(self, TOKEN_OP_SEMICOLON);
+    AstNode *init = NULL;
+
+    if (token_is_type(self->curr->kind)) {
+        init = optional_var_decl_with_delimiter(self, TOKEN_OP_SEMICOLON);
+    } else {
+        init = optional_expression_with_delimiter(self, TOKEN_OP_SEMICOLON);
+    }
+
     AstNode *cond =
         optional_expression_with_delimiter(self, TOKEN_OP_SEMICOLON);
     AstNode *iter = optional_expression_with_delimiter(self, TOKEN_OP_RPAREN);
@@ -578,6 +669,21 @@ static AstNode *println_statement(Parser *self) {
     return stmt;
 }
 
+static AstNode *return_statement(Parser *self) {
+    advance(self); /* consume the return keyword */
+
+    AstNode *expr = expression(self, PREC_NONE);
+
+    if (expr->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+    }
+
+    AstNode *node = astnode_new(AST_NODE_RETURN);
+    node->kw_return.expr = expr;
+
+    return node;
+}
+
 static AstNode *statement(Parser *self) {
     AstNode *stmt = NULL;
     TokenKind stmt_kind = self->curr->kind;
@@ -612,6 +718,22 @@ static AstNode *statement(Parser *self) {
     case TOKEN_KW_VOID:
     case TOKEN_OP_LBRACKET:
         stmt = declaration(self);
+
+        break;
+    case TOKEN_KW_RETURN:
+        stmt = return_statement(self);
+
+        break;
+    case TOKEN_KW_BREAK:
+        advance(self);
+
+        stmt = astnode_new(AST_NODE_BREAK);
+
+        break;
+    case TOKEN_KW_CONTINUE:
+        advance(self);
+
+        stmt = astnode_new(AST_NODE_CONTINUE);
 
         break;
     default:

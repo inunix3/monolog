@@ -14,8 +14,10 @@ typedef enum AstNodeKind {
     AST_NODE_IDENT,
     AST_NODE_UNARY,
     AST_NODE_BINARY,
+    AST_NODE_SUFFIX,
     AST_NODE_GROUPING,
     AST_NODE_FN_CALL,
+    AST_NODE_ARRAY_SUBSCRIPT,
     AST_NODE_BLOCK,
     AST_NODE_PRINT,
     AST_NODE_PRINTLN,
@@ -29,7 +31,11 @@ typedef enum AstNodeKind {
     AST_NODE_ARRAY_TYPE,
     AST_NODE_VAR_DECL,
     AST_NODE_PARAM_DECL,
-    AST_NODE_FN_DECL
+    AST_NODE_FN_DECL,
+    AST_NODE_RETURN,
+    AST_NODE_BREAK,
+    AST_NODE_CONTINUE,
+    AST_NODE_NIL
 } AstNodeKind;
 
 typedef struct AstNode {
@@ -57,6 +63,11 @@ typedef struct AstNode {
         } binary;
 
         struct {
+            TokenKind op;
+            struct AstNode *left;
+        } suffix;
+
+        struct {
             struct AstNode *expr;
         } grouping;
 
@@ -64,6 +75,11 @@ typedef struct AstNode {
             struct AstNode *name;
             Vector values; /* Vector<AstNode *> */
         } fn_call;
+
+        struct {
+            struct AstNode *expr;
+            struct AstNode *left;
+        } array_sub;
 
         struct {
             Vector nodes; /* Vector<AstNode *> */
@@ -117,6 +133,10 @@ typedef struct AstNode {
             Vector params; /* Vector<AstNode *> */
             struct AstNode *body;
         } fn_decl;
+
+        struct {
+            struct AstNode *expr;
+        } kw_return;
     };
 } AstNode;
 
