@@ -1,0 +1,4 @@
+println:
+  binary (+):
+    literal "Hello"
+    literal ", World!"

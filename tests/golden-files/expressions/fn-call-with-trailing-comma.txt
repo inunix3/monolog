@@ -1,0 +1,4 @@
+fn-call:
+  identifier foo
+  literal 2
+  literal 3

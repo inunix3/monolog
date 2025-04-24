@@ -1,0 +1,5 @@
+array-subscript:
+  binary (+):
+    literal 2
+    error
+  identifier array

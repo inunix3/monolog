@@ -1,0 +1,5 @@
+unary ($):
+  unary (#):
+    identifier array
+unary (*):
+  identifier opt_var

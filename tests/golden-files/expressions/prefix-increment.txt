@@ -1,0 +1,21 @@
+unary (++):
+  identifier a
+unary (++):
+  unary (++):
+    unary (++):
+      unary (++):
+        grouping:
+          binary (+):
+            literal 2
+            literal 2
+unary (++):
+  grouping:
+    unary (++):
+      grouping:
+        unary (++):
+          grouping:
+            unary (++):
+              grouping:
+                binary (+):
+                  literal 2
+                  literal 2

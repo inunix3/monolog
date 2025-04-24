@@ -1,0 +1,13 @@
+binary (||):
+  binary (||):
+    binary (==):
+      literal 1
+      literal 2
+    binary (&&):
+      binary (!=):
+        literal 4
+        literal 2
+      binary (+):
+        identifier a
+        literal 1
+  literal 0

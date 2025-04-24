@@ -1,0 +1,21 @@
+suffix (++):
+  identifier a
+suffix (++):
+  suffix (++):
+    suffix (++):
+      suffix (++):
+        grouping:
+          binary (+):
+            literal 2
+            literal 2
+suffix (++):
+  grouping:
+    suffix (++):
+      grouping:
+        suffix (++):
+          grouping:
+            suffix (++):
+              grouping:
+                binary (+):
+                  literal 2
+                  literal 2

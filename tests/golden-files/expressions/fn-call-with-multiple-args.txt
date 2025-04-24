@@ -1,0 +1,11 @@
+fn-call:
+  identifier foo
+  binary (+):
+    binary (*):
+      identifier a
+      identifier a
+    binary (*):
+      identifier b
+      identifier b
+  literal 2
+  identifier a

@@ -1,0 +1,8 @@
+fn-decl:
+  void-type
+  identifier foo
+  error
+  param-decl:
+    int-type
+    identifier b
+  null

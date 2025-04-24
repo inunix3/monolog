@@ -1,0 +1,10 @@
+var-decl:
+  array-type:
+    array-type:
+      array-type:
+        int-type
+        literal 3
+      literal 4
+    literal 5
+  identifier foo
+  null

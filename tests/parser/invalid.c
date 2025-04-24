@@ -31,6 +31,36 @@ TEST_STRING_AGAINST_FILE(invalid_expr_3, "1 2", "invalid-expr-3.txt")
 TEST_STRING_AGAINST_FILE(invalid_expr_4, "()", "invalid-expr-4.txt")
 
 TEST_STRING_AGAINST_FILE(
+    fn_call_bad_arg,
+    "foo(@);",
+    "fn-call-bad-arg.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_call_missing_rparen,
+    "foo(;",
+    "fn-call-missing-rparen.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    array_subscript_missing_rbracket,
+    "array[2 +",
+    "array-subscript-missing-rbracket.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    array_subscript_bad_expression_1,
+    "array[@]",
+    "array-subscript-bad-expression-1.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    array_subscript_bad_expression_2,
+    "array[2 + @]",
+    "array-subscript-bad-expression-2.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
     unterminated_string, "\"Hello, World!", "unterminated-string.txt"
 )
 
@@ -71,9 +101,21 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
+    var_with_bad_value,
+    "int a = @",
+    "var-with-bad-value.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
     fn_decl_with_bad_name,
     "int 1231();",
     "fn-decl-with-bad-name.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_bad_body,
+    "void foo() @",
+    "fn-decl-with-bad-body.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
@@ -82,11 +124,29 @@ TEST_STRING_AGAINST_FILE(
     "fn-decl-with-bad-name-block.txt"
 )
 
-// TEST_STRING_AGAINST_FILE(
-//     fn_decl_with_missing_rparen,
-//     "int foo(int a, int b;",
-//     "fn-decl-with-missing-rparen.txt"
-// )
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_missing_rparen,
+    "int foo(int a, int b;",
+    "fn-decl-with-missing-rparen.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_bad_param_name,
+    "void foo(int @, int b);",
+    "fn-decl-with-bad-param-name.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_bad_param_type,
+    "void foo(3434 a, int b);",
+    "fn-decl-with-bad-param-type.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    fn_decl_with_missing_comma,
+    "void foo(int a int b);",
+    "fn-decl-with-missing-comma.txt"
+)
 
 SUITE(SUITE_NAME) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
@@ -103,11 +163,21 @@ SUITE(SUITE_NAME) {
     RUN_TEST(invalid_expr_2);
     RUN_TEST(invalid_expr_3);
     RUN_TEST(invalid_expr_4);
+    RUN_TEST(fn_call_bad_arg);
+    RUN_TEST(fn_call_missing_rparen);
+    RUN_TEST(array_subscript_missing_rbracket);
+    RUN_TEST(array_subscript_bad_expression_1);
+    RUN_TEST(array_subscript_bad_expression_2);
     RUN_TEST(unterminated_string);
     RUN_TEST(if_missing_cond);
     RUN_TEST(var_with_bad_name);
     RUN_TEST(var_with_bad_assign);
+    RUN_TEST(var_with_bad_value);
     RUN_TEST(fn_decl_with_bad_name);
+    RUN_TEST(fn_decl_with_bad_body);
     RUN_TEST(fn_decl_with_bad_name_block);
-    // RUN_TEST(fn_decl_with_missing_rparen);
+    RUN_TEST(fn_decl_with_missing_rparen);
+    RUN_TEST(fn_decl_with_bad_param_name);
+    RUN_TEST(fn_decl_with_bad_param_type);
+    RUN_TEST(fn_decl_with_missing_comma);
 }

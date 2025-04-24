@@ -1,0 +1,6 @@
+identifier a
+identifier __a
+identifier a__
+identifier AbcDef34234
+identifier printf
+identifier CreateFile

@@ -1,0 +1,6 @@
+var-decl:
+  array-type:
+    int-type
+    literal 5
+  identifier my_array
+  null

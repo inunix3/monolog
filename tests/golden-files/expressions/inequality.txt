@@ -1,0 +1,22 @@
+binary (<):
+  literal 1
+  literal 2
+binary (>):
+  literal 2
+  literal 1
+binary (>=):
+  binary (+):
+    binary (*):
+      grouping:
+        binary (+):
+          identifier a
+          literal 2
+      grouping:
+        binary (+):
+          identifier a
+          literal 2
+    literal 1
+  literal 0
+binary (<=):
+  literal 1
+  literal 1

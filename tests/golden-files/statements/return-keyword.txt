@@ -1,0 +1,7 @@
+return:
+  binary (*):
+    grouping:
+      binary (+):
+        literal 2
+        literal 4
+    literal 3

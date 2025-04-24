@@ -1,0 +1,9 @@
+var-decl:
+  option-type:
+    option-type:
+      option-type:
+        option-type:
+          option-type:
+            string-type
+  identifier a
+  null

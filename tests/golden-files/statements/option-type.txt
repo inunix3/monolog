@@ -1,0 +1,5 @@
+var-decl:
+  option-type:
+    int-type
+  identifier result_of_operation
+  nil

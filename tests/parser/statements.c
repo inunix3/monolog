@@ -31,6 +31,36 @@ TEST_STRING_AGAINST_FILE(
     multiple_exprs_2, "((1)); 2 + 3; 4 * (5 + 6)", "multiple-exprs-2.txt"
 )
 
+TEST_STRING_AGAINST_FILE(
+    print_keyword,
+    "print(\"Hello\")",
+    "print-keyword.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    println_keyword,
+    "println(\"Hello\" + \", World!\")",
+    "println-keyword.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    return_keyword,
+    "return (2 + 4) * 3",
+    "return-keyword.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    break_keyword,
+    "break",
+    "break-keyword.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    continue_keyword,
+    "continue",
+    "continue-keyword.txt"
+)
+
 TEST_STRING_AGAINST_FILE(empty_block, "{}", "empty-block.txt")
 
 TEST_STRING_AGAINST_FILE(
@@ -269,6 +299,37 @@ TEST_STRING_AGAINST_FILE(
     "var-with-expression.txt"
 )
 
+
+TEST_STRING_AGAINST_FILE(
+    option_type,
+    "int? result_of_operation = nil;",
+    "option-type.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    nested_option_type,
+    "string????? a;",
+    "nested-option-type.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    array_with_known_size,
+    "[int, 5] my_array;",
+    "array-with-known-size.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    array_with_unknown_size,
+    "[string, n] list;",
+    "array-with-unknown-size.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
+    nested_arrays,
+    "[[[int, 3], 4], 5] foo;",
+    "nested-arrays.txt"
+)
+
 TEST_STRING_AGAINST_FILE(
     fn_decl_empty_without_params,
     "int foo();",
@@ -324,6 +385,11 @@ SUITE(SUITE_NAME) {
     RUN_TEST(semicolon_misuse_6);
     RUN_TEST(multiple_exprs_1);
     RUN_TEST(multiple_exprs_2);
+    RUN_TEST(print_keyword);
+    RUN_TEST(println_keyword);
+    RUN_TEST(return_keyword);
+    RUN_TEST(break_keyword);
+    RUN_TEST(continue_keyword);
     RUN_TEST(empty_block);
     RUN_TEST(block_1_statement);
     RUN_TEST(block_multiple_statements);
@@ -358,6 +424,11 @@ SUITE(SUITE_NAME) {
     RUN_TEST(var_without_value);
     RUN_TEST(var_with_value);
     RUN_TEST(var_with_expression);
+    RUN_TEST(option_type);
+    RUN_TEST(nested_option_type);
+    RUN_TEST(array_with_known_size);
+    RUN_TEST(array_with_unknown_size);
+    RUN_TEST(nested_arrays);
     RUN_TEST(fn_decl_empty_without_params);
     RUN_TEST(fn_decl_empty_with_1_param);
     RUN_TEST(fn_decl_empty_with_params);

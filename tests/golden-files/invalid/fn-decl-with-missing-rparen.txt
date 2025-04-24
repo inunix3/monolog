@@ -1,0 +1,11 @@
+fn-decl:
+  int-type
+  identifier foo
+  param-decl:
+    int-type
+    identifier a
+  param-decl:
+    int-type
+    identifier b
+  error
+  error

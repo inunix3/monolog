@@ -1,0 +1,4 @@
+fn-decl:
+  void-type
+  identifier foo
+  error

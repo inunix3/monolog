@@ -1,0 +1,7 @@
+fn-call:
+  identifier foo
+  binary (+):
+    literal 2
+    binary (/):
+      identifier a
+      literal 4

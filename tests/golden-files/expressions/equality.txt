@@ -1,0 +1,9 @@
+binary (==):
+  literal 1
+  identifier a
+binary (!=):
+  literal 1
+  grouping:
+    binary (+):
+      literal 2
+      literal 2

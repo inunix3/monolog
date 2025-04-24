@@ -1,0 +1,4 @@
+var-decl:
+  int-type
+  identifier a
+  error

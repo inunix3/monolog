@@ -1,0 +1,17 @@
+binary (+):
+  array-subscript:
+    binary (+):
+      literal 2
+      literal 2
+    identifier a
+  binary (*):
+    array-subscript:
+      identifier i
+      identifier a
+    array-subscript:
+      binary (%):
+        array-subscript:
+          identifier i
+          identifier a
+        literal 2
+      identifier input

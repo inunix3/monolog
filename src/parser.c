@@ -145,7 +145,8 @@ static bool expect(Parser *self, TokenKind kind) {
 typedef enum SyncMode {
     SYNC_TO_SEMICOLON_KEEP = (1u << 0),
     SYNC_TO_SEMICOLON_SKIP = (1u << 1),
-    SYNC_TO_RBRACE_SKIP = (1u << 2),
+    SYNC_TO_RBRACE_KEEP = (1u << 2),
+    SYNC_TO_RBRACE_SKIP = (1u << 3),
     SYNC_TO_RPAREN_KEEP = (1u << 4),
     SYNC_TO_RPAREN_SKIP = (1u << 5),
     SYNC_TO_RBRACKET_KEEP = (1u << 6),
@@ -165,6 +166,10 @@ static void sync(Parser *self, unsigned modes) {
 
         if (modes & SYNC_TO_SEMICOLON_SKIP &&
             match_prev(self, TOKEN_OP_SEMICOLON)) {
+            break;
+        }
+
+        if (modes & SYNC_TO_RBRACE_SKIP && match(self, TOKEN_OP_RBRACE)) {
             break;
         }
 
@@ -206,6 +211,9 @@ static void sync(Parser *self, unsigned modes) {
             case TOKEN_KW_INT:
             case TOKEN_KW_STRING:
             case TOKEN_KW_VOID:
+            case TOKEN_KW_RETURN:
+            case TOKEN_KW_BREAK:
+            case TOKEN_KW_CONTINUE:
             case TOKEN_OP_LBRACKET:
                 return;
             default:
@@ -350,6 +358,9 @@ static bool value_list(Parser *self, Vector *values) {
             if (match(self, TOKEN_OP_COMMA)) {
                 advance(self);
             } else if (!match(self, TOKEN_OP_RPAREN)) {
+                AstNode *error_node = astnode_new(AST_NODE_ERROR);
+                vec_push(values, &error_node);
+
                 error(self, "expected , or )");
 
                 sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
@@ -361,7 +372,7 @@ static bool value_list(Parser *self, Vector *values) {
         }
     }
 
-    if (expr->kind != AST_NODE_ERROR && !expect(self, TOKEN_OP_RPAREN)) {
+    if (!expect(self, TOKEN_OP_RPAREN)) {
         return false;
     }
 
@@ -383,7 +394,10 @@ static AstNode *fn_call(Parser *self, AstNode *left) {
     vec_init(&values, sizeof(AstNode *));
 
     if (!value_list(self, &values)) {
-        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+        // sync(
+        //     self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RBRACKET_KEEP |
+        //               SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+        // );
     }
 
     AstNode *node = astnode_new(AST_NODE_FN_CALL);
@@ -443,7 +457,10 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     if (!prefix_rule->prefix) {
         error(self, "unexpected %.*s", self->curr->len, self->curr->src);
         advance(self);
-        sync(self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RPAREN_KEEP);
+        sync(
+            self, SYNC_TO_RBRACKET_KEEP | SYNC_TO_RBRACE_KEEP |
+                      SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RPAREN_KEEP
+        );
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -872,6 +889,9 @@ static bool fn_decl_param_list(Parser *self, Vector *params) {
             if (match(self, TOKEN_OP_COMMA)) {
                 advance(self);
             } else if (!match(self, TOKEN_OP_RPAREN)) {
+                AstNode *error_node = astnode_new(AST_NODE_ERROR);
+                vec_push(params, &error_node);
+
                 error(self, "expected , or )");
 
                 sync(self, SYNC_TO_COMMA_KEEP | SYNC_TO_RPAREN_KEEP);
