@@ -71,8 +71,7 @@ typedef struct Token {
     const char *src;
     size_t len;
     bool valid;
-    size_t line;
-    size_t col;
+    SourceInfo src_info;
 } Token;
 
 typedef struct Lexer {
@@ -81,8 +80,8 @@ typedef struct Lexer {
     size_t len;
     char ch;
     char prev_ch;
-    char line;
-    char col;
+    int line;
+    int col;
 } Lexer;
 
 void lexer_lex(const char *data, size_t len, Vector *tokens);

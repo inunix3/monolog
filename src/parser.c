@@ -335,6 +335,7 @@ static AstNode *grouping(Parser *self) {
     return node;
 }
 
+/* TODO: union value_list() and fn_decl_param_list() */
 static bool value_list(Parser *self, Vector *values) {
     if (match(self, TOKEN_OP_RPAREN)) {
         advance(self);
@@ -566,7 +567,6 @@ static AstNode *while_statement(Parser *self) {
 
 /* TODO: union optional_var_decl_with_delimiter() and
  * optional_expression_with_delimiter() */
-
 static AstNode *
 optional_var_decl_with_delimiter(Parser *self, TokenKind delim) {
     AstNode *decl = NULL;
@@ -866,6 +866,7 @@ static AstNode *param_decl(Parser *self) {
     return node;
 }
 
+/* TODO: union value_list() and fn_decl_param_list() */
 static bool fn_decl_param_list(Parser *self, Vector *params) {
     if (match(self, TOKEN_OP_RPAREN)) {
         advance(self);
