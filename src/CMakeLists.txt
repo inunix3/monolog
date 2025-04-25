@@ -10,17 +10,22 @@ set(HEADERS
     "${INCLUDE_DIR}/ast.h"
     "${INCLUDE_DIR}/lexer.h"
     "${INCLUDE_DIR}/parser.h"
-    "${INCLUDE_DIR}/utils.h"
+    "${INCLUDE_DIR}/semantic_checker.h"
     "${INCLUDE_DIR}/strbuf.h"
+    "${INCLUDE_DIR}/type.h"
+    "${INCLUDE_DIR}/utils.h"
     "${INCLUDE_DIR}/vector.h"
 )
 
 set(SOURCES
     "${SRC_DIR}/ast.c"
+    "${SRC_DIR}/diagnostic.c"
     "${SRC_DIR}/lexer.c"
     "${SRC_DIR}/parser.c"
-    "${SRC_DIR}/utils.c"
+    "${SRC_DIR}/semantic_checker.c"
     "${SRC_DIR}/strbuf.c"
+    "${SRC_DIR}/type.c"
+    "${SRC_DIR}/utils.c"
     "${SRC_DIR}/vector.c"
 )
 

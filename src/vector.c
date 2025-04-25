@@ -29,7 +29,7 @@ void vec_deinit(Vector *self) {
     memset(self, 0, sizeof(*self));
 }
 
-void vec_push(Vector *self, void *data) {
+void vec_push(Vector *self, const void *data) {
     if (self->len >= self->cap) {
         self->data = realloc(self->data, self->cap * self->element_size + VECTOR_DEFAULT_CAP * self->element_size);
         self->cap += VECTOR_DEFAULT_CAP;

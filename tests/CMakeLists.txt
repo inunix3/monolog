@@ -28,3 +28,14 @@ add_custom_command(
     "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
     "$<TARGET_FILE_DIR:parser_test>/golden-files"
 )
+
+set(SEMCK_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/semck/invalid.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/semck/main.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/semck/valid.c"
+)
+
+add_executable(semck_test $<TARGET_OBJECTS:monolog-obj> ${SEMCK_SOURCES})
+target_compile_options(semck_test PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(semck_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_link_libraries(semck_test PRIVATE greatest)

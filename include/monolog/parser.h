@@ -17,7 +17,7 @@ typedef enum PrecedenceLevel {
     PREC_ADD,        /* + - */
     PREC_MUL,        /* * / % */
     PREC_PREFIX,     /* + - ! # $ * ++ -- */
-    PREC_SUFFIX      /* ++ -- ? () [] */
+    PREC_SUFFIX      /* ++ -- () [] */
 } PrecedenceLevel;
 
 typedef struct Parser {

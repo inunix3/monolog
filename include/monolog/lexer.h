@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "src_info.h"
 #include "vector.h"
 
 #include <stdbool.h>
