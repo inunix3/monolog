@@ -11,7 +11,7 @@
 #include <string.h>
 
 bool vec_init(Vector *self, size_t element_size) {
-    self->data = malloc(VECTOR_DEFAULT_CAP * element_size);
+    self->data = calloc(element_size, VECTOR_DEFAULT_CAP);
 
     if (!self->data) {
         return false;
@@ -35,16 +35,20 @@ void vec_deinit(Vector *self) {
 
 bool vec_push(Vector *self, const void *data) {
     if (self->len >= self->cap) {
-        self->data = realloc(
-            self->data, self->cap * self->element_size +
-                            VECTOR_DEFAULT_CAP * self->element_size
-        );
+        size_t new_cap = self->cap * 2;
+
+        self->data = realloc(self->data, new_cap * self->element_size);
 
         if (!self->data) {
             return false;
         }
 
-        self->cap += VECTOR_DEFAULT_CAP;
+        memset(
+            self->data + self->len * self->element_size, 0,
+            (new_cap - self->cap) * self->element_size
+        );
+
+        self->cap = new_cap;
     }
 
     memcpy(
@@ -71,10 +75,7 @@ bool vec_reserve(Vector *self, size_t new_cap) {
         return false;
     }
 
-    self->data = realloc(
-        self->data,
-        new_cap * self->element_size
-    );
+    self->data = realloc(self->data, new_cap * self->element_size);
 
     self->cap = new_cap;
 

@@ -8,6 +8,7 @@ set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 
 set(HEADERS
     "${INCLUDE_DIR}/ast.h"
+    "${INCLUDE_DIR}/hashmap.h"
     "${INCLUDE_DIR}/lexer.h"
     "${INCLUDE_DIR}/parser.h"
     "${INCLUDE_DIR}/semantic_checker.h"
@@ -19,6 +20,7 @@ set(HEADERS
 
 set(SOURCES
     "${SRC_DIR}/ast.c"
+    "${SRC_DIR}/hashmap.c"
     "${SRC_DIR}/diagnostic.c"
     "${SRC_DIR}/lexer.c"
     "${SRC_DIR}/parser.c"

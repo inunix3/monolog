@@ -117,15 +117,16 @@ TEST clear(void) {
 }
 
 TEST capacity_remains_the_same_after_popping_all(void) {
-    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2; ++i) {
+    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2 + 1; ++i) {
         vec_push(&g_vec, &i);
     }
 
-    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2; ++i) {
+    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2 + 1; ++i) {
         vec_pop(&g_vec);
     }
 
-    ASSERT_EQ(VECTOR_DEFAULT_CAP * 2, g_vec.cap);
+    /* vector doubles its capacity when it is filled */
+    ASSERT_EQ(VECTOR_DEFAULT_CAP * 4, g_vec.cap);
     ASSERT_EQ(0, g_vec.len);
     ASSERT(g_vec.data != NULL);
 

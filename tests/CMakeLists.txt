@@ -8,6 +8,11 @@ target_compile_options(vector_test PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(vector_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
 target_link_libraries(vector_test PRIVATE greatest)
 
+add_executable(hashmap_test $<TARGET_OBJECTS:monolog-obj> hashmap.c)
+target_compile_options(hashmap_test PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(hashmap_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_link_libraries(hashmap_test PRIVATE greatest)
+
 add_executable(lexer_test $<TARGET_OBJECTS:monolog-obj> lexer.c)
 target_compile_options(lexer_test PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(lexer_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
