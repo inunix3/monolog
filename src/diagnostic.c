@@ -28,5 +28,27 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         );
 
         return g_buf;
+    case DIAGNOSTIC_MISMATCHED_TYPES:
+        snprintf(
+            g_buf, BUFFER_SIZE, "expected %s, found %s",
+            type_name(dmsg->type_mismatch.expected),
+            type_name(dmsg->type_mismatch.found)
+        );
+
+        return g_buf;
+    case DIAGNOSTIC_UNDECLARED_SYMBOL:
+        snprintf(
+            g_buf, BUFFER_SIZE, "undeclared symbol %s", dmsg->undef_sym.name
+        );
+
+        return g_buf;
+    case DIAGNOSTIC_UNDEFINED_VARIABLE:
+        snprintf(
+            g_buf, BUFFER_SIZE,
+            "variable %s exists, but no value is assigned to it",
+            dmsg->undef_sym.name
+        );
+
+        return g_buf;
     }
 }

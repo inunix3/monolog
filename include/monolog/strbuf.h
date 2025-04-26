@@ -11,3 +11,4 @@ typedef struct StrBuf {
 bool str_init(StrBuf *self, const char *cstr);
 bool str_initn(StrBuf *self, const char *cstr, size_t len);
 void str_deinit(StrBuf *self);
+bool str_set(StrBuf *self, const char *cstr);

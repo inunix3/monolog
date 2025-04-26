@@ -25,3 +25,6 @@ bool vec_push(Vector *self, const void *data);
 void vec_pop(Vector *self);
 bool vec_reserve(Vector *self, size_t new_cap);
 void vec_clear(Vector *self);
+
+/* NOTE: using on empty vector is an undefined behavior */
+#define VEC_LAST(_self, _type) (((_type *)(_self)->data)[(_self)->len - 1])
