@@ -8,7 +8,7 @@ TEST binary_int_string(void) {
     ASSERT_EQ(TYPE_INT, NTH_DMSG(0).binary_op_comb.t1->id);
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(0).binary_op_comb.t2->id);
     ASSERT_STR_EQ(
-        "bad operand combination for +: integer and string",
+        "bad operand combination for +: int and string",
         dmsg_to_str(&NTH_DMSG(0))
     );
 
@@ -23,7 +23,7 @@ TEST binary_string_int(void) {
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(0).binary_op_comb.t1->id);
     ASSERT_EQ(TYPE_INT, NTH_DMSG(0).binary_op_comb.t2->id);
     ASSERT_STR_EQ(
-        "bad operand combination for +: string and integer",
+        "bad operand combination for +: string and int",
         dmsg_to_str(&NTH_DMSG(0))
     );
 
@@ -63,19 +63,19 @@ TEST var_decl(void) {
     ASSERT_EQ(DIAGNOSTIC_MISMATCHED_TYPES, NTH_DMSG(0).kind);
     ASSERT_EQ(TYPE_INT, NTH_DMSG(0).type_mismatch.expected->id);
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(0).type_mismatch.found->id);
-    ASSERT_STR_EQ("expected integer, found string", dmsg_to_str(&NTH_DMSG(0)));
+    ASSERT_STR_EQ("expected int, found string", dmsg_to_str(&NTH_DMSG(0)));
 
     ASSERT_EQ(DIAGNOSTIC_MISMATCHED_TYPES, NTH_DMSG(1).kind);
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(1).type_mismatch.expected->id);
     ASSERT_EQ(TYPE_INT, NTH_DMSG(1).type_mismatch.found->id);
-    ASSERT_STR_EQ("expected string, found integer", dmsg_to_str(&NTH_DMSG(1)));
+    ASSERT_STR_EQ("expected string, found int", dmsg_to_str(&NTH_DMSG(1)));
 
     ASSERT_EQ(DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION, NTH_DMSG(2).kind);
     ASSERT_EQ(TOKEN_OP_PLUS, NTH_DMSG(2).binary_op_comb.op);
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(2).binary_op_comb.t1->id);
     ASSERT_EQ(TYPE_INT, NTH_DMSG(2).binary_op_comb.t2->id);
     ASSERT_STR_EQ(
-        "bad operand combination for +: string and integer",
+        "bad operand combination for +: string and int",
         dmsg_to_str(&NTH_DMSG(2))
     );
 
@@ -166,22 +166,51 @@ TEST array_sub_bad_index_type(void) {
     ASSERT_EQ(DIAGNOSTIC_BAD_INDEX_TYPE, NTH_DMSG(0).kind);
     ASSERT_EQ(TYPE_STRING, NTH_DMSG(0).bad_index_type.found->id);
     ASSERT_STR_EQ(
-        "index expression must result in an integer, but found string",
+        "index expression must result in int, but found string",
         dmsg_to_str(&NTH_DMSG(0))
     );
 
     PASS();
 }
 
-TEST not_assignable_expr(void) {
-    CHECK_FAIL("int foo(); foo() = 5; 3 + 4 = 8; (-(-(-3))) = 115;");
+TEST immutable_expr(void) {
+    CHECK_FAIL(
+        "int foo();\n"
+        "int? opt = nil;\n"
+        "[int, 5] array;\n"
+        "foo() = 5; 3 + 4 = 8;\n"
+        "--3; --\"adada\";\n"
+        "++3; ++\"adada\";\n"
+        "3--; \"adada\"--;\n"
+        "3++; \"adada\"++;\n"
+    );
 
-    for (int i = 0; i < 3; ++i) {
-        ASSERT_EQ(DIAGNOSTIC_EXPR_NOT_ASSIGNABLE, NTH_DMSG(i).kind);
+    for (int i = 0; i < 10; ++i) {
+        ASSERT_EQ(DIAGNOSTIC_EXPR_NOT_MUTABLE, NTH_DMSG(i).kind);
         ASSERT_STR_EQ(
-            "expression is not assignable", dmsg_to_str(&NTH_DMSG(i))
+            "expression cannot be mutated", dmsg_to_str(&NTH_DMSG(i))
         );
     }
+
+    PASS();
+}
+
+TEST size_op_can_be_applied_only_for_string_and_array(void) {
+    CHECK_FAIL("int? a = 5; #a; int b = 0; #b");
+
+    ASSERT_EQ(DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, NTH_DMSG(0).kind);
+    ASSERT_EQ(TOKEN_OP_HASHTAG, NTH_DMSG(0).unary_op_comb.op);
+    ASSERT_EQ(TYPE_OPTION, NTH_DMSG(0).unary_op_comb.type->id);
+    ASSERT_STR_EQ(
+        "bad operand type for unary #: option<int>", dmsg_to_str(&NTH_DMSG(0))
+    );
+
+    ASSERT_EQ(DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, NTH_DMSG(1).kind);
+    ASSERT_EQ(TOKEN_OP_HASHTAG, NTH_DMSG(1).unary_op_comb.op);
+    ASSERT_EQ(TYPE_INT, NTH_DMSG(1).unary_op_comb.type->id);
+    ASSERT_STR_EQ(
+        "bad operand type for unary #: int", dmsg_to_str(&NTH_DMSG(1))
+    );
 
     PASS();
 }
@@ -201,5 +230,6 @@ SUITE(invalid) {
     RUN_TEST(fn_call_too_few_arguments);
     RUN_TEST(array_sub_not_indexable);
     RUN_TEST(array_sub_bad_index_type);
-    RUN_TEST(not_assignable_expr);
+    RUN_TEST(immutable_expr);
+    RUN_TEST(size_op_can_be_applied_only_for_string_and_array);
 }

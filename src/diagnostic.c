@@ -2,7 +2,6 @@
 #include <monolog/type.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #define BUFFER_SIZE 4096
 
@@ -25,6 +24,14 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
             g_buf, BUFFER_SIZE, "bad operand type for unary %s: %s",
             token_kind_to_str(dmsg->unary_op_comb.op),
             dmsg->unary_op_comb.type->name
+        );
+
+        break;
+    case DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION:
+        snprintf(
+            g_buf, BUFFER_SIZE, "bad operand type for suffix %s: %s",
+            token_kind_to_str(dmsg->suffix_op_comb.op),
+            dmsg->suffix_op_comb.type->name
         );
 
         break;
@@ -117,17 +124,20 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
     case DIAGNOSTIC_BAD_INDEX_TYPE:
         snprintf(
             g_buf, BUFFER_SIZE,
-            "index expression must result in an integer, but found %s",
+            "index expression must result in int, but found %s",
             type_name(dmsg->bad_index_type.found)
         );
 
         break;
     case DIAGNOSTIC_EXPR_NOT_INDEXABLE:
-        snprintf(g_buf, BUFFER_SIZE, "expression is not indexable: expected array or string");
+        snprintf(
+            g_buf, BUFFER_SIZE,
+            "expression is not indexable: expected array or string"
+        );
 
         break;
-    case DIAGNOSTIC_EXPR_NOT_ASSIGNABLE:
-        snprintf(g_buf, BUFFER_SIZE, "expression is not assignable");
+    case DIAGNOSTIC_EXPR_NOT_MUTABLE:
+        snprintf(g_buf, BUFFER_SIZE, "expression cannot be mutated");
 
         break;
     }

@@ -7,6 +7,7 @@ typedef enum DiagnosticKind {
     DIAGNOSTIC_INTERNAL_ERROR,
     DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION,
     DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION,
+    DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION,
     DIAGNOSTIC_MISMATCHED_TYPES,
     DIAGNOSTIC_UNDECLARED_VARIABLE,
     DIAGNOSTIC_UNDECLARED_FUNCTION,
@@ -18,7 +19,7 @@ typedef enum DiagnosticKind {
     DIAGNOSTIC_BAD_ARG_TYPE,
     DIAGNOSTIC_BAD_INDEX_TYPE,
     DIAGNOSTIC_EXPR_NOT_INDEXABLE,
-    DIAGNOSTIC_EXPR_NOT_ASSIGNABLE
+    DIAGNOSTIC_EXPR_NOT_MUTABLE
 } DiagnosticKind;
 
 typedef struct DiagnosticMessage {
@@ -35,6 +36,11 @@ typedef struct DiagnosticMessage {
             TokenKind op;
             Type *type;
         } unary_op_comb;
+
+        struct {
+            TokenKind op;
+            Type *type;
+        } suffix_op_comb;
 
         struct {
             Type *expected;

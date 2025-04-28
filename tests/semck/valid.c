@@ -50,6 +50,17 @@ CHECK_EXPR(array_sub, "[int, 5] array; int a = array[5 - 3] + 6");
 CHECK_EXPR(array_sub_string, "string s = \"Hello, World!\"; s[7] == 87")
 CHECK_EXPR(array_sub_assign, "[int, 5] array; array[5] = 5");
 
+CHECK_EXPR(array_size, "[int, 5] array; int a = #array; #array == 5")
+CHECK_EXPR(string_len, "string str = \"Hi, World!\"; int a = #str; #str == 10")
+CHECK_EXPR(string_literal_len, "#\"Hello, World!\" == 13")
+CHECK_EXPR(option_nil, "int? a = nil; a == nil")
+CHECK_EXPR(option_deref, "int? a = 5; *a == 5")
+CHECK_EXPR(prefix_inc, "int a = 5; ++a; [int, 5] b; ++b[0]")
+CHECK_EXPR(prefix_dec, "int a = 5; --a; [int, 5] b; --b[0]")
+CHECK_EXPR(suffix_inc, "int a = 5; a++; [int, 5] b; b[0]++")
+CHECK_EXPR(suffix_dec, "int a = 5; a--; [int, 5] b; b[0]--")
+CHECK_EXPR(negation, "int a = 5; int b = !a")
+
 SUITE(valid) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -72,4 +83,14 @@ SUITE(valid) {
     RUN_TEST(array_sub);
     RUN_TEST(array_sub_string);
     RUN_TEST(array_sub_assign);
+    RUN_TEST(array_size);
+    RUN_TEST(string_len);
+    RUN_TEST(string_literal_len);
+    RUN_TEST(option_nil);
+    RUN_TEST(option_deref);
+    RUN_TEST(prefix_inc);
+    RUN_TEST(prefix_dec);
+    RUN_TEST(suffix_inc);
+    RUN_TEST(suffix_dec);
+    RUN_TEST(negation);
 }

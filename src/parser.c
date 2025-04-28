@@ -456,7 +456,12 @@ static AstNode *prefix(Parser *self, PrecedenceLevel prec) {
     ParseRule *prefix_rule = &g_rules[self->curr->kind];
 
     if (!prefix_rule->prefix) {
-        error(self, "unexpected %.*s", self->curr->len, self->curr->src);
+        if (self->curr->kind == TOKEN_EOF) {
+            error(self, "unexpected EOF");
+        } else {
+            error(self, "unexpected %.*s", self->curr->len, self->curr->src);
+        }
+
         advance(self);
         sync(
             self, SYNC_TO_RBRACKET_KEEP | SYNC_TO_RBRACE_KEEP |

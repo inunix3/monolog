@@ -12,7 +12,7 @@ static char g_buf[BUF_SIZE];
 void format_type_name(const Type *type, size_t *pos) {
     switch (type->id) {
     case TYPE_INT:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "integer");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "int");
 
         break;
     case TYPE_STRING:

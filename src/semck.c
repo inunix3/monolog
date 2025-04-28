@@ -13,7 +13,7 @@ void error(SemChecker *self, const DiagnosticMessage *dmsg) {
 static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning);
 static SemVariable *find_var(SemChecker *self, const char *name);
 
-static bool expr_is_assignable(SemChecker *self, const AstNode *node) {
+static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
     case AST_NODE_IDENT:
         if (find_var(self, node->ident.str.data)) {
@@ -22,7 +22,11 @@ static bool expr_is_assignable(SemChecker *self, const AstNode *node) {
 
         return false;
     case AST_NODE_GROUPING:
-        return expr_is_assignable(self, node->grouping.expr);
+        return expr_is_mutable(self, node->grouping.expr);
+    case AST_NODE_UNARY:
+        return node->unary.op == TOKEN_OP_MUL
+                   ? expr_is_mutable(self, node->unary.right)
+                   : false;
     case AST_NODE_ARRAY_SUBSCRIPT:
         return true;
     default:
@@ -108,8 +112,8 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             return self->error_type;
         }
     case TOKEN_OP_ASSIGN:
-        if (!expr_is_assignable(self, node->binary.left)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_ASSIGNABLE};
+        if (!expr_is_mutable(self, node->binary.left)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE};
 
             error(self, &dmsg);
 
@@ -158,13 +162,100 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
 
             return self->error_type;
         }
+    case TOKEN_OP_INC:
+    case TOKEN_OP_DEC:
+        if (!expr_is_mutable(self, node->unary.right)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE};
+
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        if (type->id != TYPE_INT) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION};
+            dmsg.unary_op_comb.op = op;
+            dmsg.unary_op_comb.type = type;
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        return type;
     case TOKEN_OP_HASHTAG:
+        if (type->id != TYPE_ARRAY && type->id != TYPE_STRING) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION};
+            dmsg.unary_op_comb.op = op;
+            dmsg.unary_op_comb.type = type;
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        return self->builtin_int;
+    case TOKEN_OP_DOLAR:
+        if (type->id != TYPE_INT) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION};
+            dmsg.unary_op_comb.op = op;
+            dmsg.unary_op_comb.type = type;
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        return self->builtin_int;
+    case TOKEN_OP_MUL:
+        if (type->id != TYPE_OPTION) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION};
+            dmsg.unary_op_comb.op = op;
+            dmsg.unary_op_comb.type = type;
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        return type->opt_type.type;
     default: {
         DiagnosticMessage dmsg = {DIAGNOSTIC_INTERNAL_ERROR};
         error(self, &dmsg);
 
         return self->error_type;
     }
+    }
+}
+
+static Type *check_suffix(SemChecker *self, const AstNode *node) {
+    TokenKind op = node->suffix.op;
+    Type *type = check_expr(self, node->suffix.left, false);
+
+    if (type->id == TYPE_ERROR) {
+        return self->error_type;
+    }
+
+    switch (op) {
+    case TOKEN_OP_INC:
+    case TOKEN_OP_DEC:
+        if (!expr_is_mutable(self, node->suffix.left)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE};
+
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        if (type->id != TYPE_INT) {
+            DiagnosticMessage dmsg;
+            dmsg.kind = DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION;
+            dmsg.suffix_op_comb.op = op;
+            dmsg.suffix_op_comb.type = type;
+            error(self, &dmsg);
+
+            return self->error_type;
+        }
+
+        return type;
+    default:
+        return self->error_type;
     }
 }
 
@@ -329,6 +420,8 @@ static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning) {
         return check_binary(self, node);
     case AST_NODE_UNARY:
         return check_unary(self, node);
+    case AST_NODE_SUFFIX:
+        return check_suffix(self, node);
     case AST_NODE_GROUPING:
         return check_expr(self, node->grouping.expr, assigning);
     case AST_NODE_FN_CALL:
