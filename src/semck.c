@@ -563,6 +563,80 @@ static void check_block(SemChecker *self, const AstNode *node) {
     self->curr_scope = &VEC_LAST(&self->scopes, SemScope);
 }
 
+static void check_if(SemChecker *self, const AstNode *node) {
+    const AstNode *cond = node->kw_if.cond;
+    const AstNode *body = node->kw_if.body;
+    const AstNode *else_body = node->kw_if.else_body;
+
+    Type *cond_type = check_expr(self, cond, false);
+
+    if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES};
+        dmsg.type_mismatch.expected = self->builtin_int;
+        dmsg.type_mismatch.found = cond_type;
+
+        error(self, &dmsg);
+    }
+
+    if (body) {
+        check_node(self, body);
+    }
+
+    if (else_body) {
+        check_node(self, else_body);
+    }
+}
+
+static void check_while(SemChecker *self, const AstNode *node) {
+    const AstNode *cond = node->kw_while.cond;
+    const AstNode *body = node->kw_while.body;
+
+    Type *cond_type = check_expr(self, cond, false);
+
+    if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES};
+        dmsg.type_mismatch.expected = self->builtin_int;
+        dmsg.type_mismatch.found = cond_type;
+
+        error(self, &dmsg);
+    }
+
+    if (body) {
+        check_node(self, body);
+    }
+}
+
+static void check_for(SemChecker *self, const AstNode *node) {
+    const AstNode *init = node->kw_for.init;
+    const AstNode *cond = node->kw_for.cond;
+    const AstNode *iter = node->kw_for.iter;
+    const AstNode *body = node->kw_for.body;
+
+    if (init) {
+        check_node(self, init);
+    }
+
+    if (cond) {
+        Type *cond_type = check_expr(self, cond, false);
+
+        if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES};
+            dmsg.type_mismatch.expected = self->builtin_int;
+            dmsg.type_mismatch.found = cond_type;
+
+            error(self, &dmsg);
+        }
+    }
+
+    if (iter) {
+        check_expr(self, iter, false);
+    }
+
+    if (body) {
+        check_node(self, body);
+    }
+}
+
 static void check_node(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
     case AST_NODE_VAR_DECL:
@@ -576,6 +650,21 @@ static void check_node(SemChecker *self, const AstNode *node) {
     case AST_NODE_BLOCK:
         check_block(self, node);
 
+        break;
+    case AST_NODE_IF:
+        check_if(self, node);
+
+        break;
+    case AST_NODE_WHILE:
+        check_while(self, node);
+
+        break;
+    case AST_NODE_FOR:
+        check_for(self, node);
+
+        break;
+    case AST_NODE_BREAK:
+    case AST_NODE_CONTINUE:
         break;
     default:
         check_expr(self, node, false);
