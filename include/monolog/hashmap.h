@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* OPTIMIZATION: it's better to use powers of 2 */
 #define HASHMAP_DEFAULT_CAP 256
 
 typedef uint32_t HashType;

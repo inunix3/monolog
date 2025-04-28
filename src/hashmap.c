@@ -29,11 +29,18 @@ static Bucket *find_bucket(Bucket *buckets, size_t cap, const char *key) {
     Bucket *bucket = NULL;
     Bucket *tombstone = NULL;
 
-    HashType i = calc_hash(key, strlen(key)) % cap;
+    /* HashType idx = calc_hash(key, strlen(key)) % cap;
+     *
+     * OPTIMIZATION: since the capacity is always a power of 2, we can use
+     * bitwise AND and capacity minus one to get the remainder of division.
+     * Bitwise instructions are very cheap, especially when compared to heavy
+     * operations like modulo.
+     */
+    HashType idx = calc_hash(key, strlen(key)) & (cap - 1);
 
     /* Linear probing */
     for (;;) {
-        bucket = &buckets[i];
+        bucket = &buckets[idx];
 
         if (!bucket->key) {
             if (!bucket->value) {
@@ -45,11 +52,7 @@ static Bucket *find_bucket(Bucket *buckets, size_t cap, const char *key) {
             break;
         }
 
-        if (i >= cap) {
-            i = 0;
-        }
-
-        ++i;
+        idx = (idx + 1) & (cap - 1);
     }
 
     return bucket;
