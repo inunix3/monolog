@@ -18,7 +18,7 @@ typedef struct SemVariable {
 typedef struct SemFunction {
     Type *type;
     const char *name;
-    Vector params;
+    Vector params; /* Vector<SemVariable *> */
     bool defined;
 } SemFunction;
 

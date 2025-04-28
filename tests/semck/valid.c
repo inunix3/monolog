@@ -35,7 +35,7 @@ CHECK_EXPR(
 )
 
 CHECK_EXPR(
-    fn_decl_recursion, "int foo(int a) { foo(a + 1); }"
+    fn_decl_recursion, "int foo(int a) { return foo(a + 1); }"
 )
 
 CHECK_EXPR(fn_call, "string foo(); string b = foo();")

@@ -273,6 +273,18 @@ static SemVariable *find_var(SemChecker *self, const char *name) {
         }
     }
 
+    if (!var && self->curr_fn) {
+        SemVariable *vars = self->curr_fn->params.data;
+
+        for (size_t i = 0; i < self->curr_fn->params.len; ++i) {
+            var = &vars[i];
+
+            if (var->name == name) {
+                break;
+            }
+        }
+    }
+
     return var;
 }
 
@@ -416,6 +428,8 @@ static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning) {
         return self->builtin_string;
     case AST_NODE_IDENT:
         return check_ident(self, node, assigning);
+    case AST_NODE_NIL:
+        return self->nil_type;
     case AST_NODE_BINARY:
         return check_binary(self, node);
     case AST_NODE_UNARY:
