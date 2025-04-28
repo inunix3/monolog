@@ -1,6 +1,6 @@
 #pragma once
 
-#include <monolog/semantic_checker.h>
+#include <monolog/semck.h>
 #include <monolog/diagnostic.h>
 #include <monolog/lexer.h>
 #include <monolog/parser.h>

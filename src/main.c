@@ -7,7 +7,7 @@
 
 #include <monolog/lexer.h>
 #include <monolog/parser.h>
-#include <monolog/semantic_checker.h>
+#include <monolog/semck.h>
 #include <monolog/utils.h>
 #include <monolog/vector.h>
 

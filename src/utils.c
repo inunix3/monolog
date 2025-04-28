@@ -60,3 +60,20 @@ char *read_file(const char *filename) {
 
     return buf;
 }
+
+void *cstr_dup_n(const char *str, size_t len) {
+    char *new_str = malloc(len + 1);
+
+    if (!new_str) {
+        return NULL;
+    }
+
+    memcpy(new_str, str, len);
+    new_str[len] = '\0';
+
+    return new_str;
+}
+
+void *cstr_dup(const char *str) {
+    return cstr_dup_n(str, strlen(str));
+}

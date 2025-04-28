@@ -8,8 +8,17 @@ typedef enum DiagnosticKind {
     DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION,
     DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION,
     DIAGNOSTIC_MISMATCHED_TYPES,
-    DIAGNOSTIC_UNDECLARED_SYMBOL,
-    DIAGNOSTIC_UNDEFINED_VARIABLE
+    DIAGNOSTIC_UNDECLARED_VARIABLE,
+    DIAGNOSTIC_UNDECLARED_FUNCTION,
+    DIAGNOSTIC_UNDEFINED_VARIABLE,
+    DIAGNOSTIC_PARAM_REDECLARATION,
+    DIAGNOSTIC_FN_REDEFINITION,
+    DIAGNOSTIC_TOO_FEW_ARGS,
+    DIAGNOSTIC_TOO_MANY_ARGS,
+    DIAGNOSTIC_BAD_ARG_TYPE,
+    DIAGNOSTIC_BAD_INDEX_TYPE,
+    DIAGNOSTIC_EXPR_NOT_INDEXABLE,
+    DIAGNOSTIC_EXPR_NOT_ASSIGNABLE
 } DiagnosticKind;
 
 typedef struct DiagnosticMessage {
@@ -33,9 +42,32 @@ typedef struct DiagnosticMessage {
         } type_mismatch;
 
         struct {
-            const char *name;
+            char *name;
         } undef_sym;
+
+        struct {
+            char *name;
+        } param_redecl;
+
+        struct {
+            char *name;
+        } fn_redef;
+
+        struct {
+            size_t expected;
+            size_t supplied;
+        } bad_arg_count;
+
+        struct {
+            Type *expected;
+            Type *found;
+        } bad_arg_type;
+
+        struct {
+            Type *found;
+        } bad_index_type;
     };
 } DiagnosticMessage;
 
+void dmsg_deinit(DiagnosticMessage *dmsg);
 const char *dmsg_to_str(const DiagnosticMessage *dmsg);

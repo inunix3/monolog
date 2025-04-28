@@ -2,6 +2,7 @@
 #include <monolog/type.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #define BUFFER_SIZE 4096
 
@@ -15,33 +16,48 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         snprintf(
             g_buf, BUFFER_SIZE, "bad operand combination for %s: %s and %s",
             token_kind_to_str(dmsg->binary_op_comb.op),
-            type_name(dmsg->binary_op_comb.t1),
-            type_name(dmsg->binary_op_comb.t2)
+            dmsg->binary_op_comb.t1->name, dmsg->binary_op_comb.t2->name
         );
 
-        return g_buf;
+        break;
     case DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION:
         snprintf(
             g_buf, BUFFER_SIZE, "bad operand type for unary %s: %s",
             token_kind_to_str(dmsg->unary_op_comb.op),
-            type_name(dmsg->unary_op_comb.type)
+            dmsg->unary_op_comb.type->name
         );
 
-        return g_buf;
-    case DIAGNOSTIC_MISMATCHED_TYPES:
+        break;
+    case DIAGNOSTIC_MISMATCHED_TYPES: {
+        const Type *expected = dmsg->bad_arg_type.expected;
+        const Type *found = dmsg->bad_arg_type.found;
+
+        if (expected->id == TYPE_OPTION) {
+            snprintf(
+                g_buf, BUFFER_SIZE, "expected %s, %s or nil, but found %s",
+                expected->name, expected->opt_type.type->name, found->name
+            );
+        } else {
+            snprintf(
+                g_buf, BUFFER_SIZE, "expected %s, found %s", expected->name,
+                found->name
+            );
+        }
+
+        break;
+    }
+    case DIAGNOSTIC_UNDECLARED_VARIABLE:
         snprintf(
-            g_buf, BUFFER_SIZE, "expected %s, found %s",
-            type_name(dmsg->type_mismatch.expected),
-            type_name(dmsg->type_mismatch.found)
+            g_buf, BUFFER_SIZE, "undeclared variable %s", dmsg->undef_sym.name
         );
 
-        return g_buf;
-    case DIAGNOSTIC_UNDECLARED_SYMBOL:
+        break;
+    case DIAGNOSTIC_UNDECLARED_FUNCTION:
         snprintf(
-            g_buf, BUFFER_SIZE, "undeclared symbol %s", dmsg->undef_sym.name
+            g_buf, BUFFER_SIZE, "undeclared function %s", dmsg->undef_sym.name
         );
 
-        return g_buf;
+        break;
     case DIAGNOSTIC_UNDEFINED_VARIABLE:
         snprintf(
             g_buf, BUFFER_SIZE,
@@ -49,6 +65,72 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
             dmsg->undef_sym.name
         );
 
-        return g_buf;
+        break;
+    case DIAGNOSTIC_PARAM_REDECLARATION:
+        snprintf(
+            g_buf, BUFFER_SIZE, "parameter %s is already declared",
+            dmsg->param_redecl.name
+        );
+
+        break;
+    case DIAGNOSTIC_FN_REDEFINITION:
+        snprintf(
+            g_buf, BUFFER_SIZE, "function %s is already defined",
+            dmsg->fn_redef.name
+        );
+
+        break;
+    case DIAGNOSTIC_TOO_FEW_ARGS:
+        snprintf(
+            g_buf, BUFFER_SIZE, "too few arguments: expected %zu, supplied %zu",
+            dmsg->bad_arg_count.expected, dmsg->bad_arg_count.supplied
+        );
+
+        break;
+    case DIAGNOSTIC_TOO_MANY_ARGS:
+        snprintf(
+            g_buf, BUFFER_SIZE,
+            "too many arguments: expected %zu, supplied %zu",
+            dmsg->bad_arg_count.expected, dmsg->bad_arg_count.supplied
+        );
+
+        break;
+    case DIAGNOSTIC_BAD_ARG_TYPE: {
+        const Type *expected = dmsg->bad_arg_type.expected;
+        const Type *found = dmsg->bad_arg_type.found;
+
+        if (expected->id == TYPE_OPTION) {
+            snprintf(
+                g_buf, BUFFER_SIZE,
+                "bad argument type: expected %s, %s or nil, but found %s",
+                expected->name, expected->opt_type.type->name, found->name
+            );
+        } else {
+            snprintf(
+                g_buf, BUFFER_SIZE, "bad argument type: expected %s, found %s",
+                expected->name, found->name
+            );
+        }
+
+        break;
     }
+    case DIAGNOSTIC_BAD_INDEX_TYPE:
+        snprintf(
+            g_buf, BUFFER_SIZE,
+            "index expression must result in an integer, but found %s",
+            type_name(dmsg->bad_index_type.found)
+        );
+
+        break;
+    case DIAGNOSTIC_EXPR_NOT_INDEXABLE:
+        snprintf(g_buf, BUFFER_SIZE, "expression is not indexable: expected array or string");
+
+        break;
+    case DIAGNOSTIC_EXPR_NOT_ASSIGNABLE:
+        snprintf(g_buf, BUFFER_SIZE, "expression is not assignable");
+
+        break;
+    }
+
+    return g_buf;
 }
