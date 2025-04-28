@@ -694,9 +694,13 @@ static AstNode *println_statement(Parser *self) {
 static AstNode *return_statement(Parser *self) {
     advance(self); /* consume the return keyword */
 
-    AstNode *expr = expression(self, PREC_NONE);
+    AstNode *expr = NULL;
 
-    if (expr->kind == AST_NODE_ERROR) {
+    if (self->curr->kind != TOKEN_OP_SEMICOLON) {
+        expr = expression(self, PREC_NONE);
+    }
+
+    if (expr && expr->kind == AST_NODE_ERROR) {
         sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
     }
 

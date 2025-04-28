@@ -489,6 +489,8 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
     hashmap_add(&self->curr_scope->vars, name, var);
 }
 
+static void check_node(SemChecker *self, const AstNode *node);
+
 static void check_fn_decl(SemChecker *self, const AstNode *node) {
     Type *type = parse_type(self, node->fn_decl.type);
     char *name = node->fn_decl.name->ident.str.data;
@@ -542,9 +544,15 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
     }
 
     hashmap_add(&self->funcs, fn->name, fn);
-}
 
-static void check_node(SemChecker *self, const AstNode *node);
+    self->curr_fn = fn;
+
+    if (body) {
+        check_node(self, body);
+    }
+
+    self->curr_fn = NULL;
+}
 
 static void check_block(SemChecker *self, const AstNode *node) {
     SemScope new_scope;
@@ -602,7 +610,9 @@ static void check_while(SemChecker *self, const AstNode *node) {
     }
 
     if (body) {
+        ++self->loop_depth;
         check_node(self, body);
+        --self->loop_depth;
     }
 }
 
@@ -633,7 +643,40 @@ static void check_for(SemChecker *self, const AstNode *node) {
     }
 
     if (body) {
+        ++self->loop_depth;
         check_node(self, body);
+        --self->loop_depth;
+    }
+}
+
+static void check_return(SemChecker *self, const AstNode *node) {
+    const AstNode *expr = node->kw_return.expr;
+
+    if (!self->curr_fn) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION};
+
+        error(self, &dmsg);
+
+        return;
+    }
+
+    Type *ret_type = expr ? check_expr(self, expr, false) : self->builtin_void;
+    Type *expected = self->curr_fn->type;
+
+    if (ret_type->id == TYPE_ERROR) {
+        return;
+    }
+
+    if (ret_type != self->builtin_void && expected == self->builtin_void) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_VOID_RETURN};
+
+        error(self, &dmsg);
+    } else if (expected != ret_type) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES};
+        dmsg.type_mismatch.expected = self->curr_fn->type;
+        dmsg.type_mismatch.found = ret_type;
+
+        error(self, &dmsg);
     }
 }
 
@@ -664,7 +707,24 @@ static void check_node(SemChecker *self, const AstNode *node) {
 
         break;
     case AST_NODE_BREAK:
+        if (self->loop_depth <= 0) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_BREAK_OUTSIDE_LOOP};
+
+            error(self, &dmsg);
+        }
+
+        break;
     case AST_NODE_CONTINUE:
+        if (self->loop_depth <= 0) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP};
+
+            error(self, &dmsg);
+        }
+
+        break;
+    case AST_NODE_RETURN:
+        check_return(self, node);
+
         break;
     default:
         check_expr(self, node, false);
@@ -705,6 +765,9 @@ void semck_init(SemChecker *self) {
     vec_init(&self->scopes, sizeof(SemScope));
     vec_init(&self->dmsgs, sizeof(DiagnosticMessage));
     self->error_state = false;
+
+    self->curr_fn = NULL;
+    self->loop_depth = 0;
 
     SemScope global_scope;
     semscope_init(&global_scope);

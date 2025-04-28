@@ -41,6 +41,9 @@ typedef struct SemChecker {
     Type *error_type;
     Type *nil_type;
 
+    SemFunction *curr_fn;
+    int loop_depth;
+
     Vector dmsgs; /* Vector<DiagnosticMessage> */
     bool error_state;
 } SemChecker;

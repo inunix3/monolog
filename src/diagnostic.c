@@ -140,6 +140,22 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         snprintf(g_buf, BUFFER_SIZE, "expression cannot be mutated");
 
         break;
+    case DIAGNOSTIC_BREAK_OUTSIDE_LOOP:
+        snprintf(g_buf, BUFFER_SIZE, "break cannot be outside loop");
+
+        break;
+    case DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP:
+        snprintf(g_buf, BUFFER_SIZE, "continue cannot be outside loop");
+
+        break;
+    case DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION:
+        snprintf(g_buf, BUFFER_SIZE, "return cannot be outside function");
+
+        break;
+    case DIAGNOSTIC_VOID_RETURN:
+        snprintf(g_buf, BUFFER_SIZE, "void function cannot return value");
+
+        break;
     }
 
     return g_buf;
