@@ -52,10 +52,10 @@ target_link_libraries(semck_test PRIVATE greatest)
 
 set(INTERP_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/expressions.c"
-    # "${CMAKE_CURRENT_SOURCE_DIR}/interp/invalid.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/invalid.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/main.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/shared.h"
-    # "${CMAKE_CURRENT_SOURCE_DIR}/interp/statements.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/statements.c"
 )
 
 add_executable(interp_test $<TARGET_OBJECTS:monolog-obj> ${INTERP_SOURCES})

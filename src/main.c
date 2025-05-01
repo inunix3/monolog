@@ -178,8 +178,9 @@ static int cmd_run(char *buf, size_t size) {
     if (!has_error) {
         Interpreter interp;
         interp_init(&interp, &ast);
+        interp.log_errors = true;
 
-        exit_code = interp_run(&interp);
+        exit_code = interp_walk(&interp);
     }
 
     ast_destroy(&ast);
@@ -234,8 +235,9 @@ static void cmd_repl(void) {
             if (!has_error) {
                 Interpreter interp;
                 interp_init(&interp, &ast);
+                interp.log_errors = true;
 
-                interp_run(&interp);
+                interp_walk(&interp);
 
                 if (interp.halt) {
                     exit(interp.exit_code);

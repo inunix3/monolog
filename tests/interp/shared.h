@@ -40,12 +40,26 @@ static bool parse(const char *input) {
 
     vec_deinit(&tokens);
 
-    return !parser.error_state;
+    if (!parser.error_state && semck_check(&g_semck, &g_ast)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static Value eval(const char *input) {
+    if (parse(input)) {
+        interp_init(&g_interp, &g_ast);
+
+        return interp_eval(&g_interp);
+    }
+
+    return (Value) {TYPE_ERROR};
 }
 
 static void run(const char *input) {
     if (parse(input)) {
         interp_init(&g_interp, &g_ast);
-        interp_run(&g_interp);
+        interp_walk(&g_interp);
     }
 }

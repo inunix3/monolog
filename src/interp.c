@@ -1,7 +1,10 @@
+#include <monolog/ast.h>
 #include <monolog/interp.h>
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define CASE_BINARY_INT(_op, _v1, _v2)                                         \
     val.i = (_v1)->i _op(_v2)->i;                                              \
@@ -14,6 +17,7 @@
 #define RETURN_IF_ERROR(_v)                                                    \
     if ((_v).type == TYPE_ERROR)                                               \
         return _v;
+
 #define RETURN_VOID_IF_ERROR(_v)                                               \
     if ((_v).type == TYPE_ERROR)                                               \
         return;
@@ -22,8 +26,10 @@ static Value g_err_value = {TYPE_ERROR};
 
 static void error(Interpreter *self, const char *msg) {
     self->had_error = true;
-    fputs(msg, stderr);
-    putchar('\n');
+
+    if (self->log_errors) {
+        fprintf(stderr, "runtime error: %s\n", msg);
+    }
 }
 
 static Value
@@ -129,6 +135,7 @@ static Value exec_unary_string(Interpreter *self, TokenKind op, Value *v1) {
 
     switch (op) {
     case TOKEN_OP_HASHTAG:
+        val.type = TYPE_INT;
         val.i = v1->s.len;
 
         break;
@@ -203,6 +210,10 @@ static Value exec_expr(Interpreter *self, const AstNode *node) {
     case AST_NODE_GROUPING:
         return exec_expr(self, node->grouping.expr);
     default:
+        val.type = TYPE_ERROR;
+
+        error(self, "invalid expression");
+
         break;
     }
 
@@ -215,7 +226,7 @@ static void builtin_print(Interpreter *self, const char *str) {
 
 static void builtin_println(Interpreter *self, const char *str) {
     fputs(str, stdout);
-    putchar('\n');
+    fputc('\n', stdout);
 }
 
 static void exec_node(Interpreter *self, const AstNode *node) {
@@ -291,12 +302,14 @@ static void exec_node(Interpreter *self, const AstNode *node) {
 void interp_init(Interpreter *self, const Ast *ast) {
     self->ast = ast;
     self->exit_code = 0;
+    self->halt = false;
     self->had_error = false;
+    self->log_errors = false;
 }
 
 void interp_deinit(Interpreter *self) { (void)self; }
 
-int interp_run(Interpreter *self) {
+int interp_walk(Interpreter *self) {
     const AstNode **nodes = self->ast->nodes.data;
 
     for (size_t i = 0; i < self->ast->nodes.len; ++i) {
@@ -311,4 +324,22 @@ int interp_run(Interpreter *self) {
     }
 
     return self->exit_code;
+}
+
+Value interp_eval(Interpreter *self) {
+    Value val;
+
+    if (self->ast->nodes.len == 0) {
+        val.type = TYPE_VOID;
+
+        return val;
+    }
+
+    val = exec_expr(self, ((const AstNode **)self->ast->nodes.data)[0]);
+
+    if (self->had_error) {
+        self->exit_code = -1;
+    }
+
+    return val;
 }
