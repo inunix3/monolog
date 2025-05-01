@@ -260,7 +260,7 @@ static AstNode *string_literal(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_STRING);
 
     /* TODO: handle escaped characters */
-    str_init_n(&node->literal.str, self->curr->src + 1, self->curr->len - 2);
+    str_dup_n(&node->literal.str, self->curr->src + 1, self->curr->len - 2);
 
     advance(self); /* consume the string */
 
@@ -269,7 +269,7 @@ static AstNode *string_literal(Parser *self) {
 
 static AstNode *identifier(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_IDENT);
-    str_init_n(&node->ident.str, self->curr->src, self->curr->len);
+    str_dup_n(&node->ident.str, self->curr->src, self->curr->len);
 
     advance(self); /* consume the identifier */
 

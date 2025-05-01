@@ -8,7 +8,10 @@ typedef struct StrBuf {
     size_t len;
 } StrBuf;
 
-bool str_init(StrBuf *self, const char *cstr);
-bool str_init_n(StrBuf *self, const char *cstr, size_t len);
+bool str_init(StrBuf *self);
+bool str_init_n(StrBuf *self, size_t len);
+bool str_dup(StrBuf *self, const char *cstr);
+bool str_dup_n(StrBuf *self, const char *cstr, size_t len);
 void str_deinit(StrBuf *self);
+bool str_cat(StrBuf *self, const StrBuf *src);
 bool str_set(StrBuf *self, const char *cstr);

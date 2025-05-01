@@ -49,3 +49,16 @@ add_executable(semck_test $<TARGET_OBJECTS:monolog-obj> ${SEMCK_SOURCES})
 target_compile_options(semck_test PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(semck_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
 target_link_libraries(semck_test PRIVATE greatest)
+
+set(INTERP_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/expressions.c"
+    # "${CMAKE_CURRENT_SOURCE_DIR}/interp/invalid.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/main.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/shared.h"
+    # "${CMAKE_CURRENT_SOURCE_DIR}/interp/statements.c"
+)
+
+add_executable(interp_test $<TARGET_OBJECTS:monolog-obj> ${INTERP_SOURCES})
+target_compile_options(interp_test PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(interp_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_link_libraries(interp_test PRIVATE greatest)

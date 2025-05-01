@@ -5,6 +5,7 @@
  * (see LICENSE.md in the root of project).
  */
 
+#include <monolog/interp.h>
 #include <monolog/lexer.h>
 #include <monolog/parser.h>
 #include <monolog/semck.h>
@@ -146,6 +147,47 @@ static void cmd_parse(char *buf, size_t size) {
     vec_deinit(&tokens);
 }
 
+static int cmd_run(char *buf, size_t size) {
+    Vector tokens;
+    vec_init(&tokens, sizeof(Token));
+
+    lexer_lex(buf, size, &tokens);
+
+    Parser parser = parser_new(tokens.data, tokens.len);
+    parser.log_errors = true;
+
+    Ast ast = parser_parse(&parser);
+
+    bool has_error = parser.error_state;
+    if (!has_error) {
+        SemChecker semck;
+        semck_init(&semck);
+        has_error = !semck_check(&semck, &ast);
+
+        DiagnosticMessage *dmsgs = semck.dmsgs.data;
+
+        for (size_t i = 0; i < semck.dmsgs.len; ++i) {
+            printf("error: %s\n", dmsg_to_str(&dmsgs[i]));
+        }
+
+        semck_deinit(&semck);
+    }
+
+    int exit_code = -1;
+
+    if (!has_error) {
+        Interpreter interp;
+        interp_init(&interp, &ast);
+
+        exit_code = interp_run(&interp);
+    }
+
+    ast_destroy(&ast);
+    vec_deinit(&tokens);
+
+    return exit_code;
+}
+
 static void print_help(void) {
     printf("usage: monolog COMMAND FILENAME\n"
            "\n"
@@ -173,10 +215,12 @@ static void cmd_repl(void) {
             parser.log_errors = true;
             Ast ast = parser_parse(&parser);
 
-            if (!parser.error_state) {
+            bool has_error = parser.error_state;
+
+            if (!has_error) {
                 SemChecker semck;
                 semck_init(&semck);
-                semck_check(&semck, &ast);
+                has_error = !semck_check(&semck, &ast);
 
                 DiagnosticMessage *dmsgs = semck.dmsgs.data;
 
@@ -187,7 +231,17 @@ static void cmd_repl(void) {
                 semck_deinit(&semck);
             }
 
-            ast_dump(&ast, stdout);
+            if (!has_error) {
+                Interpreter interp;
+                interp_init(&interp, &ast);
+
+                interp_run(&interp);
+
+                if (interp.halt) {
+                    exit(interp.exit_code);
+                }
+            }
+
             ast_destroy(&ast);
         }
 
@@ -226,6 +280,11 @@ int main(int argc, char **argv) {
         cmd_tokenize(input, size);
     } else if (strcmp(cmd, "parse") == 0) {
         cmd_parse(input, size);
+    } else if (strcmp(cmd, "run") == 0) {
+        int exit_code = cmd_run(input, size);
+        free(input);
+
+        return exit_code;
     } else {
         fprintf(stderr, "bad command\n");
     }

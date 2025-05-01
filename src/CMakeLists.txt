@@ -16,6 +16,7 @@ set(HEADERS
     "${INCLUDE_DIR}/type.h"
     "${INCLUDE_DIR}/utils.h"
     "${INCLUDE_DIR}/vector.h"
+    "${INCLUDE_DIR}/interp.h"
 )
 
 set(SOURCES
@@ -29,6 +30,7 @@ set(SOURCES
     "${SRC_DIR}/type.c"
     "${SRC_DIR}/utils.c"
     "${SRC_DIR}/vector.c"
+    "${SRC_DIR}/interp.c"
 )
 
 add_library(monolog-obj OBJECT ${HEADERS} ${SOURCES})
