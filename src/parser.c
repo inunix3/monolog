@@ -66,12 +66,13 @@ static ParseRule g_rules[] = {
     [TOKEN_KW_RETURN]        = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_BREAK]         = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_CONTINUE]      = {NULL,            NULL,    NULL,      PREC_NONE},
-    [TOKEN_KW_NIL]           = {nil_constant,     NULL,    NULL,     PREC_NONE},
+    [TOKEN_KW_NIL]           = {nil_constant,    NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_INT]           = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_VOID]          = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_STRING]        = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_KW_PRINT]         = {NULL,            NULL,    NULL,      PREC_NONE},
-    [TOKEN_KW_PRINTLN]       = {NULL,            NULL,    NULL,      PREC_NONE}
+    [TOKEN_KW_PRINTLN]       = {NULL,            NULL,    NULL,      PREC_NONE},
+    [TOKEN_KW_EXIT]          = {NULL,            NULL,    NULL,      PREC_NONE}
 };
 /* clang-format on */
 
@@ -208,6 +209,7 @@ static void sync(Parser *self, unsigned modes) {
             case TOKEN_KW_WHILE:
             case TOKEN_KW_PRINT:
             case TOKEN_KW_PRINTLN:
+            case TOKEN_KW_EXIT:
             case TOKEN_KW_INT:
             case TOKEN_KW_STRING:
             case TOKEN_KW_VOID:
@@ -665,6 +667,11 @@ static AstNode *print_statement(Parser *self) {
 
     expect(self, TOKEN_OP_LPAREN);
     AstNode *expr = expression(self, PREC_NONE);
+
+    if (expr->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_RPAREN_KEEP);
+    }
+
     expect(self, TOKEN_OP_RPAREN);
 
     AstNode *stmt = astnode_new(AST_NODE_PRINT);
@@ -686,6 +693,24 @@ static AstNode *println_statement(Parser *self) {
     expect(self, TOKEN_OP_RPAREN);
 
     AstNode *stmt = astnode_new(AST_NODE_PRINTLN);
+    stmt->kw_print.expr = expr;
+
+    return stmt;
+}
+
+static AstNode *exit_statement(Parser *self) {
+    advance(self); /* consume exit keyword */
+
+    expect(self, TOKEN_OP_LPAREN);
+    AstNode *expr = expression(self, PREC_NONE);
+
+    if (expr->kind == AST_NODE_ERROR) {
+        sync(self, SYNC_TO_RPAREN_KEEP);
+    }
+
+    expect(self, TOKEN_OP_RPAREN);
+
+    AstNode *stmt = astnode_new(AST_NODE_EXIT);
     stmt->kw_print.expr = expr;
 
     return stmt;
@@ -732,6 +757,10 @@ static AstNode *statement(Parser *self) {
         break;
     case TOKEN_KW_PRINTLN:
         stmt = println_statement(self);
+
+        break;
+    case TOKEN_KW_EXIT:
+        stmt = exit_statement(self);
 
         break;
     case TOKEN_OP_LBRACE:

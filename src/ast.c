@@ -83,6 +83,11 @@ void astnode_destroy(AstNode *self) {
         self->kw_print.expr = NULL;
 
         break;
+    case AST_NODE_EXIT:
+        astnode_destroy(self->kw_exit.expr);
+        self->kw_exit.expr = NULL;
+
+        break;
     case AST_NODE_IF:
         astnode_destroy(self->kw_if.cond);
         self->kw_if.cond = NULL;
@@ -265,6 +270,11 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
     case AST_NODE_PRINTLN:
         fprintf(out, "println:\n");
         print_node(node->kw_print.expr, out, indent + 1);
+
+        break;
+    case AST_NODE_EXIT:
+        fprintf(out, "exit:\n");
+        print_node(node->kw_exit.expr, out, indent + 1);
 
         break;
     case AST_NODE_IF:

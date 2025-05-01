@@ -203,7 +203,7 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
             return self->error_type;
         }
 
-        return self->builtin_int;
+        return self->builtin_string;
     case TOKEN_OP_MUL:
         if (type->id != TYPE_OPTION) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION};
@@ -694,6 +694,18 @@ static void check_return(SemChecker *self, const AstNode *node) {
     }
 }
 
+static void check_print(SemChecker *self, const AstNode *node) {
+    Type *expr_type = check_expr(self, node->kw_print.expr, false);
+
+    if (expr_type->id != TYPE_ERROR && expr_type->id != TYPE_STRING) {
+        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES};
+        dmsg.type_mismatch.expected = self->builtin_string;
+        dmsg.type_mismatch.found = expr_type;
+
+        error(self, &dmsg);
+    }
+}
+
 static void check_node(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
     case AST_NODE_VAR_DECL:
@@ -718,6 +730,11 @@ static void check_node(SemChecker *self, const AstNode *node) {
         break;
     case AST_NODE_FOR:
         check_for(self, node);
+
+        break;
+    case AST_NODE_PRINT:
+    case AST_NODE_PRINTLN:
+        check_print(self, node);
 
         break;
     case AST_NODE_BREAK:

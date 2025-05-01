@@ -471,10 +471,10 @@ TEST embedded_strings(void) {
 
 TEST keywords(void) {
     const char *input = "if else for while return break continue nil int void "
-                        "string print println";
+                        "string print println exit";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    ASSERT_EQ(14, g_tokens.len);
+    ASSERT_EQ(15, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_KW_IF, input, 2, true, {1, 1}},
@@ -490,7 +490,8 @@ TEST keywords(void) {
         {TOKEN_KW_STRING, input + 53, 6, true, {1, 54}},
         {TOKEN_KW_PRINT, input + 60, 5, true, {1, 61}},
         {TOKEN_KW_PRINTLN, input + 66, 7, true, {1, 67}},
-        {TOKEN_EOF, input + strlen(input), 0, true, {1, 74}}
+        {TOKEN_KW_EXIT, input + 74, 4, true, {1, 75}},
+        {TOKEN_EOF, input + strlen(input), 0, true, {1, 79}}
     };
 
     for (int i = 0; i < g_tokens.len; ++i) {
@@ -502,10 +503,10 @@ TEST keywords(void) {
 
 TEST keywords_case_sensitivity(void) {
     const char *input = "iF ELSE fOr WhIlE REtuRn BrEAK ContInuE Nil Int VoId "
-                        "sTRIng PRINT printLn";
+                        "sTRIng PRINT printLn eXIt";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    ASSERT_EQ(14, g_tokens.len);
+    ASSERT_EQ(15, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_IDENTIFIER, input, 2, true, {1, 1}},
@@ -521,7 +522,8 @@ TEST keywords_case_sensitivity(void) {
         {TOKEN_IDENTIFIER, input + 53, 6, true, {1, 54}},
         {TOKEN_IDENTIFIER, input + 60, 5, true, {1, 61}},
         {TOKEN_IDENTIFIER, input + 66, 7, true, {1, 67}},
-        {TOKEN_EOF, input + strlen(input), 0, true, {1, 74}}
+        {TOKEN_IDENTIFIER, input + 74, 4, true, {1, 75}},
+        {TOKEN_EOF, input + strlen(input), 0, true, {1, 79}}
     };
 
     for (int i = 0; i < g_tokens.len; ++i) {

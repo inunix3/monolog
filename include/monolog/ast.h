@@ -21,6 +21,7 @@ typedef enum AstNodeKind {
     AST_NODE_BLOCK,
     AST_NODE_PRINT,
     AST_NODE_PRINTLN,
+    AST_NODE_EXIT,
     AST_NODE_IF,
     AST_NODE_WHILE,
     AST_NODE_FOR,
@@ -88,6 +89,10 @@ typedef struct AstNode {
         struct {
             struct AstNode *expr;
         } kw_print;
+
+        struct {
+            struct AstNode *expr;
+        } kw_exit;
 
         struct {
             struct AstNode *cond;

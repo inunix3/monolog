@@ -64,7 +64,7 @@ static TokenKind identifier_kind(const char *s, size_t len) {
     static const char *keywords[] = {"if",     "else",  "for",      "while",
                                      "return", "break", "continue", "nil",
                                      "int",    "void",  "string",   "print",
-                                     "println"};
+                                     "println", "exit"};
 
     for (int i = 0; i < ARRAY_SIZE(keywords); ++i) {
         if (strlen(keywords[i]) == len && strncmp(s, keywords[i], len) == 0) {
@@ -318,7 +318,7 @@ const char *token_kind_to_str(TokenKind kind) {
         "&&",      "||",       "?",       "#",          "$",
         "if",      "else",     "for",     "while",      "return",
         "break",   "continue", "nil",     "int",        "void",
-        "string",  "print",    "println"
+        "string",  "print",    "println", "exit"
     };
 
     return strs[kind];
@@ -373,7 +373,8 @@ const char *token_kind_to_name(TokenKind kind) {
         "keyword void",
         "keyword string",
         "keyword print",
-        "keyword println"
+        "keyword println",
+        "keyword exit"
     };
 
     return names[kind];

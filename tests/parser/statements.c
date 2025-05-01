@@ -44,6 +44,12 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
+    exit_keyword,
+    "exit(-1 - 1 + 1)",
+    "exit-keyword.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
     return_keyword,
     "return (2 + 4) * 3",
     "return-keyword.txt"
@@ -387,6 +393,7 @@ SUITE(SUITE_NAME) {
     RUN_TEST(multiple_exprs_2);
     RUN_TEST(print_keyword);
     RUN_TEST(println_keyword);
+    RUN_TEST(exit_keyword);
     RUN_TEST(return_keyword);
     RUN_TEST(break_keyword);
     RUN_TEST(continue_keyword);
