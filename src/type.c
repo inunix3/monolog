@@ -9,45 +9,45 @@
 
 static char g_buf[BUF_SIZE];
 
-void format_type_name(const Type *type, size_t *pos) {
+void format_type_name(const Type *type, int *pos) {
     switch (type->id) {
     case TYPE_INT:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "int");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "int");
 
         break;
     case TYPE_STRING:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "string");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "string");
 
         break;
     case TYPE_VOID:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "void");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "void");
 
         break;
     case TYPE_OPTION:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "option<");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "option<");
         format_type_name(type->opt_type.type, pos);
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, ">");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, ">");
 
         break;
     case TYPE_ARRAY:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "array<");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "array<");
         format_type_name(type->array_type.type, pos);
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, ">");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, ">");
 
         break;
     case TYPE_ERROR:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "<error>");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "<error>");
 
         break;
     case TYPE_NIL:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - *pos, "nil");
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "nil");
 
         break;
     }
 }
 
 const char *type_name(const Type *type) {
-    size_t pos = 0;
+    int pos = 0;
 
     memset(g_buf, 0, sizeof(g_buf));
     format_type_name(type, &pos);
@@ -80,6 +80,21 @@ bool type_system_init(TypeSystem *self) {
         return false;
     }
 
+    Type builtin_int = {TYPE_INT, NULL, {0}};
+    self->builtin_int = type_system_register(self, &builtin_int);
+
+    Type builtin_string = {TYPE_STRING, NULL, {0}};
+    self->builtin_string = type_system_register(self, &builtin_string);
+
+    Type builtin_void = {TYPE_VOID, NULL, {0}};
+    self->builtin_void = type_system_register(self, &builtin_void);
+
+    Type error_type = {TYPE_ERROR, NULL, {0}};
+    self->error_type = type_system_register(self, &error_type);
+
+    Type nil_type = {TYPE_NIL, NULL, {0}};
+    self->nil_type = type_system_register(self, &nil_type);
+
     return true;
 }
 
@@ -106,10 +121,8 @@ void type_system_deinit(TypeSystem *self) {
 }
 
 char *type_system_name(TypeSystem *self, const Type *type) {
-    size_t pos = 0;
-
+    int pos = 0;
     format_type_name(type, &pos);
-
     char *name = cstr_dup(g_buf);
 
     if (!hashmap_get(&self->types, name)) {
@@ -120,10 +133,8 @@ char *type_system_name(TypeSystem *self, const Type *type) {
 }
 
 Type *type_system_register(TypeSystem *self, const Type *type) {
-    size_t pos = 0;
-
+    int pos = 0;
     format_type_name(type, &pos);
-
     Type *existing_type = hashmap_get(&self->types, g_buf);
 
     if (existing_type) {

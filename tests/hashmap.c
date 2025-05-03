@@ -88,8 +88,38 @@ TEST delete_one_value(void) {
     PASS();
 }
 
+TEST delete_multiple_values(void) {
+    const char *keys[] = {"Key1", "Key2", "Key3", "Key4", "Key5",
+                          "Key6", "Key7", "Key8", "Key9", "Key10"};
+
+    char *values[] = {"Value1", "Value2", "Value3", "Value4", "Value5",
+                      "Value6", "Value7", "Value8", "Value9", "Value10"};
+
+    for (int i = 0; i < 10; ++i) {
+        hashmap_add(&g_map, keys[i], values[i]);
+    }
+
+    hashmap_remove(&g_map, keys[2]);
+    hashmap_remove(&g_map, keys[4]);
+    hashmap_remove(&g_map, keys[5]);
+    hashmap_remove(&g_map, keys[8]);
+    hashmap_remove(&g_map, keys[9]);
+
+    ASSERT_EQ(HASHMAP_DEFAULT_CAP, g_map.cap);
+    ASSERT_EQ(5, g_map.size);
+    ASSERT(g_map.buckets != NULL);
+
+    ASSERT_NEQ(NULL, hashmap_get(&g_map, "Key1"));
+    ASSERT_NEQ(NULL, hashmap_get(&g_map, "Key2"));
+    ASSERT_NEQ(NULL, hashmap_get(&g_map, "Key4"));
+    ASSERT_NEQ(NULL, hashmap_get(&g_map, "Key7"));
+    ASSERT_NEQ(NULL, hashmap_get(&g_map, "Key8"));
+
+    PASS();
+}
+
 TEST getting_values(void) {
-    TestData data[50] = { 0 };
+    TestData data[50] = {0};
 
     fill_test_data(data, 50);
 
@@ -108,7 +138,7 @@ TEST getting_values(void) {
 }
 
 TEST add_more_values_and_iteration(void) {
-    TestData data[50] = { 0 };
+    TestData data[50] = {0};
 
     fill_test_data(data, 50);
 
@@ -119,7 +149,7 @@ TEST add_more_values_and_iteration(void) {
     int cnt = 0;
     for (HashMapIter it = hashmap_iter(&g_map); it.bucket != NULL;
          hashmap_iter_next(&it)) {
-        int value = *(int *) it.bucket->value;
+        int value = *(int *)it.bucket->value;
 
         ASSERT(cnt < 50);
         ASSERT(0 <= value && value < 50);
@@ -137,11 +167,12 @@ TEST add_more_values_and_iteration(void) {
 }
 
 TEST grow(void) {
-    TestData data[HASHMAP_DEFAULT_CAP * 2] = { 0 };
+    TestData data[HASHMAP_DEFAULT_CAP * 2] = {0};
 
     fill_test_data(data, HASHMAP_DEFAULT_CAP * 2);
 
-    /* Hashmap doubles it's size every insertion when the load factor is >= 70% */
+    /* Hashmap doubles it's size every insertion when the load factor is >= 70%
+     */
     ASSERT_EQ(HASHMAP_DEFAULT_CAP * 4, g_map.cap);
     ASSERT_EQ(HASHMAP_DEFAULT_CAP * 2, g_map.size);
     ASSERT(g_map.buckets != NULL);
@@ -157,7 +188,7 @@ TEST grow(void) {
 }
 
 TEST capacity_remains_the_same_after_deleting_all(void) {
-    TestData data[HASHMAP_DEFAULT_CAP * 2] = { 0 };
+    TestData data[HASHMAP_DEFAULT_CAP * 2] = {0};
 
     fill_test_data(data, HASHMAP_DEFAULT_CAP * 2);
 
@@ -165,7 +196,8 @@ TEST capacity_remains_the_same_after_deleting_all(void) {
         hashmap_remove(&g_map, data[i].buf);
     }
 
-    /* Hashmap doubles it's size every insertion when the load factor is >= 70% */
+    /* Hashmap doubles it's size every insertion when the load factor is >= 70%
+     */
     ASSERT_EQ(HASHMAP_DEFAULT_CAP * 4, g_map.cap);
     ASSERT_EQ(0, g_map.size);
     ASSERT(g_map.buckets != NULL);
@@ -174,13 +206,14 @@ TEST capacity_remains_the_same_after_deleting_all(void) {
 }
 
 TEST capacity_remains_the_same_after_clearing(void) {
-    TestData data[HASHMAP_DEFAULT_CAP * 2] = { 0 };
+    TestData data[HASHMAP_DEFAULT_CAP * 2] = {0};
 
     fill_test_data(data, HASHMAP_DEFAULT_CAP * 2);
 
     hashmap_clear(&g_map);
 
-    /* Hashmap doubles it's capacity every insertion when the load factor is >= 70% */
+    /* Hashmap doubles it's capacity every insertion when the load factor is >=
+     * 70% */
     ASSERT_EQ(HASHMAP_DEFAULT_CAP * 4, g_map.cap);
     ASSERT_EQ(0, g_map.size);
     ASSERT(g_map.buckets != NULL);
@@ -196,6 +229,7 @@ SUITE(hashmap) {
     RUN_TEST(add_one_value);
     RUN_TEST(get_one_value);
     RUN_TEST(delete_one_value);
+    RUN_TEST(delete_multiple_values);
     RUN_TEST(getting_values);
     RUN_TEST(add_more_values_and_iteration);
     RUN_TEST(grow);

@@ -30,7 +30,7 @@ char *read_file_stream(FILE *file) {
         return NULL;
     }
 
-    char *buf = malloc(size + 1);
+    char *buf = malloc((size_t)size + 1);
 
     if (!buf) {
         fprintf(stderr, "cannot allocate buffer: %s\n", strerror(errno));
@@ -39,7 +39,7 @@ char *read_file_stream(FILE *file) {
         return NULL;
     }
 
-    fread(buf, sizeof(*buf), size, file);
+    fread(buf, sizeof(*buf), (size_t)size, file);
     buf[size] = 0;
 
     return buf;
@@ -74,6 +74,4 @@ void *cstr_dup_n(const char *str, size_t len) {
     return new_str;
 }
 
-void *cstr_dup(const char *str) {
-    return cstr_dup_n(str, strlen(str));
-}
+void *cstr_dup(const char *str) { return cstr_dup_n(str, strlen(str)); }

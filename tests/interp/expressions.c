@@ -3,7 +3,7 @@
 TEST empty_input(void) {
     Value v = eval("");
 
-    ASSERT_EQ(TYPE_VOID, v.type);
+    ASSERT_EQ(TYPE_VOID, v.type->id);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(0, g_interp.exit_code);
@@ -16,7 +16,7 @@ TEST empty_input(void) {
 TEST int_literal(void) {
     Value v = eval("123456789");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(123456789, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -30,7 +30,7 @@ TEST int_literal(void) {
 TEST unary_minus_int(void) {
     Value v = eval("-115");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(-115, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -44,7 +44,7 @@ TEST unary_minus_int(void) {
 TEST unary_nested_int(void) {
     Value v = eval("-(-(+(-5)))");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(-5, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -58,7 +58,7 @@ TEST unary_nested_int(void) {
 TEST unary_plus_int(void) {
     Value v = eval("+115");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(115, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -72,7 +72,7 @@ TEST unary_plus_int(void) {
 TEST binary_int_plus_int(void) {
     Value v = eval("115 + 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(209, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -86,7 +86,7 @@ TEST binary_int_plus_int(void) {
 TEST binary_int_minus_int(void) {
     Value v = eval("115 - 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(21, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -100,7 +100,7 @@ TEST binary_int_minus_int(void) {
 TEST binary_int_mul_int(void) {
     Value v = eval("115 * 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(10810, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -114,7 +114,7 @@ TEST binary_int_mul_int(void) {
 TEST binary_int_div_int(void) {
     Value v = eval("115 / 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -128,7 +128,7 @@ TEST binary_int_div_int(void) {
 TEST binary_int_mod_int(void) {
     Value v = eval("115 % 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(21, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -142,8 +142,8 @@ TEST binary_int_mod_int(void) {
 TEST binary_string_plus_string(void) {
     Value v = eval("\"Hello\" + \", \" + \"World\" + \"!\"");
 
-    ASSERT_EQ(TYPE_STRING, v.type);
-    ASSERT_STR_EQ("Hello, World!", v.s.data);
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("Hello, World!", v.s->data);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(0, g_interp.exit_code);
@@ -156,7 +156,7 @@ TEST binary_string_plus_string(void) {
 TEST precedence(void) {
     Value v = eval("1 + 2 * 3 - 4 / 10");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(7, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -170,7 +170,7 @@ TEST precedence(void) {
 TEST left_associativity(void) {
     Value v = eval("115 + 94 + 3 - 1 - 10");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(201, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -184,7 +184,7 @@ TEST left_associativity(void) {
 TEST mul_left_associativity(void) {
     Value v = eval("115 * 94 / 3 % 4 * 34");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(102, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -198,7 +198,7 @@ TEST mul_left_associativity(void) {
 TEST grouping(void) {
     Value v = eval("(115 + 94) / 34");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(6, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -212,7 +212,7 @@ TEST grouping(void) {
 TEST nested_grouping(void) {
     Value v = eval("(((94 + 115) * 2) % 2 ) - 1");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(-1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -226,7 +226,7 @@ TEST nested_grouping(void) {
 TEST arithmetic_combination(void) {
     Value v = eval("(1 + 2) * (3 - 4) / (9 * -(+10000 % (34 - -99999)))");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -240,7 +240,7 @@ TEST arithmetic_combination(void) {
 TEST equality_true(void) {
     Value v = eval("2 + 2 == 4");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -254,7 +254,7 @@ TEST equality_true(void) {
 TEST equality_false(void) {
     Value v = eval("2 + 2 == 5");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -268,7 +268,7 @@ TEST equality_false(void) {
 TEST not_equal_true(void) {
     Value v = eval("3 + 5 * 3 - 4 / 5 != 4");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -282,7 +282,7 @@ TEST not_equal_true(void) {
 TEST not_equal_false(void) {
     Value v = eval("3 + 5 * 3 - 4 / 5 != 18");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -296,7 +296,7 @@ TEST not_equal_false(void) {
 TEST greater_true(void) {
     Value v = eval("5 > 3");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -310,7 +310,7 @@ TEST greater_true(void) {
 TEST greater_false(void) {
     Value v = eval("3 > 5");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -324,7 +324,7 @@ TEST greater_false(void) {
 TEST greater_equal_1_true(void) {
     Value v = eval("115 >= 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -338,7 +338,7 @@ TEST greater_equal_1_true(void) {
 TEST greater_equal_2_true(void) {
     Value v = eval("94 >= 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -352,7 +352,7 @@ TEST greater_equal_2_true(void) {
 TEST greater_equal_false(void) {
     Value v = eval("93 >= 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -366,7 +366,7 @@ TEST greater_equal_false(void) {
 TEST less_true(void) {
     Value v = eval("-256 < 1024");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -380,7 +380,7 @@ TEST less_true(void) {
 TEST less_false(void) {
     Value v = eval("-256 > 1024");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -394,7 +394,7 @@ TEST less_false(void) {
 TEST less_equal_1_true(void) {
     Value v = eval("94 <= 115");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -408,7 +408,7 @@ TEST less_equal_1_true(void) {
 TEST less_equal_2_true(void) {
     Value v = eval("94 <= 94");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -422,7 +422,7 @@ TEST less_equal_2_true(void) {
 TEST less_equal_false(void) {
     Value v = eval("-115 <= -116");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -436,7 +436,7 @@ TEST less_equal_false(void) {
 TEST and_true(void) {
     Value v = eval("1 && 1");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -450,7 +450,7 @@ TEST and_true(void) {
 TEST and_1_false(void) {
     Value v = eval("0 && 1");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -464,7 +464,7 @@ TEST and_1_false(void) {
 TEST and_2_false(void) {
     Value v = eval("1 && 0");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -478,7 +478,7 @@ TEST and_2_false(void) {
 TEST and_3_false(void) {
     Value v = eval("0 && 0");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -492,7 +492,7 @@ TEST and_3_false(void) {
 TEST or_1_true(void) {
     Value v = eval("1 || 1");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -506,7 +506,7 @@ TEST or_1_true(void) {
 TEST or_2_true(void) {
     Value v = eval("0 || 1");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -520,7 +520,7 @@ TEST or_2_true(void) {
 TEST or_3_true(void) {
     Value v = eval("1 || 0");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(1, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -534,7 +534,7 @@ TEST or_3_true(void) {
 TEST or_false(void) {
     Value v = eval("0 || 0");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(0, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -548,7 +548,7 @@ TEST or_false(void) {
 TEST string_len(void) {
     Value v = eval("#\"Hello, World!\"");
 
-    ASSERT_EQ(TYPE_INT, v.type);
+    ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(13, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -562,8 +562,23 @@ TEST string_len(void) {
 TEST int_to_string(void) {
     Value v = eval("$115");
 
-    ASSERT_EQ(TYPE_STRING, v.type);
-    ASSERT_STR_EQ("115", v.s.data);
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("115", v.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST int_var(void) {
+    run("int a = 115");
+    Value v = eval("a + 5");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(120, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(0, g_interp.exit_code);
@@ -617,4 +632,5 @@ SUITE(expressions) {
     RUN_TEST(or_false);
     RUN_TEST(string_len);
     RUN_TEST(int_to_string);
+    RUN_TEST(int_var);
 }
