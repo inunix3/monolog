@@ -41,7 +41,7 @@ if (COMPILER STREQUAL "gcc" OR COMPILER STREQUAL "clang")
       -Wall -Wextra -Wconversion -Wsign-conversion -Wshadow -fstack-clash-protection
   )
 
-  set(COMPILE_OPTIONS ${COMPILE_OPTIONS} $<$<CONFIG:Debug>:-Og>)
+  set(COMPILE_OPTIONS ${COMPILE_OPTIONS} $<$<CONFIG:Debug>:-O0>)
 endif()
 
 if (USE_ASAN)

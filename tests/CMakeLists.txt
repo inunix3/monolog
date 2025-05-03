@@ -1,22 +1,26 @@
 # Copyright (c) 2025-present inunix3
 #
-# This file is licensed under the MIT License (Expat)
-# (see LICENSE.md in the root of project).
+# This file is licensed under the MIT License (Expat) (see LICENSE.md in the
+# root of project).
 
-add_executable(vector_test $<TARGET_OBJECTS:monolog-obj> vector.c)
-target_compile_options(vector_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(vector_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(vector_test PRIVATE greatest)
+macro(create_test NAME)
+    set(SOURCES ${ARGN})
 
-add_executable(hashmap_test $<TARGET_OBJECTS:monolog-obj> hashmap.c)
-target_compile_options(hashmap_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(hashmap_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(hashmap_test PRIVATE greatest)
+    add_executable(${NAME} $<TARGET_OBJECTS:monolog-obj> ${SOURCES})
+    target_compile_options(${NAME} PRIVATE ${COMPILE_OPTIONS})
+    target_include_directories(${NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    target_link_libraries(${NAME} PRIVATE greatest)
 
-add_executable(lexer_test $<TARGET_OBJECTS:monolog-obj> lexer.c)
-target_compile_options(lexer_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(lexer_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(lexer_test PRIVATE greatest)
+    if(USE_ASAN)
+        target_link_options(${NAME} PRIVATE -fsanitize=address)
+    elseif(USE_UBSAN)
+        target_link_options(${NAME} PRIVATE -fsanitize=undefined)
+    endif()
+endmacro()
+
+create_test(vector_test vector.c)
+create_test(hashmap_test hashmap.c)
+create_test(lexer_test lexer.c)
 
 set(PARSER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/parser/expressions.c"
@@ -26,15 +30,13 @@ set(PARSER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/parser/statements.c"
 )
 
-add_executable(parser_test $<TARGET_OBJECTS:monolog-obj> ${PARSER_SOURCES})
-target_compile_options(parser_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(parser_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(parser_test PRIVATE greatest)
+create_test(parser_test ${PARSER_SOURCES})
 
 add_custom_command(
-    TARGET parser_test
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
+  TARGET parser_test
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E create_symlink
     "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
     "$<TARGET_FILE_DIR:parser_test>/golden-files"
 )
@@ -45,10 +47,7 @@ set(SEMCK_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/semck/valid.c"
 )
 
-add_executable(semck_test $<TARGET_OBJECTS:monolog-obj> ${SEMCK_SOURCES})
-target_compile_options(semck_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(semck_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(semck_test PRIVATE greatest)
+create_test(semck_test ${SEMCK_SOURCES})
 
 set(INTERP_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/expressions.c"
@@ -58,7 +57,4 @@ set(INTERP_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/statements.c"
 )
 
-add_executable(interp_test $<TARGET_OBJECTS:monolog-obj> ${INTERP_SOURCES})
-target_compile_options(interp_test PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(interp_test PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(interp_test PRIVATE greatest)
+create_test(interp_test ${INTERP_SOURCES})
