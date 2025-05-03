@@ -47,6 +47,12 @@ typedef struct TypeSystem {
      * will be simpler to store everything here. */
     HashMap types; /* HashMap<char *, Type *> */
     Vector type_names; /* Vector<char *> */
+
+    Type *builtin_int;
+    Type *builtin_string;
+    Type *builtin_void;
+    Type *error_type;
+    Type *nil_type;
 } TypeSystem;
 
 bool type_system_init(TypeSystem *self);

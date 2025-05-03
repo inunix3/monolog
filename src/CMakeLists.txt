@@ -8,21 +8,25 @@ set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 
 set(HEADERS
     "${INCLUDE_DIR}/ast.h"
+    "${INCLUDE_DIR}/environment.h"
     "${INCLUDE_DIR}/hashmap.h"
+    "${INCLUDE_DIR}/interp.h"
     "${INCLUDE_DIR}/lexer.h"
     "${INCLUDE_DIR}/parser.h"
     "${INCLUDE_DIR}/semck.h"
     "${INCLUDE_DIR}/strbuf.h"
     "${INCLUDE_DIR}/type.h"
     "${INCLUDE_DIR}/utils.h"
+    "${INCLUDE_DIR}/value.h"
     "${INCLUDE_DIR}/vector.h"
-    "${INCLUDE_DIR}/interp.h"
 )
 
 set(SOURCES
     "${SRC_DIR}/ast.c"
-    "${SRC_DIR}/hashmap.c"
     "${SRC_DIR}/diagnostic.c"
+    "${SRC_DIR}/environment.c"
+    "${SRC_DIR}/hashmap.c"
+    "${SRC_DIR}/interp.c"
     "${SRC_DIR}/lexer.c"
     "${SRC_DIR}/parser.c"
     "${SRC_DIR}/semck.c"
@@ -30,7 +34,6 @@ set(SOURCES
     "${SRC_DIR}/type.c"
     "${SRC_DIR}/utils.c"
     "${SRC_DIR}/vector.c"
-    "${SRC_DIR}/interp.c"
 )
 
 add_library(monolog-obj OBJECT ${HEADERS} ${SOURCES})

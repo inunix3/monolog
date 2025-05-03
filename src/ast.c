@@ -175,6 +175,12 @@ void astnode_destroy(AstNode *self) {
         astnode_destroy(self->fn_decl.name);
         self->fn_decl.name = NULL;
 
+        AstNode **values = self->fn_decl.params.data;
+
+        for (size_t i = 0; i < self->fn_decl.params.len; ++i) {
+            astnode_destroy(values[i]);
+        }
+
         vec_deinit(&self->fn_decl.params);
 
         astnode_destroy(self->fn_decl.body);
@@ -394,6 +400,7 @@ void ast_destroy(Ast *self) {
 
     for (size_t i = 0; i < self->nodes.len; ++i) {
         astnode_destroy(nodes[i]);
+        nodes[i] = NULL;
     }
 
     vec_deinit(&self->nodes);

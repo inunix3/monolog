@@ -30,17 +30,20 @@ void vec_deinit(Vector *self) {
     }
 
     free(self->data);
-    memset(self, 0, sizeof(*self));
+    self->data = NULL;
+    self->len = 0;
+    self->cap = 0;
+    self->element_size = 0;
 }
 
-bool vec_push(Vector *self, const void *data) {
+void *vec_push(Vector *self, const void *data) {
     if (self->len >= self->cap) {
         size_t new_cap = self->cap * 2;
 
         self->data = realloc(self->data, new_cap * self->element_size);
 
         if (!self->data) {
-            return false;
+            return NULL;
         }
 
         memset(
@@ -51,11 +54,10 @@ bool vec_push(Vector *self, const void *data) {
         self->cap = new_cap;
     }
 
-    memcpy(
-        self->data + self->len++ * self->element_size, data, self->element_size
-    );
+    void *block = self->data + self->len++ * self->element_size;
+    memcpy(block, data, self->element_size);
 
-    return true;
+    return block;
 }
 
 void vec_pop(Vector *self) {

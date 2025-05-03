@@ -44,13 +44,12 @@ bool str_dup_n(StrBuf *self, const char *cstr, size_t len) {
 void str_deinit(StrBuf *self) {
     free(self->data);
     self->data = NULL;
-
     self->len = 0;
 }
 
 bool str_cat(StrBuf *self, const StrBuf *src) {
     size_t new_len = self->len + src->len;
-    self->data = realloc(self->data, new_len);
+    self->data = realloc(self->data, new_len + 1);
 
     if (!self->data) {
         return false;

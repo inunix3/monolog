@@ -30,7 +30,6 @@ typedef struct HashMap {
 
 bool hashmap_init(HashMap *self);
 void hashmap_deinit(HashMap *self);
-
 bool hashmap_add(HashMap *self, const char *key, void *value);
 void hashmap_remove(HashMap *self, const char *key);
 void *hashmap_get(const HashMap *self, const char *key);

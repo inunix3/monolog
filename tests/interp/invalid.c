@@ -3,7 +3,7 @@
 TEST div_by_zero(void) {
     Value v = eval("115 / 0");
 
-    ASSERT_EQ(TYPE_ERROR, v.type);
+    ASSERT_EQ(TYPE_ERROR, v.type->id);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(-1, g_interp.exit_code);
@@ -16,7 +16,7 @@ TEST div_by_zero(void) {
 TEST mod_by_zero(void) {
     Value v = eval("115 % 0");
 
-    ASSERT_EQ(TYPE_ERROR, v.type);
+    ASSERT_EQ(TYPE_ERROR, v.type->id);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(-1, g_interp.exit_code);

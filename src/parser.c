@@ -99,14 +99,6 @@ static void error(Parser *self, const char *fmt, ...) {
     va_end(vargs);
 }
 
-static void error_at(Parser *self, int line, int col, const char *fmt, ...) {
-    va_list vargs;
-
-    va_start(vargs, fmt);
-    verror(self, fmt, vargs);
-    va_end(vargs);
-}
-
 static void advance(Parser *self) {
     Token *tok = &self->toks[self->tok_idx];
 
@@ -117,8 +109,6 @@ static void advance(Parser *self) {
     self->prev = self->curr;
     self->curr = tok;
 }
-
-static Token *peek(const Parser *self) { return &self->toks[self->tok_idx]; }
 
 static inline bool match(const Parser *self, TokenKind kind) {
     return self->curr->kind == kind;
@@ -285,8 +275,6 @@ static AstNode *nil_constant(Parser *self) {
 static AstNode *unary(Parser *self) {
     AstNode *node = astnode_new(AST_NODE_UNARY);
 
-    ParseRule *op_rule = &g_rules[self->curr->kind];
-
     advance(self); /* consume the operator */
 
     node->unary.op = self->prev->kind;
@@ -310,8 +298,6 @@ static AstNode *binary(Parser *self, AstNode *left) {
 
 static AstNode *suffix(Parser *self, AstNode *left) {
     AstNode *node = astnode_new(AST_NODE_SUFFIX);
-
-    ParseRule *op_rule = &g_rules[self->curr->kind];
 
     advance(self); /* consume the operator */
 
@@ -397,10 +383,10 @@ static AstNode *fn_call(Parser *self, AstNode *left) {
     vec_init(&values, sizeof(AstNode *));
 
     if (!value_list(self, &values)) {
-        // sync(
-        //     self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RBRACKET_KEEP |
-        //               SYNC_TO_BLOCK | SYNC_TO_STATEMENT
-        // );
+        sync(
+            self, SYNC_TO_SEMICOLON_KEEP | SYNC_TO_RBRACKET_KEEP |
+                      SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+        );
     }
 
     AstNode *node = astnode_new(AST_NODE_FN_CALL);
@@ -417,6 +403,7 @@ static AstNode *array_sub(Parser *self, AstNode *left) {
 
     if (!expect(self, TOKEN_OP_RBRACKET)) {
         astnode_destroy(expr);
+        astnode_destroy(left);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -711,7 +698,7 @@ static AstNode *exit_statement(Parser *self) {
     expect(self, TOKEN_OP_RPAREN);
 
     AstNode *stmt = astnode_new(AST_NODE_EXIT);
-    stmt->kw_print.expr = expr;
+    stmt->kw_exit.expr = expr;
 
     return stmt;
 }
@@ -886,11 +873,12 @@ static AstNode *param_decl(Parser *self) {
     AstNode *type = parse_type(self);
 
     if (type->kind == AST_NODE_ERROR) {
-        return astnode_new(AST_NODE_ERROR);
+        return type;
     }
 
     if (!match(self, TOKEN_IDENTIFIER)) {
         error(self, "expected identifier");
+        astnode_destroy(type);
 
         return astnode_new(AST_NODE_ERROR);
     }
@@ -955,6 +943,7 @@ static AstNode *declaration(Parser *self) {
     if (!match(self, TOKEN_IDENTIFIER)) {
         error(self, "expected identifier");
         sync(self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT);
+        astnode_destroy(type);
 
         return astnode_new(AST_NODE_ERROR);
     }

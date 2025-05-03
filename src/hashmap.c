@@ -59,7 +59,7 @@ static Bucket *find_bucket(Bucket *buckets, size_t cap, const char *key) {
 }
 
 static bool should_resize(const HashMap *self) {
-    return self->size >= self->cap * MAX_LOAD;
+    return self->size >= (size_t) ((double) self->cap * MAX_LOAD);
 }
 
 static bool grow(HashMap *self) {
@@ -70,10 +70,7 @@ static bool grow(HashMap *self) {
         return false;
     }
 
-    /* We're ignoring tombstones during copying buckets, so we need to
-     * recalculate the number of buckets */
-    self->size = 0;
-
+    /* rehash */
     for (size_t i = 0; i < self->cap; ++i) {
         Bucket *bucket = &self->buckets[i];
 
@@ -84,10 +81,9 @@ static bool grow(HashMap *self) {
         Bucket *dest_bucket = find_bucket(new_buckets, new_cap, bucket->key);
         dest_bucket->key = bucket->key;
         dest_bucket->value = bucket->value;
-
-        ++self->size;
     }
 
+    free(self->buckets);
     self->buckets = new_buckets;
     self->cap = new_cap;
 
@@ -121,7 +117,8 @@ bool hashmap_add(HashMap *self, const char *key, void *value) {
     }
 
     Bucket *bucket = find_bucket(self->buckets, self->cap, key);
-    bool new_bucket = !bucket->key && bucket->value != TOMBSTONE;
+    // bool new_bucket = !bucket->key && bucket->value != TOMBSTONE;
+    bool new_bucket = !bucket->key;
 
     bucket->key = key;
     bucket->value = value;
@@ -168,9 +165,7 @@ void hashmap_clear(HashMap *self) {
 }
 
 HashMapIter hashmap_iter(HashMap *self) {
-    HashMapIter it = {self};
-
-    it.idx = 0;
+    HashMapIter it = {self, NULL, 0};
     hashmap_iter_next(&it);
 
     return it;

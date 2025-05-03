@@ -21,7 +21,7 @@ typedef struct Vector {
 
 bool vec_init(Vector *self, size_t element_size);
 void vec_deinit(Vector *self);
-bool vec_push(Vector *self, const void *data);
+void *vec_push(Vector *self, const void *data);
 void vec_pop(Vector *self);
 bool vec_reserve(Vector *self, size_t new_cap);
 void vec_clear(Vector *self);

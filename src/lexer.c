@@ -61,14 +61,14 @@ static bool is_operator(char ch) {
 }
 
 static TokenKind identifier_kind(const char *s, size_t len) {
-    static const char *keywords[] = {"if",     "else",  "for",      "while",
-                                     "return", "break", "continue", "nil",
-                                     "int",    "void",  "string",   "print",
+    static const char *keywords[] = {"if",      "else",  "for",      "while",
+                                     "return",  "break", "continue", "nil",
+                                     "int",     "void",  "string",   "print",
                                      "println", "exit"};
 
-    for (int i = 0; i < ARRAY_SIZE(keywords); ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE(keywords); ++i) {
         if (strlen(keywords[i]) == len && strncmp(s, keywords[i], len) == 0) {
-            return TOKEN_KW_IF + i;
+            return TOKEN_KW_IF + (TokenKind)i;
         }
     }
 
@@ -112,7 +112,7 @@ static TokenKind single_operator_kind(char ch) {
         ['#'] = TOKEN_OP_HASHTAG,  ['$'] = TOKEN_OP_DOLAR
     };
 
-    return kinds[ch];
+    return kinds[(int)ch];
 }
 
 static bool is_alpha(char ch) {
@@ -123,7 +123,8 @@ static bool is_identifier(char ch) { return is_alpha(ch) || ch == '_'; }
 
 static Token new_token(const Lexer *self, TokenKind kind) {
     return (Token
-    ){kind, self->data + self->next_ch_idx - 1, 0, true, self->line, self->col};
+    ){kind, self->data + self->next_ch_idx - 1, 0, true, {self->line, self->col}
+    };
 }
 
 static char advance(Lexer *self) {
@@ -147,18 +148,6 @@ static char advance(Lexer *self) {
 
 static char peek_next(Lexer *self) {
     return at_eof(self) ? '\0' : self->data[self->next_ch_idx];
-}
-
-static void skip_ws(Lexer *self) {
-    while (is_ws(self->ch)) {
-        advance(self);
-    }
-}
-
-static void skip_comment(Lexer *self) {
-    while (!at_eof(self) && self->ch != '\n') {
-        advance(self);
-    }
 }
 
 static Token lex_invalid(Lexer *self) {
@@ -269,9 +258,11 @@ static Token next_token(Lexer *self) {
     find_begin_of_data(self);
 
     if (at_eof(self)) {
-        return (Token){TOKEN_EOF,  self->data + self->next_ch_idx - 1,
-                       0,          true,
-                       self->line, self->col};
+        return (Token){TOKEN_EOF,
+                       self->data + self->next_ch_idx - 1,
+                       0,
+                       true,
+                       {self->line, self->col}};
     } else if (is_digit(self->ch)) {
         return lex_int(self);
     } else if (is_identifier(self->ch)) {
