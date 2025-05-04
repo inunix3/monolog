@@ -22,6 +22,17 @@ typedef struct ExprResult {
     };
 } ExprResult;
 
+typedef enum StmtResultKind {
+    STMT_ERROR,
+    STMT_VOID,
+    STMT_BREAK,
+    STMT_CONTINUE
+} StmtResultKind;
+
+typedef struct StmtResult {
+    StmtResultKind kind;
+} StmtResult;
+
 typedef struct Interpreter {
     Environment env;
     TypeSystem *types;
