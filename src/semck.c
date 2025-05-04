@@ -155,7 +155,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         if (type_equal(type, self->types->builtin_int)) {
             return self->types->builtin_int;
         } else {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
+            };
             dmsg.unary_op_comb.op = op;
             dmsg.unary_op_comb.type = type;
             error(self, &dmsg);
@@ -173,7 +175,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         }
 
         if (type->id != TYPE_INT) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
+            };
             dmsg.unary_op_comb.op = op;
             dmsg.unary_op_comb.type = type;
             error(self, &dmsg);
@@ -184,7 +188,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         return type;
     case TOKEN_OP_HASHTAG:
         if (type->id != TYPE_ARRAY && type->id != TYPE_STRING) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
+            };
             dmsg.unary_op_comb.op = op;
             dmsg.unary_op_comb.type = type;
             error(self, &dmsg);
@@ -195,7 +201,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         return self->types->builtin_int;
     case TOKEN_OP_DOLAR:
         if (type->id != TYPE_INT) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
+            };
             dmsg.unary_op_comb.op = op;
             dmsg.unary_op_comb.type = type;
             error(self, &dmsg);
@@ -206,7 +214,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         return self->types->builtin_string;
     case TOKEN_OP_MUL:
         if (type->id != TYPE_OPTION) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
+            };
             dmsg.unary_op_comb.op = op;
             dmsg.unary_op_comb.type = type;
             error(self, &dmsg);
@@ -753,32 +763,17 @@ void semck_deinit(SemChecker *self) {
     self->error_state = false;
 }
 
-// Value value_clone(const Value *self) {
-//     Value val = *self;
-//
-//     val.type = self->type;
-//
-//     if (val.type->id == TYPE_STRING) {
-//         str_dup_n(&val.s, self->s.data, self->s.len);
-//     }
-//
-//     return val;
-// }
-
-Variable *var_clone(const Variable *var) {
+static Variable *var_clone(const Variable *var) {
     Variable *var_copy = malloc(sizeof(*var));
     var_copy->type = var->type;
     var_copy->name = cstr_dup(var->name);
-    // var_copy->val = value_clone(&var->val);
     var_copy->defined = var->defined;
     var_copy->is_param = var->is_param;
 
     return var_copy;
 }
 
-void clone_fn_params(
-    Vector *self, const Vector *params_vec
-) {
+static void clone_fn_params(Vector *self, const Vector *params_vec) {
     const Variable *params = params_vec->data;
 
     for (size_t i = 0; i < params_vec->len; ++i) {
@@ -827,6 +822,4 @@ bool semck_check(
     return !self->error_state;
 }
 
-void semck_reset(SemChecker *self) {
-    env_reset(&self->env);
-}
+void semck_reset(SemChecker *self) { env_reset(&self->env); }

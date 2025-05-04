@@ -100,6 +100,42 @@ TEST stmt_else(void) {
     PASS();
 }
 
+TEST stmt_while(void) {
+    run(
+        "int i = 0;\n"
+        "while (i < 10000) {\n"
+        "  ++i;\n"
+        "}\n"
+        "\n"
+        "exit(i);"
+    );
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(10000, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(true, g_interp.halt);
+
+    PASS();
+}
+
+TEST stmt_for(void) {
+    run(
+        "int outer_i = 0;"
+        "for (int i = 0; i < 10000; i++) {\n"
+        "  outer_i = i;"
+        "}\n"
+        "\n"
+        "exit(outer_i);"
+    );
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(9999, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(true, g_interp.halt);
+
+    PASS();
+}
+
 /* TODO: test loop statements */
 
 SUITE(statements) {
@@ -114,4 +150,6 @@ SUITE(statements) {
     RUN_TEST(stmt_if_false);
     RUN_TEST(stmt_else_if);
     RUN_TEST(stmt_else);
+    RUN_TEST(stmt_while);
+    RUN_TEST(stmt_for);
 }

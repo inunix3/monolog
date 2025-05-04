@@ -124,7 +124,7 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, Value *v1) {
     case TOKEN_OP_MINUS:
         CASE_UNARY_INT(-, v1);
     case TOKEN_OP_EXCL:
-        val.i = !(v1->i != 0);
+        val.i = !val.i;
 
         break;
     case TOKEN_OP_DOLAR: {
@@ -248,6 +248,140 @@ static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
     return expr;
 }
 
+static ExprResult
+exec_suffix_int(Interpreter *self, Variable *var, TokenKind op) {
+    Value val = {self->types->builtin_int, {0}};
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+
+    switch (op) {
+    case TOKEN_OP_INC: {
+        Int old = var->val.i;
+        ++var->val.i;
+
+        val.i = old;
+
+        break;
+    }
+    case TOKEN_OP_DEC: {
+        Int old = var->val.i;
+        --var->val.i;
+
+        val.i = old;
+
+        break;
+    }
+    default:
+        expr_res.kind = EXPR_ERROR;
+
+        error(self, "bad operator");
+
+        return expr_res;
+    }
+
+    expr_res.val = val;
+
+    return expr_res;
+}
+
+static ExprResult exec_suffix(Interpreter *self, const AstNode *node) {
+    ExprResult expr_res = exec_expr(self, node->suffix.left);
+
+    if (expr_res.kind != EXPR_VAR) {
+        return expr_res;
+    }
+
+    Variable *var = expr_res.var;
+
+    switch (var->type->id) {
+    case TYPE_INT:
+        return exec_suffix_int(self, var, node->suffix.op);
+    default:
+        expr_res.kind = EXPR_ERROR;
+
+        error(self, "bad type for suffix");
+
+        break;
+    }
+
+    return expr_res;
+}
+
+static ExprResult exec_string_literal(Interpreter *self, const AstNode *node) {
+    ExprResult expr_res;
+
+    expr_res.kind = EXPR_VALUE;
+
+    StrBuf str = {0};
+    StrBuf *strp = vec_push(&self->strings, &str);
+
+    str_dup_n(strp, node->literal.str.data, node->literal.str.len);
+
+    expr_res.val.type = self->types->builtin_string;
+    expr_res.val.s = strp;
+
+    return expr_res;
+}
+
+static ExprResult exec_identifier(Interpreter *self, const AstNode *node) {
+    ExprResult expr_res;
+
+    Variable *var = env_find_var(&self->env, node->ident.str.data);
+
+    if (!var) {
+        expr_res.kind = EXPR_ERROR;
+        error(self, "cannot find variable");
+
+        return expr_res;
+    }
+
+    expr_res.kind = EXPR_VAR;
+    expr_res.var = var;
+
+    return expr_res;
+}
+
+static ExprResult
+exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
+    ExprResult expr_res = {0};
+
+    if ((size_t)idx >= str->len) {
+        expr_res.kind = EXPR_ERROR;
+        error(self, "index out of range");
+
+        return expr_res;
+    }
+
+    expr_res.kind = EXPR_VALUE;
+    expr_res.val.type = self->types->builtin_int;
+    expr_res.val.i = str->data[idx];
+
+    return expr_res;
+}
+
+static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
+    ExprResult left_expr = exec_expr(self, node->array_sub.left);
+    RETURN_IF_ERROR(left_expr);
+
+    ExprResult idx_expr = exec_expr(self, node->array_sub.expr);
+    RETURN_IF_ERROR(idx_expr);
+
+    ExprResult expr_res = {0};
+    Value left_val = EXPR_GET_VALUE(left_expr);
+    Value idx = EXPR_GET_VALUE(idx_expr);
+
+    switch (left_val.type->id) {
+    case TYPE_STRING:
+        return exec_string_subscript(self, left_val.s, idx.i);
+    default:
+        expr_res.kind = EXPR_ERROR;
+        error(self, "bad type for subscript");
+
+        break;
+    }
+
+    return expr_res;
+}
+
 static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
     ExprResult expr_res;
 
@@ -259,36 +393,17 @@ static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
 
         return expr_res;
     case AST_NODE_STRING:
-        expr_res.kind = EXPR_VALUE;
-
-        StrBuf str = {0};
-        StrBuf *strp = vec_push(&self->strings, &str);
-
-        str_dup_n(strp, node->literal.str.data, node->literal.str.len);
-
-        expr_res.val.type = self->types->builtin_string;
-        expr_res.val.s = strp;
-
-        return expr_res;
-    case AST_NODE_IDENT: {
-        Variable *var = env_find_var(&self->env, node->ident.str.data);
-
-        if (!var) {
-            expr_res.kind = EXPR_ERROR;
-            error(self, "cannot find variable");
-
-            return expr_res;
-        }
-
-        expr_res.kind = EXPR_VAR;
-        expr_res.var = var;
-
-        return expr_res;
-    }
+        return exec_string_literal(self, node);
+    case AST_NODE_IDENT:
+        return exec_identifier(self, node);
     case AST_NODE_UNARY:
         return exec_unary(self, node);
     case AST_NODE_BINARY:
         return exec_binary(self, node);
+    case AST_NODE_SUFFIX:
+        return exec_suffix(self, node);
+    case AST_NODE_ARRAY_SUBSCRIPT:
+        return exec_subscript(self, node);
     case AST_NODE_GROUPING:
         return exec_expr(self, node->grouping.expr);
     default:
@@ -297,19 +412,6 @@ static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
 
         return expr_res;
     }
-}
-
-static void builtin_print(Interpreter *self, const char *str) {
-    (void)self;
-
-    fputs(str, stdout);
-}
-
-static void builtin_println(Interpreter *self, const char *str) {
-    (void)self;
-
-    fputs(str, stdout);
-    fputc('\n', stdout);
 }
 
 static Type *process_type(Interpreter *self, const AstNode *node) {
@@ -341,115 +443,176 @@ static Type *process_type(Interpreter *self, const AstNode *node) {
     }
 }
 
-static void exec_node(Interpreter *self, const AstNode *node) {
-    switch (node->kind) {
-    case AST_NODE_BLOCK: {
-        AstNode **nodes = node->block.nodes.data;
+static void exec_node(Interpreter *self, const AstNode *node);
 
-        for (size_t i = 0; i < node->block.nodes.len; ++i) {
-            exec_node(self, nodes[i]);
+static void exec_block(Interpreter *self, const AstNode *node) {
+    AstNode **nodes = node->block.nodes.data;
 
-            if (self->had_error || self->halt) {
+    env_enter_scope(&self->env);
+
+    for (size_t i = 0; i < node->block.nodes.len; ++i) {
+        exec_node(self, nodes[i]);
+
+        if (self->had_error || self->halt) {
+            break;
+        }
+    }
+
+    env_leave_scope(&self->env);
+}
+
+static void exec_var_decl(Interpreter *self, const AstNode *node) {
+    Type *type = process_type(self, node->var_decl.type);
+
+    Value val = {self->types->error_type, {0}};
+    bool defined = false;
+
+    if (node->var_decl.rvalue) {
+        ExprResult expr = exec_expr(self, node->var_decl.rvalue);
+        RETURN_VOID_IF_ERROR(expr);
+
+        val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
+
+        if (!type_equal(val.type, type)) {
+            error(self, "type mismatch");
+
+            return;
+        }
+
+        defined = true;
+    }
+
+    Variable *var = malloc(sizeof(*var));
+    var->name = cstr_dup(node->var_decl.name->ident.str.data);
+    var->type = type;
+    var->val = val;
+    var->defined = defined;
+    var->is_param = false;
+
+    hashmap_add(&self->env.curr_scope->vars, var->name, var);
+}
+
+static void exec_print(Interpreter *self, const AstNode *node) {
+    ExprResult expr = exec_expr(self, node->kw_print.expr);
+    RETURN_VOID_IF_ERROR(expr);
+
+    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
+
+    fputs(val.s->data, stdout);
+}
+
+static void exec_println(Interpreter *self, const AstNode *node) {
+    ExprResult expr = exec_expr(self, node->kw_print.expr);
+    RETURN_VOID_IF_ERROR(expr);
+
+    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
+
+    fputs(val.s->data, stdout);
+    fputc('\n', stdout);
+}
+
+static void exec_exit(Interpreter *self, const AstNode *node) {
+    ExprResult expr = exec_expr(self, node->kw_exit.expr);
+    RETURN_VOID_IF_ERROR(expr);
+
+    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
+
+    self->exit_code = (int)val.i;
+    self->halt = true;
+}
+
+static void exec_if(Interpreter *self, const AstNode *node) {
+    ExprResult cond = exec_expr(self, node->kw_if.cond);
+    RETURN_VOID_IF_ERROR(cond);
+
+    Value cond_val = EXPR_GET_VALUE(cond);
+
+    if (cond_val.i) {
+        exec_node(self, node->kw_if.body);
+    } else if (node->kw_if.else_body) {
+        exec_node(self, node->kw_if.else_body);
+    }
+}
+
+static void exec_while(Interpreter *self, const AstNode *node) {
+    ExprResult cond = exec_expr(self, node->kw_while.cond);
+    RETURN_VOID_IF_ERROR(cond);
+
+    Value cond_val = EXPR_GET_VALUE(cond);
+
+    while (cond_val.i) {
+        exec_node(self, node->kw_while.body);
+
+        cond = exec_expr(self, node->kw_while.cond);
+        RETURN_VOID_IF_ERROR(cond);
+
+        cond_val = EXPR_GET_VALUE(cond);
+    }
+}
+
+static void exec_for(Interpreter *self, const AstNode *node) {
+    const AstNode *init = node->kw_for.init;
+    const AstNode *cond = node->kw_for.cond;
+    const AstNode *iter = node->kw_for.iter;
+    const AstNode *body = node->kw_for.body;
+
+    env_enter_scope(&self->env);
+
+    if (init) {
+        exec_node(self, init);
+
+        if (self->had_error) {
+            return;
+        }
+    }
+
+    for (;;) {
+        if (cond) {
+            ExprResult expr = exec_expr(self, cond);
+            RETURN_VOID_IF_ERROR(expr);
+
+            Value val = EXPR_GET_VALUE(expr);
+
+            if (!val.i) {
                 break;
             }
         }
 
-        break;
-    }
-    case AST_NODE_VAR_DECL: {
-        Type *type = process_type(self, node->var_decl.type);
+        if (body) {
+            exec_node(self, body);
 
-        Value val = {self->types->error_type, {0}};
-        bool defined = false;
-
-        if (node->var_decl.rvalue) {
-            ExprResult expr = exec_expr(self, node->var_decl.rvalue);
-            RETURN_VOID_IF_ERROR(expr);
-
-            val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-            if (!type_equal(val.type, type)) {
-                error(self, "type mismatch");
-
+            if (self->had_error) {
                 return;
             }
-
-            defined = true;
         }
 
-        Variable *var = malloc(sizeof(*var));
-        var->name = cstr_dup(node->var_decl.name->ident.str.data);
-        var->type = type;
-        var->val = val;
-        var->defined = defined;
-        var->is_param = false;
-
-        hashmap_add(&self->env.curr_scope->vars, var->name, var);
-
-        break;
-    }
-    case AST_NODE_PRINT: {
-        ExprResult expr = exec_expr(self, node->kw_print.expr);
-        RETURN_VOID_IF_ERROR(expr);
-
-        Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-        builtin_print(self, val.s->data);
-
-        break;
-    }
-    case AST_NODE_PRINTLN: {
-        ExprResult expr = exec_expr(self, node->kw_print.expr);
-        RETURN_VOID_IF_ERROR(expr);
-
-        Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-        builtin_println(self, val.s->data);
-
-        break;
-    }
-    case AST_NODE_EXIT: {
-        ExprResult expr = exec_expr(self, node->kw_exit.expr);
-        RETURN_VOID_IF_ERROR(expr);
-
-        Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-        self->exit_code = (int)val.i;
-        self->halt = true;
-
-        break;
-    }
-    case AST_NODE_IF: {
-        ExprResult cond = exec_expr(self, node->kw_if.cond);
-        RETURN_VOID_IF_ERROR(cond);
-
-        Value cond_val = EXPR_GET_VALUE(cond);
-
-        if (cond_val.i) {
-            exec_node(self, node->kw_if.body);
-        } else if (node->kw_if.else_body) {
-            exec_node(self, node->kw_if.else_body);
+        if (iter) {
+            ExprResult expr = exec_expr(self, iter);
+            RETURN_VOID_IF_ERROR(expr);
         }
-
-        break;
     }
-    case AST_NODE_WHILE: {
-        ExprResult cond = exec_expr(self, node->kw_while.cond);
-        RETURN_VOID_IF_ERROR(cond);
 
-        Value cond_val = EXPR_GET_VALUE(cond);
+    env_leave_scope(&self->env);
+}
 
-        while (cond_val.i) {
-            exec_node(self, node->kw_while.body);
-
-            cond = exec_expr(self, node->kw_while.cond);
-            RETURN_VOID_IF_ERROR(cond);
-
-            cond_val = EXPR_GET_VALUE(cond);
-        }
-
-        break;
-    }
+static void exec_node(Interpreter *self, const AstNode *node) {
+    switch (node->kind) {
+    case AST_NODE_BLOCK:
+        return exec_block(self, node);
+    case AST_NODE_VAR_DECL:
+        return exec_var_decl(self, node);
+    case AST_NODE_PRINT:
+        return exec_print(self, node);
+    case AST_NODE_PRINTLN:
+        return exec_println(self, node);
+    case AST_NODE_EXIT:
+        return exec_exit(self, node);
+    case AST_NODE_IF:
+        return exec_if(self, node);
+    case AST_NODE_WHILE:
+        return exec_while(self, node);
+    case AST_NODE_FOR:
+        return exec_for(self, node);
     default:
         exec_expr(self, node);
 

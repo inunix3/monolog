@@ -6,14 +6,7 @@
 void scope_init(Scope *self) { hashmap_init(&self->vars); }
 
 void scope_deinit(Scope *self) {
-    for (HashMapIter it = hashmap_iter(&self->vars); it.bucket != NULL;
-         hashmap_iter_next(&it)) {
-        Variable *var = it.bucket->value;
-
-        free(var->name);
-        free(var);
-    }
-
+    scope_clear(self);
     hashmap_deinit(&self->vars);
 }
 
@@ -24,6 +17,8 @@ void scope_clear(Scope *self) {
 
         hashmap_remove(&self->vars, var->name);
         free(var->name);
+        var->name = NULL;
+
         free(var);
     }
 }
@@ -113,4 +108,24 @@ void env_reset(Environment *self) {
         hashmap_remove(&self->funcs, fn->name);
         free(fn);
     }
+}
+
+Scope *env_enter_scope(Environment *self) {
+    Scope new_scope;
+    scope_init(&new_scope);
+    vec_push(&self->scopes, &new_scope);
+
+    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
+
+    return self->curr_scope;
+}
+
+void env_leave_scope(Environment *self) {
+    if (self->curr_scope == self->global_scope) {
+        return;
+    }
+
+    scope_deinit(self->curr_scope);
+    vec_pop(&self->scopes);
+    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
 }

@@ -559,6 +559,30 @@ TEST string_len(void) {
     PASS();
 }
 
+TEST string_subscript(void) {
+    Value first = eval("\"Hello, World!\"[0]");
+
+    ASSERT_EQ(TYPE_INT, first.type->id);
+    ASSERT_EQ((Int) 'H', first.i);
+
+    Value last = eval("\"Hello, World!\"[12]");
+
+    ASSERT_EQ(TYPE_INT, last.type->id);
+    ASSERT_EQ((Int) '!', last.i);
+
+    Value random = eval("\"Hello, World!\"[5]");
+
+    ASSERT_EQ(TYPE_INT, random.type->id);
+    ASSERT_EQ((Int) ',', random.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
 TEST int_to_string(void) {
     Value v = eval("$115");
 
@@ -579,6 +603,91 @@ TEST int_var(void) {
 
     ASSERT_EQ(TYPE_INT, v.type->id);
     ASSERT_EQ(120, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST string_var(void) {
+    run("string s = \"Hello, World!\"");
+    Value v = eval("s + s + \"String\"");
+
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("Hello, World!Hello, World!String", v.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST prefix_increment(void) {
+    run("int a = 5;");
+    Value v = eval("++a");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(6, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST suffix_increment(void) {
+    run("int a = 5;");
+    Value v = eval("a++");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(5, v.i);
+
+    v = eval("a");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(6, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST prefix_decrement(void) {
+    run("int a = 5;");
+    Value v = eval("--a");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(4, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST suffix_decrement(void) {
+    run("int a = 5;");
+    Value v = eval("a--");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(5, v.i);
+
+    v = eval("a");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(4, v.i);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(0, g_interp.exit_code);
@@ -633,4 +742,10 @@ SUITE(expressions) {
     RUN_TEST(string_len);
     RUN_TEST(int_to_string);
     RUN_TEST(int_var);
+    RUN_TEST(string_var);
+    RUN_TEST(string_subscript);
+    RUN_TEST(prefix_increment);
+    RUN_TEST(prefix_decrement);
+    RUN_TEST(suffix_increment);
+    RUN_TEST(suffix_decrement);
 }

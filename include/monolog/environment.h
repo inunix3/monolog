@@ -43,3 +43,5 @@ void env_init(Environment *self);
 void env_deinit(Environment *self);
 Variable *env_find_var(const Environment *self, const char *name);
 void env_reset(Environment *self);
+Scope *env_enter_scope(Environment *self);
+void env_leave_scope(Environment *self);
