@@ -3,6 +3,7 @@
 #include <monolog/utils.h>
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,11 +33,19 @@
 #define EXPR_GET_VALUE(_expr)                                                  \
     ((_expr).kind == EXPR_VAR ? (_expr).var->val : (_expr).val)
 
-static void error(Interpreter *self, const char *msg) {
+static void error(Interpreter *self, const char *fmt, ...) {
     self->had_error = true;
 
     if (self->log_errors) {
-        fprintf(stderr, "runtime error: %s\n", msg);
+        fputs("runtime error: ", stderr);
+
+        va_list vargs;
+
+        va_start(vargs, fmt);
+        vfprintf(stderr, fmt, vargs);
+        va_end(vargs);
+
+        fputc('\n', stderr);
     }
 }
 
@@ -111,7 +120,8 @@ exec_binary_string(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
     return val;
 }
 
-static ExprResult exec_expr(Interpreter *self, const AstNode *node);
+static ExprResult
+exec_expr(Interpreter *self, const AstNode *node, bool assigning);
 
 static Value exec_unary_int(Interpreter *self, TokenKind op, Value *v1) {
     Value val = {self->types->builtin_int, {0}};
@@ -171,7 +181,7 @@ static Value exec_unary_string(Interpreter *self, TokenKind op, Value *v1) {
 }
 
 static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->unary.right);
+    ExprResult expr = exec_expr(self, node->unary.right, false);
     EXPR_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
     Value val = EXPR_GET_VALUE(expr);
@@ -218,13 +228,15 @@ assign_var(Interpreter *self, Variable *var, ExprResult expr) {
 }
 
 static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
-    ExprResult expr1 = exec_expr(self, node->binary.left);
+    bool assigning = node->binary.op == TOKEN_OP_ASSIGN;
+
+    ExprResult expr1 = exec_expr(self, node->binary.left, assigning);
     EXPR_RETURN_IF_ERROR(expr1, EXPR_ERROR);
 
-    ExprResult expr2 = exec_expr(self, node->binary.right);
+    ExprResult expr2 = exec_expr(self, node->binary.right, false);
     EXPR_RETURN_IF_ERROR(expr2, EXPR_ERROR);
 
-    if (expr1.kind == EXPR_VAR && node->binary.op == TOKEN_OP_ASSIGN) {
+    if (expr1.kind == EXPR_VAR && assigning) {
         return assign_var(self, expr1.var, expr2);
     }
 
@@ -246,7 +258,10 @@ static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
         break;
     default:
         expr.kind = EXPR_ERROR;
-        error(self, "unsupported binary operation for 2 types");
+        error(
+            self, "unsupported binary operation for %s and %s", v1.type->name,
+            v2.type->name
+        );
 
         break;
     }
@@ -278,8 +293,7 @@ exec_suffix_int(Interpreter *self, Variable *var, TokenKind op) {
     }
     default:
         expr_res.kind = EXPR_ERROR;
-
-        error(self, "bad operator");
+        error(self, "bad suffix operator %s", token_kind_to_str(op));
 
         return expr_res;
     }
@@ -290,7 +304,7 @@ exec_suffix_int(Interpreter *self, Variable *var, TokenKind op) {
 }
 
 static ExprResult exec_suffix(Interpreter *self, const AstNode *node) {
-    ExprResult expr_res = exec_expr(self, node->suffix.left);
+    ExprResult expr_res = exec_expr(self, node->suffix.left, false);
 
     if (expr_res.kind != EXPR_VAR) {
         return expr_res;
@@ -304,7 +318,10 @@ static ExprResult exec_suffix(Interpreter *self, const AstNode *node) {
     default:
         expr_res.kind = EXPR_ERROR;
 
-        error(self, "bad type for suffix");
+        error(
+            self, "unsupported type %s for suffix operator %s", var->type->name,
+            node->suffix.op
+        );
 
         break;
     }
@@ -328,14 +345,25 @@ static ExprResult exec_string_literal(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
-static ExprResult exec_identifier(Interpreter *self, const AstNode *node) {
+static ExprResult
+exec_identifier(Interpreter *self, const AstNode *node, bool assigning) {
     ExprResult expr_res;
 
     Variable *var = env_find_var(&self->env, node->ident.str.data);
 
     if (!var) {
         expr_res.kind = EXPR_ERROR;
-        error(self, "cannot find variable");
+        error(self, "undeclared variable %s", node->ident.str.data);
+
+        return expr_res;
+    }
+
+    if (!assigning && !var->defined && !var->is_param) {
+        expr_res.kind = EXPR_ERROR;
+        error(
+            self, "variable %s is declared, but no value was assigned to it",
+            var->name
+        );
 
         return expr_res;
     }
@@ -352,7 +380,12 @@ exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
 
     if ((size_t)idx >= str->len) {
         expr_res.kind = EXPR_ERROR;
-        error(self, "index out of range");
+        error(
+            self,
+            "string index out of range: %" PRId64
+            " but the string length is %zu",
+            idx, str->len
+        );
 
         return expr_res;
     }
@@ -365,10 +398,10 @@ exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
 }
 
 static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
-    ExprResult left_expr = exec_expr(self, node->array_sub.left);
+    ExprResult left_expr = exec_expr(self, node->array_sub.left, false);
     EXPR_RETURN_IF_ERROR(left_expr, EXPR_ERROR);
 
-    ExprResult idx_expr = exec_expr(self, node->array_sub.expr);
+    ExprResult idx_expr = exec_expr(self, node->array_sub.expr, false);
     EXPR_RETURN_IF_ERROR(idx_expr, EXPR_ERROR);
 
     ExprResult expr_res = {0};
@@ -380,7 +413,7 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
         return exec_string_subscript(self, left_val.s, idx.i);
     default:
         expr_res.kind = EXPR_ERROR;
-        error(self, "bad type for subscript");
+        error(self, "unsupported type %s for indexing", left_val.type->name);
 
         break;
     }
@@ -388,7 +421,8 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
-static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
+static ExprResult
+exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
     ExprResult expr_res;
 
     switch (node->kind) {
@@ -401,7 +435,7 @@ static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
     case AST_NODE_STRING:
         return exec_string_literal(self, node);
     case AST_NODE_IDENT:
-        return exec_identifier(self, node);
+        return exec_identifier(self, node, assigning);
     case AST_NODE_UNARY:
         return exec_unary(self, node);
     case AST_NODE_BINARY:
@@ -411,7 +445,7 @@ static ExprResult exec_expr(Interpreter *self, const AstNode *node) {
     case AST_NODE_ARRAY_SUBSCRIPT:
         return exec_subscript(self, node);
     case AST_NODE_GROUPING:
-        return exec_expr(self, node->grouping.expr);
+        return exec_expr(self, node->grouping.expr, assigning);
     default:
         expr_res.kind = EXPR_ERROR;
         error(self, "invalid expression");
@@ -485,14 +519,17 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     bool defined = false;
 
     if (node->var_decl.rvalue) {
-        ExprResult expr = exec_expr(self, node->var_decl.rvalue);
+        ExprResult expr = exec_expr(self, node->var_decl.rvalue, false);
         STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
         val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
 
         if (!type_equal(val.type, type)) {
             stmt_res.kind = STMT_ERROR;
-            error(self, "type mismatch");
+            error(
+                self, "type mismatch: expected %s, found %s", type->name,
+                val.type->name
+            );
 
             return stmt_res;
         }
@@ -513,7 +550,7 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_print(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_print.expr);
+    ExprResult expr = exec_expr(self, node->kw_print.expr, false);
     STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
     Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
@@ -526,7 +563,7 @@ static StmtResult exec_print(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_println(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_print.expr);
+    ExprResult expr = exec_expr(self, node->kw_print.expr, false);
     STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
     Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
@@ -540,7 +577,7 @@ static StmtResult exec_println(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_exit(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_exit.expr);
+    ExprResult expr = exec_expr(self, node->kw_exit.expr, false);
     STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
     Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
@@ -554,7 +591,7 @@ static StmtResult exec_exit(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_if(Interpreter *self, const AstNode *node) {
-    ExprResult cond = exec_expr(self, node->kw_if.cond);
+    ExprResult cond = exec_expr(self, node->kw_if.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
     Value cond_val = EXPR_GET_VALUE(cond);
@@ -572,7 +609,7 @@ static StmtResult exec_if(Interpreter *self, const AstNode *node) {
 
 static StmtResult exec_while(Interpreter *self, const AstNode *node) {
     StmtResult stmt_res = {STMT_VOID};
-    ExprResult cond = exec_expr(self, node->kw_while.cond);
+    ExprResult cond = exec_expr(self, node->kw_while.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
     Value cond_val = EXPR_GET_VALUE(cond);
@@ -591,7 +628,7 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
             break;
         }
 
-        cond = exec_expr(self, node->kw_while.cond);
+        cond = exec_expr(self, node->kw_while.cond, false);
         STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
         cond_val = EXPR_GET_VALUE(cond);
@@ -620,7 +657,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
 
     for (;;) {
         if (cond) {
-            ExprResult expr = exec_expr(self, cond);
+            ExprResult expr = exec_expr(self, cond, false);
 
             if (expr.kind == EXPR_ERROR) {
                 goto failure;
@@ -651,7 +688,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
         }
 
         if (iter) {
-            ExprResult expr = exec_expr(self, iter);
+            ExprResult expr = exec_expr(self, iter, false);
 
             if (expr.kind == EXPR_ERROR) {
                 goto failure;
@@ -700,11 +737,10 @@ static StmtResult exec_node(Interpreter *self, const AstNode *node) {
 
         break;
     default:
-        exec_expr(self, node);
+        exec_expr(self, node, false);
 
         break;
     }
-
 
     return stmt_res;
 }
@@ -760,7 +796,7 @@ Value interp_eval(Interpreter *self) {
     }
 
     ExprResult expr =
-        exec_expr(self, ((const AstNode **)self->ast->nodes.data)[0]);
+        exec_expr(self, ((const AstNode **)self->ast->nodes.data)[0], false);
     val = EXPR_GET_VALUE(expr);
 
     if (self->had_error) {
