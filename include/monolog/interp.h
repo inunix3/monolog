@@ -26,11 +26,13 @@ typedef enum StmtResultKind {
     STMT_ERROR,
     STMT_VOID,
     STMT_BREAK,
-    STMT_CONTINUE
+    STMT_CONTINUE,
+    STMT_RETURN
 } StmtResultKind;
 
 typedef struct StmtResult {
     StmtResultKind kind;
+    Value ret_value;
 } StmtResult;
 
 typedef struct Interpreter {
@@ -38,14 +40,14 @@ typedef struct Interpreter {
     TypeSystem *types;
     Vector strings; /* Vector<StrBuf *> */
 
-    const Ast *ast;
+    Ast *ast;
     int exit_code;
     bool halt;
     bool had_error;
     bool log_errors;
 } Interpreter;
 
-void interp_init(Interpreter *self, const Ast *ast, TypeSystem *types);
+void interp_init(Interpreter *self, Ast *ast, TypeSystem *types);
 void interp_deinit(Interpreter *self);
 int interp_walk(Interpreter *self);
 Value interp_eval(Interpreter *self);

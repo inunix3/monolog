@@ -304,7 +304,6 @@ check_ident(SemChecker *self, const AstNode *node, bool assigning) {
 
 static Type *check_fn_call(SemChecker *self, const AstNode *node) {
     char *name = node->fn_call.name->ident.str.data;
-
     Function *fn = hashmap_get(&self->env.funcs, name);
 
     if (!fn) {
@@ -318,7 +317,6 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
     }
 
     Type *type = fn->type;
-
     const Vector *values_vec = &node->fn_call.values;
 
     if (values_vec->len < fn->params.len) {
@@ -341,12 +339,12 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
         return type;
     }
 
-    const Variable *params = fn->params.data;
+    const FnParam *params = fn->params.data;
     const AstNode **values = values_vec->data;
 
     for (size_t i = 0; i < values_vec->len; ++i) {
         const AstNode *value = values[i];
-        const Variable *param = &params[i];
+        const FnParam *param = &params[i];
 
         Type *value_type = check_expr(self, value, false);
 
@@ -480,7 +478,7 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
     var->defined = rvalue != NULL;
     var->is_param = false;
 
-    hashmap_add(&self->env.curr_scope->vars, var->name, var);
+    env_add_local_var(&self->env, var);
 }
 
 static void check_node(SemChecker *self, const AstNode *node);
@@ -502,10 +500,13 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
 
     Function *fn = malloc(sizeof(*fn));
     fn->type = type;
-    fn->name = name;
+    fn->name = cstr_dup_n(name, node->fn_decl.name->ident.str.len);
     fn->body = body;
+    fn->free_body = false;
 
-    vec_init(&fn->params, sizeof(Variable));
+    env_enter_scope(&self->env);
+
+    vec_init(&fn->params, sizeof(FnParam));
 
     const Vector *params_vec = &node->fn_decl.params;
     const AstNode **params = params_vec->data;
@@ -515,55 +516,59 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
 
         type = parse_type(self, param_node->param_decl.type);
         name = param_node->param_decl.name->ident.str.data;
+        bool bad_param = false;
 
         for (size_t j = 0; j < fn->params.len; ++j) {
-            const Variable *fn_params = fn->params.data;
+            const FnParam *param = fn->params.data;
 
-            if (strcmp(name, fn_params[j].name) == 0) {
+            if (strcmp(name, param[j].name) == 0) {
                 DiagnosticMessage dmsg;
                 dmsg.kind = DIAGNOSTIC_PARAM_REDECLARATION;
                 dmsg.param_redecl.name = name;
 
                 error(self, &dmsg);
+
+                bad_param = true;
             }
         }
 
-        Variable param;
-        param.type = type;
-        param.name = name;
-        param.defined = false;
-        param.is_param = true;
+        if (!bad_param) {
+            FnParam *param = vec_emplace(&fn->params);
+            param->type = type;
+            param->name = cstr_dup(name);
 
-        vec_push(&fn->params, &param);
+            Variable *var = malloc(sizeof(*var));
+            var->type = type;
+            var->name = cstr_dup(name);
+            var->defined = false;
+            var->is_param = true;
+
+            env_add_local_var(&self->env, var);
+        } else {
+            bad_param = false;
+        }
     }
 
-    hashmap_add(&self->env.funcs, fn->name, fn);
-
-    self->env.curr_fn = fn;
+    env_add_fn(&self->env, fn);
 
     if (body) {
+        self->env.curr_fn = fn;
         check_node(self, body);
+        self->env.curr_fn = NULL;
     }
 
-    self->env.curr_fn = NULL;
+    env_leave_scope(&self->env);
 }
 
 static void check_block(SemChecker *self, const AstNode *node) {
-    Scope new_scope;
-    scope_init(&new_scope);
-    vec_push(&self->env.scopes, &new_scope);
-
-    self->env.curr_scope = &VEC_LAST(&self->env.scopes, Scope);
-
+    env_enter_scope(&self->env);
     const AstNode **nodes = node->block.nodes.data;
 
     for (size_t i = 0; i < node->block.nodes.len; ++i) {
         check_node(self, nodes[i]);
     }
 
-    scope_deinit(self->env.curr_scope);
-    vec_pop(&self->env.scopes);
-    self->env.curr_scope = &VEC_LAST(&self->env.scopes, Scope);
+    env_leave_scope(&self->env);
 }
 
 static void check_if(SemChecker *self, const AstNode *node) {
@@ -774,11 +779,15 @@ static Variable *var_clone(const Variable *var) {
 }
 
 static void clone_fn_params(Vector *self, const Vector *params_vec) {
-    const Variable *params = params_vec->data;
+    const FnParam *params = params_vec->data;
 
     for (size_t i = 0; i < params_vec->len; ++i) {
-        Variable *var_copy = var_clone(&params[i]);
-        vec_push(self, var_copy);
+        FnParam *param = malloc(sizeof(*param));
+
+        param->type = params[i].type;
+        param->name = cstr_dup(params[i].name);
+
+        vec_push(self, param);
     }
 }
 
@@ -791,25 +800,24 @@ bool semck_check(
             Variable *var = it.bucket->value;
             Variable *var_copy = var_clone(var);
 
-            hashmap_add(
-                &self->env.global_scope->vars, var_copy->name, var_copy
-            );
+            env_add_global_var(&self->env, var_copy);
         }
     }
 
     if (funcs) {
         for (HashMapIter it = hashmap_iter(funcs); it.bucket != NULL;
              hashmap_iter_next(&it)) {
-            Function *func = it.bucket->value;
+            Function *fn = it.bucket->value;
+            Function *fn_copy = malloc(sizeof(*fn_copy));
+            vec_init(&fn_copy->params, sizeof(FnParam));
 
-            Function *func_copy = malloc(sizeof(*func_copy));
+            fn_copy->type = fn->type;
+            fn_copy->name = cstr_dup(fn->name);
+            clone_fn_params(&fn_copy->params, &fn->params);
+            fn_copy->body = fn->body;
+            fn_copy->free_body = false;
 
-            func_copy->type = type_system_register(self->types, func->type);
-            func_copy->name = cstr_dup(func->name);
-            clone_fn_params(&func_copy->params, &func->params);
-            func_copy->body = func->body;
-
-            hashmap_add(&self->env.funcs, func_copy->name, func_copy);
+            env_add_fn(&self->env, fn_copy);
         }
     }
 

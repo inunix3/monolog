@@ -36,26 +36,43 @@ void vec_deinit(Vector *self) {
     self->element_size = 0;
 }
 
+static bool grow(Vector *self) {
+    size_t new_cap = self->cap * 2;
+
+    self->data = realloc(self->data, new_cap * self->element_size);
+
+    if (!self->data) {
+        return false;
+    }
+
+    memset(
+        self->data + self->len * self->element_size, 0,
+        (new_cap - self->cap) * self->element_size
+    );
+
+    self->cap = new_cap;
+
+    return true;
+}
+
 void *vec_push(Vector *self, const void *data) {
-    if (self->len >= self->cap) {
-        size_t new_cap = self->cap * 2;
-
-        self->data = realloc(self->data, new_cap * self->element_size);
-
-        if (!self->data) {
-            return NULL;
-        }
-
-        memset(
-            self->data + self->len * self->element_size, 0,
-            (new_cap - self->cap) * self->element_size
-        );
-
-        self->cap = new_cap;
+    if (self->len >= self->cap && !grow(self)) {
+        return false;
     }
 
     void *block = self->data + self->len++ * self->element_size;
     memcpy(block, data, self->element_size);
+
+    return block;
+}
+
+void *vec_emplace(Vector *self) {
+    if (self->len >= self->cap && !grow(self)) {
+        return false;
+    }
+
+    void *block = self->data + self->len++ * self->element_size;
+    memset(block, 0, self->element_size);
 
     return block;
 }

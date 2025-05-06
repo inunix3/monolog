@@ -25,7 +25,7 @@
 
 #define STMT_RETURN_IF_ERROR(_e, _err)                                         \
     if ((_e).kind == (_err)) {                                                 \
-        StmtResult __stmt_res = {STMT_ERROR};                                  \
+        StmtResult __stmt_res = {STMT_ERROR, {0}};                             \
                                                                                \
         return __stmt_res;                                                     \
     }
@@ -421,6 +421,97 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
+static StmtResult exec_node(Interpreter *self, AstNode *node);
+
+static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
+    const FnParam *params = self->env.curr_fn->params.data;
+
+    for (size_t i = 0; i < self->env.curr_fn->params.len; ++i) {
+        const AstNode *arg_node = args[i];
+        const FnParam *param = &params[i];
+
+        ExprResult expr = exec_expr(self, arg_node, false);
+
+        if (expr.kind == EXPR_ERROR) {
+            return false;
+        }
+
+        Variable *arg = malloc(sizeof(*arg));
+        arg->type = param->type;
+        arg->name = cstr_dup(param->name);
+        arg->val = EXPR_GET_VALUE(expr);
+        arg->defined = true;
+        arg->is_param = true;
+
+        env_add_local_var(&self->env, arg);
+    }
+
+    return true;
+}
+
+static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
+    const char *name = node->fn_call.name->ident.str.data;
+    Function *fn = env_find_fn(&self->env, name);
+    ExprResult expr_res = {0};
+
+    if (!fn) {
+        expr_res.kind = EXPR_ERROR;
+
+        return expr_res;
+    } else if (!fn->body) {
+        expr_res.kind = EXPR_ERROR;
+        error(self, "function %s has no body to execute", name);
+
+        return expr_res;
+    }
+
+    Scope *caller_scope = self->env.curr_scope;
+    env_enter_fn(&self->env, fn);
+
+    const AstNode **args = node->fn_call.values.data;
+
+    if (!fill_fn_params_values(self, args)) {
+        expr_res.kind = EXPR_ERROR;
+
+        goto finish;
+    }
+
+    env_save_caller(&self->env, caller_scope);
+
+    StmtResult body_res = exec_node(self, fn->body);
+
+    switch (body_res.kind) {
+    case STMT_ERROR:
+        expr_res.kind = EXPR_ERROR;
+
+        break;
+    case STMT_RETURN:
+        expr_res.kind = EXPR_VALUE;
+        expr_res.val = body_res.ret_value;
+
+        break;
+    case STMT_VOID:
+        if (fn->type->id != TYPE_VOID) {
+            expr_res.kind = EXPR_ERROR;
+
+            error(
+                self, "function %s was expected to return %s, but it didn't",
+                fn->name, fn->type->name
+            );
+        }
+
+        break;
+    default:
+        break;
+    }
+
+finish:
+    env_leave_fn(&self->env);
+    env_restore_caller(&self->env);
+
+    return expr_res;
+}
+
 static ExprResult
 exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
     ExprResult expr_res;
@@ -446,6 +537,8 @@ exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
         return exec_subscript(self, node);
     case AST_NODE_GROUPING:
         return exec_expr(self, node->grouping.expr, assigning);
+    case AST_NODE_FN_CALL:
+        return exec_fn_call(self, node);
     default:
         expr_res.kind = EXPR_ERROR;
         error(self, "invalid expression");
@@ -483,10 +576,13 @@ static Type *process_type(Interpreter *self, const AstNode *node) {
     }
 }
 
-static StmtResult exec_node(Interpreter *self, const AstNode *node);
-
 static StmtResult exec_block(Interpreter *self, const AstNode *node) {
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
+
+    if (node->block.nodes.len == 0) {
+        return stmt_res;
+    }
+
     AstNode **nodes = node->block.nodes.data;
 
     env_enter_scope(&self->env);
@@ -512,7 +608,7 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     Type *type = process_type(self, node->var_decl.type);
     Value val = {self->types->error_type, {0}};
@@ -549,6 +645,40 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
+static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
+    StmtResult stmt_res = {STMT_VOID, {0}};
+    Type *type = process_type(self, node->fn_decl.type);
+    AstNode *body = node->fn_decl.body;
+
+    if (body) {
+        /* steal ownership, so interpreter can later use the body and execute it
+         * (the problem is that REPL destroys AST after every interpretation).
+         */
+        node->fn_decl.body = NULL;
+    }
+
+    Function *fn = malloc(sizeof(*fn));
+    fn->type = type;
+    fn->name = cstr_dup(node->fn_decl.name->ident.str.data);
+    fn->body = body;
+    fn->free_body = true;
+
+    vec_init(&fn->params, sizeof(FnParam));
+
+    const AstNode **params_nodes = node->fn_decl.params.data;
+    for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
+        const AstNode *param_node = params_nodes[i];
+
+        FnParam *param = vec_emplace(&fn->params);
+        param->type = type;
+        param->name = cstr_dup(param_node->param_decl.name->ident.str.data);
+    }
+
+    env_add_fn(&self->env, fn);
+
+    return stmt_res;
+}
+
 static StmtResult exec_print(Interpreter *self, const AstNode *node) {
     ExprResult expr = exec_expr(self, node->kw_print.expr, false);
     STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
@@ -557,7 +687,7 @@ static StmtResult exec_print(Interpreter *self, const AstNode *node) {
 
     fputs(val.s->data, stdout);
 
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     return stmt_res;
 }
@@ -571,7 +701,7 @@ static StmtResult exec_println(Interpreter *self, const AstNode *node) {
     fputs(val.s->data, stdout);
     fputc('\n', stdout);
 
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     return stmt_res;
 }
@@ -585,7 +715,7 @@ static StmtResult exec_exit(Interpreter *self, const AstNode *node) {
     self->exit_code = (int)val.i;
     self->halt = true;
 
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     return stmt_res;
 }
@@ -602,13 +732,13 @@ static StmtResult exec_if(Interpreter *self, const AstNode *node) {
         return exec_node(self, node->kw_if.else_body);
     }
 
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     return stmt_res;
 }
 
 static StmtResult exec_while(Interpreter *self, const AstNode *node) {
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
     ExprResult cond = exec_expr(self, node->kw_while.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
@@ -619,13 +749,13 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
 
         switch (res.kind) {
         case STMT_VOID:
+        case STMT_CONTINUE:
             break;
         case STMT_ERROR:
+        case STMT_RETURN:
             return res;
         case STMT_BREAK:
             return stmt_res;
-        case STMT_CONTINUE:
-            break;
         }
 
         cond = exec_expr(self, node->kw_while.cond, false);
@@ -638,12 +768,12 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_for(Interpreter *self, const AstNode *node) {
-    StmtResult stmt_res = {STMT_VOID};
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
-    const AstNode *init = node->kw_for.init;
+    AstNode *init = node->kw_for.init;
     const AstNode *cond = node->kw_for.cond;
     const AstNode *iter = node->kw_for.iter;
-    const AstNode *body = node->kw_for.body;
+    AstNode *body = node->kw_for.body;
 
     env_enter_scope(&self->env);
 
@@ -675,15 +805,18 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
 
             switch (res.kind) {
             case STMT_VOID:
+            case STMT_CONTINUE:
                 break;
             case STMT_ERROR:
                 goto failure;
+            case STMT_RETURN:
+                env_leave_scope(&self->env);
+
+                return res;
             case STMT_BREAK:
                 env_leave_scope(&self->env);
 
                 return stmt_res;
-            case STMT_CONTINUE:
-                break;
             }
         }
 
@@ -708,14 +841,27 @@ failure:
     return stmt_res;
 }
 
-static StmtResult exec_node(Interpreter *self, const AstNode *node) {
-    StmtResult stmt_res = {STMT_VOID};
+static StmtResult exec_return(Interpreter *self, const AstNode *node) {
+    ExprResult expr = exec_expr(self, node->kw_return.expr, false);
+    STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
+
+    StmtResult res;
+    res.kind = STMT_RETURN;
+    res.ret_value = EXPR_GET_VALUE(expr);
+
+    return res;
+}
+
+static StmtResult exec_node(Interpreter *self, AstNode *node) {
+    StmtResult stmt_res = {STMT_VOID, {0}};
 
     switch (node->kind) {
     case AST_NODE_BLOCK:
         return exec_block(self, node);
     case AST_NODE_VAR_DECL:
         return exec_var_decl(self, node);
+    case AST_NODE_FN_DECL:
+        return exec_fn_decl(self, node);
     case AST_NODE_PRINT:
         return exec_print(self, node);
     case AST_NODE_PRINTLN:
@@ -736,6 +882,8 @@ static StmtResult exec_node(Interpreter *self, const AstNode *node) {
         stmt_res.kind = STMT_CONTINUE;
 
         break;
+    case AST_NODE_RETURN:
+        return exec_return(self, node);
     default:
         exec_expr(self, node, false);
 
@@ -745,7 +893,7 @@ static StmtResult exec_node(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
-void interp_init(Interpreter *self, const Ast *ast, TypeSystem *types) {
+void interp_init(Interpreter *self, Ast *ast, TypeSystem *types) {
     self->types = types;
     env_init(&self->env);
     vec_init(&self->strings, sizeof(StrBuf));
@@ -770,7 +918,7 @@ void interp_deinit(Interpreter *self) {
 }
 
 int interp_walk(Interpreter *self) {
-    const AstNode **nodes = self->ast->nodes.data;
+    AstNode **nodes = self->ast->nodes.data;
 
     for (size_t i = 0; i < self->ast->nodes.len; ++i) {
         exec_node(self, nodes[i]);
