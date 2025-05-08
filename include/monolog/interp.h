@@ -10,7 +10,8 @@
 typedef enum ExprResultKind {
     EXPR_ERROR,
     EXPR_VALUE,
-    EXPR_VAR
+    EXPR_VAR,
+    EXPR_REF
 } ExprResultKind;
 
 typedef struct ExprResult {
@@ -19,6 +20,7 @@ typedef struct ExprResult {
     union {
         Value val;
         Variable *var;
+        Value *ref;
     };
 } ExprResult;
 
@@ -38,7 +40,9 @@ typedef struct StmtResult {
 typedef struct Interpreter {
     Environment env;
     TypeSystem *types;
-    Vector strings; /* Vector<StrBuf *> */
+    Vector strings; /* Vector<StrBuf> */
+    // Vector arrays; /* Vector<Vector<Value>> */
+    Vector opts; /* Vector<Value> */
 
     Ast *ast;
     int exit_code;

@@ -86,3 +86,11 @@ bool str_set(StrBuf *self, const char *cstr) {
 
     return true;
 }
+
+bool str_equal(const StrBuf *self, const StrBuf *str) {
+    if (self->len != str->len) {
+        return false;
+    }
+
+    return strncmp(self->data, str->data, self->len) == 0;
+}

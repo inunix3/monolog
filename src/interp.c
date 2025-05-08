@@ -30,9 +30,6 @@
         return __stmt_res;                                                     \
     }
 
-#define EXPR_GET_VALUE(_expr)                                                  \
-    ((_expr).kind == EXPR_VAR ? (_expr).var->val : (_expr).val)
-
 static void error(Interpreter *self, const char *fmt, ...) {
     self->had_error = true;
 
@@ -49,8 +46,118 @@ static void error(Interpreter *self, const char *fmt, ...) {
     }
 }
 
+static Value *expr_get_value(ExprResult *expr) {
+    switch (expr->kind) {
+    case EXPR_ERROR:
+        return NULL;
+    case EXPR_VALUE:
+        return &expr->val;
+    case EXPR_VAR:
+        return &expr->var->val;
+    case EXPR_REF:
+        return expr->ref;
+    }
+}
+
+static bool clone_value(Interpreter *self, Value *dest, const Value *src);
+
+static bool make_opt(Interpreter *self, Value *dest, const Value *val) {
+    dest->opt.val = NULL;
+
+    if (val && val->type->id != TYPE_NIL) {
+        Value *owned_val = vec_emplace(&self->opts);
+
+        if (!owned_val) {
+            return false;
+        }
+
+        dest->opt.val = owned_val;
+
+        if (val->type->id == TYPE_OPTION && type_equal(val->type, dest->type)) {
+            if (!val->opt.val) {
+                vec_pop(&self->opts);
+                dest->opt.val = NULL;
+            } else {
+                owned_val->type = val->opt.val->type;
+                return clone_value(self, dest->opt.val, val->opt.val);
+            }
+        } else {
+            owned_val->type = val->type;
+
+            return clone_value(self, dest->opt.val, val);
+        }
+    }
+
+    return true;
+}
+
+static bool clone_value(Interpreter *self, Value *dest, const Value *src) {
+    switch (src->type->id) {
+    case TYPE_ERROR:
+        dest->type = self->types->error_type;
+
+        break;
+    case TYPE_INT:
+        dest->type = self->types->builtin_int;
+        dest->i = src->i;
+
+        break;
+    case TYPE_STRING:
+        dest->type = self->types->builtin_string;
+        dest->s = vec_emplace(&self->strings);
+
+        return str_dup_n(dest->s, src->s->data, src->s->len);
+    case TYPE_VOID:
+        dest->type = self->types->builtin_void;
+
+        break;
+    case TYPE_ARRAY:
+        /* TODO: implement */
+        break;
+    case TYPE_OPTION:
+        return make_opt(self, dest, src);
+    case TYPE_NIL:
+        *dest = *src;
+
+        break;
+    }
+
+    return true;
+}
+
+static bool value_equal(const Value *v1, const Value *v2) {
+    if (!type_equal(v1->type, v2->type)) {
+        return false;
+    }
+
+    switch (v1->type->id) {
+    case TYPE_ERROR:
+    case TYPE_VOID:
+    case TYPE_NIL:
+        break;
+    case TYPE_INT:
+        return v1->i == v2->i;
+    case TYPE_STRING:
+        return str_equal(v1->s, v2->s);
+    case TYPE_ARRAY:
+        /* arrays cannot be compared */
+
+        return false;
+    case TYPE_OPTION:
+        if (v1->opt.val && v2->opt.val) {
+            return value_equal(v1->opt.val, v2->opt.val);
+        } else if (!v1->opt.val && !v2->opt.val) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static Value
-exec_binary_int(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
+exec_binary_int(Interpreter *self, TokenKind op, Value *v1, const Value *v2) {
     Value val = {self->types->builtin_int, {0}};
 
     switch (op) {
@@ -63,7 +170,6 @@ exec_binary_int(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
     case TOKEN_OP_DIV:
         if (v2->i == 0) {
             error(self, "division by zero");
-
             val.type = self->types->error_type;
 
             return val;
@@ -73,7 +179,6 @@ exec_binary_int(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
     case TOKEN_OP_MOD:
         if (v2->i == 0) {
             error(self, "division by zero");
-
             val.type = self->types->error_type;
 
             return val;
@@ -103,8 +208,9 @@ exec_binary_int(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
     return val;
 }
 
-static Value
-exec_binary_string(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
+static Value exec_binary_string(
+    Interpreter *self, TokenKind op, Value *v1, const Value *v2
+) {
     Value val = *v1;
     val.type = self->types->builtin_string;
 
@@ -120,10 +226,89 @@ exec_binary_string(Interpreter *self, TokenKind op, Value *v1, Value *v2) {
     return val;
 }
 
+static Value exec_binary_option(
+    Interpreter *self, TokenKind op, const Value *v1, const Value *v2
+) {
+    Value val = {0};
+
+    switch (op) {
+    case TOKEN_OP_EQUAL:
+        val.type = self->types->builtin_int;
+
+        if (v2->type->id == TYPE_NIL) {
+            val.i = v1->opt.val == NULL;
+        } else if (type_equal(v1->type, v2->type)) {
+            if (v1->opt.val && v2->opt.val) {
+                val.i = value_equal(v1->opt.val, v2->opt.val);
+            } else if (!v1->opt.val && !v2->opt.val) {
+                val.i = 1;
+            } else {
+                val.i = 0;
+            }
+        }
+
+        break;
+    case TOKEN_OP_NOT_EQUAL:
+        val.type = self->types->builtin_int;
+
+        if (v2->type->id == TYPE_NIL) {
+            val.i = v1->opt.val != NULL;
+        } else if (type_equal(v1->type, v2->type)) {
+            if (v1->opt.val && v2->opt.val) {
+                val.i = value_equal(v1->opt.val, v2->opt.val);
+            } else if (!v1->opt.val && !v2->opt.val) {
+                val.i = 0;
+            } else {
+                val.i = 1;
+            }
+        }
+
+        break;
+    default:
+        break;
+    }
+
+    return val;
+}
+
+static Value exec_binary_nil(
+    Interpreter *self, TokenKind op, const Value *v1, const Value *v2
+) {
+    (void)v1;
+    Value val = {0};
+
+    switch (op) {
+    case TOKEN_OP_EQUAL:
+        val.type = self->types->builtin_int;
+
+        if (v2->type->id == TYPE_NIL) {
+            val.i = 1;
+        } else if (v2->type->id == TYPE_OPTION) {
+            val.i = v2->opt.val == NULL;
+        }
+
+        break;
+    case TOKEN_OP_NOT_EQUAL:
+        val.type = self->types->builtin_int;
+
+        if (v2->type->id == TYPE_NIL) {
+            val.i = 0;
+        } else if (v2->type->id == TYPE_OPTION) {
+            val.i = v2->opt.val != NULL;
+        }
+
+        break;
+    default:
+        break;
+    }
+
+    return val;
+}
+
 static ExprResult
 exec_expr(Interpreter *self, const AstNode *node, bool assigning);
 
-static Value exec_unary_int(Interpreter *self, TokenKind op, Value *v1) {
+static Value exec_unary_int(Interpreter *self, TokenKind op, const Value *v1) {
     Value val = {self->types->builtin_int, {0}};
 
     switch (op) {
@@ -146,14 +331,12 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, Value *v1) {
     case TOKEN_OP_DOLAR: {
         size_t len = (size_t)snprintf(NULL, 0, "%" PRId64, v1->i);
 
-        StrBuf str;
-        StrBuf *strp = vec_push(&self->strings, &str);
-
-        str_init_n(strp, len);
-        snprintf(strp->data, len + 1, "%" PRId64, v1->i);
+        StrBuf *str = vec_emplace(&self->strings);
+        str_init_n(str, len);
+        snprintf(str->data, len + 1, "%" PRId64, v1->i);
 
         val.type = self->types->builtin_string;
-        val.s = strp;
+        val.s = str;
 
         break;
     }
@@ -164,7 +347,8 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, Value *v1) {
     return val;
 }
 
-static Value exec_unary_string(Interpreter *self, TokenKind op, Value *v1) {
+static Value
+exec_unary_string(Interpreter *self, TokenKind op, const Value *v1) {
     Value val = {self->types->builtin_string, {0}};
 
     switch (op) {
@@ -180,51 +364,144 @@ static Value exec_unary_string(Interpreter *self, TokenKind op, Value *v1) {
     return val;
 }
 
-static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->unary.right, false);
-    EXPR_RETURN_IF_ERROR(expr, EXPR_ERROR);
+static Value *
+exec_unary_option(Interpreter *self, TokenKind op, const Value *v1) {
+    Value *val = NULL;
 
-    Value val = EXPR_GET_VALUE(expr);
-
-    switch (val.type->id) {
-    case TYPE_INT:
-        val = exec_unary_int(self, node->unary.op, &val);
-
-        break;
-    case TYPE_STRING:
-        val = exec_unary_string(self, node->unary.op, &val);
+    switch (op) {
+    case TOKEN_OP_MUL:
+        if (v1->opt.val) {
+            val = v1->opt.val;
+        } else {
+            val = NULL;
+            error(self, "tried to dereference an empty option");
+        }
 
         break;
     default:
         break;
     }
 
+    return val;
+}
+
+static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
+    ExprResult expr = exec_expr(self, node->unary.right, false);
+    EXPR_RETURN_IF_ERROR(expr, EXPR_ERROR);
+
+    const Value *expr_val = expr_get_value(&expr);
     ExprResult expr_res;
 
-    if (expr.kind == EXPR_VAR &&
-        (node->unary.op == TOKEN_OP_INC || node->unary.op == TOKEN_OP_DEC)) {
+    switch (expr_val->type->id) {
+    case TYPE_INT:
+        expr_res.val = exec_unary_int(self, node->unary.op, expr_val);
+
+        break;
+    case TYPE_STRING:
+        expr_res.val = exec_unary_string(self, node->unary.op, expr_val);
+
+        break;
+    case TYPE_OPTION:
+    case TYPE_NIL: {
+        Value *val = exec_unary_option(self, node->unary.op, expr_val);
+
+        if (!val) {
+            expr_res.kind = EXPR_ERROR;
+
+            return expr_res;
+        } else {
+            expr_res.kind = EXPR_REF;
+            expr_res.ref = val;
+        }
+
+        return expr_res;
+    }
+    default:
+        break;
+    }
+
+    if (expr_res.val.type->id == TYPE_ERROR) {
+        expr_res.kind = EXPR_ERROR;
+    } else if (expr.kind == EXPR_VAR && (node->unary.op == TOKEN_OP_INC ||
+                                         node->unary.op == TOKEN_OP_DEC)) {
+        Value temp = expr_res.val;
+
         expr_res.kind = EXPR_VAR;
         expr_res.var = expr.var;
-        expr_res.var->val = val;
+        expr_res.var->val = temp;
     } else {
         expr_res.kind = EXPR_VALUE;
-        expr_res.val = val;
     }
 
     return expr_res;
+}
+
+static bool
+implicitly_clone_value(Interpreter *self, Value *dest, const Value *src) {
+    if (dest->type->id == TYPE_OPTION) {
+        return make_opt(self, dest, src);
+    }
+
+    return clone_value(self, dest, src);
 }
 
 static ExprResult
 assign_var(Interpreter *self, Variable *var, ExprResult expr) {
     (void)self;
 
-    var->val = EXPR_GET_VALUE(expr);
+    Value *expr_val = expr_get_value(&expr);
+    ExprResult expr_res = {0};
 
-    ExprResult expr_res;
-    expr_res.kind = EXPR_VALUE;
-    expr_res.val = var->val;
+    if (!implicitly_clone_value(self, &var->val, expr_val)) {
+        expr_res.kind = EXPR_ERROR;
+    } else {
+        expr_res.kind = EXPR_VALUE;
+        expr_res.val = var->val;
+    }
 
     return expr_res;
+}
+
+static ExprResult assign_ref(Interpreter *self, Value *val, ExprResult expr) {
+    (void)self;
+
+    Value *expr_val = expr_get_value(&expr);
+
+    clone_value(self, val, expr_val);
+
+    ExprResult expr_res;
+    expr_res.kind = EXPR_REF;
+    expr_res.ref = val;
+
+    return expr_res;
+}
+
+static ExprResult
+assign_expr(Interpreter *self, ExprResult expr1, ExprResult expr2) {
+    switch (expr1.kind) {
+    case EXPR_VAR:
+        return assign_var(self, expr1.var, expr2);
+    case EXPR_REF:
+        return assign_ref(self, expr1.ref, expr2);
+    default:
+        break;
+    }
+
+    ExprResult expr_res;
+    expr_res.kind = EXPR_ERROR;
+
+    return expr_res;
+}
+
+static bool expr_assignable(ExprResult expr) {
+    switch (expr.kind) {
+    case EXPR_ERROR:
+    case EXPR_VALUE:
+        return false;
+    case EXPR_VAR:
+    case EXPR_REF:
+        return true;
+    }
 }
 
 static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
@@ -236,31 +513,41 @@ static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
     ExprResult expr2 = exec_expr(self, node->binary.right, false);
     EXPR_RETURN_IF_ERROR(expr2, EXPR_ERROR);
 
-    if (expr1.kind == EXPR_VAR && assigning) {
-        return assign_var(self, expr1.var, expr2);
+    if (expr_assignable(expr1) && assigning) {
+        return assign_expr(self, expr1, expr2);
     }
 
-    Value v1 = EXPR_GET_VALUE(expr1);
-    Value v2 = EXPR_GET_VALUE(expr2);
+    Value *v1 = expr_get_value(&expr1);
+    const Value *v2 = expr_get_value(&expr2);
 
     ExprResult expr;
 
-    switch (v1.type->id) {
+    switch (v1->type->id) {
     case TYPE_INT:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_int(self, node->binary.op, &v1, &v2);
+        expr.val = exec_binary_int(self, node->binary.op, v1, v2);
 
         break;
     case TYPE_STRING:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_string(self, node->binary.op, &v1, &v2);
+        expr.val = exec_binary_string(self, node->binary.op, v1, v2);
+
+        break;
+    case TYPE_NIL:
+        expr.kind = EXPR_VALUE;
+        expr.val = exec_binary_nil(self, node->binary.op, v1, v2);
+
+        break;
+    case TYPE_OPTION:
+        expr.kind = EXPR_VALUE;
+        expr.val = exec_binary_option(self, node->binary.op, v1, v2);
 
         break;
     default:
         expr.kind = EXPR_ERROR;
         error(
-            self, "unsupported binary operation for %s and %s", v1.type->name,
-            v2.type->name
+            self, "unsupported binary operation for %s and %s", v1->type->name,
+            v2->type->name
         );
 
         break;
@@ -334,13 +621,11 @@ static ExprResult exec_string_literal(Interpreter *self, const AstNode *node) {
 
     expr_res.kind = EXPR_VALUE;
 
-    StrBuf str = {0};
-    StrBuf *strp = vec_push(&self->strings, &str);
-
-    str_dup_n(strp, node->literal.str.data, node->literal.str.len);
+    StrBuf *str = vec_emplace(&self->strings);
+    str_dup_n(str, node->literal.str.data, node->literal.str.len);
 
     expr_res.val.type = self->types->builtin_string;
-    expr_res.val.s = strp;
+    expr_res.val.s = str;
 
     return expr_res;
 }
@@ -405,15 +690,15 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     EXPR_RETURN_IF_ERROR(idx_expr, EXPR_ERROR);
 
     ExprResult expr_res = {0};
-    Value left_val = EXPR_GET_VALUE(left_expr);
-    Value idx = EXPR_GET_VALUE(idx_expr);
+    Value *left_val = expr_get_value(&left_expr);
+    Value *idx = expr_get_value(&idx_expr);
 
-    switch (left_val.type->id) {
+    switch (left_val->type->id) {
     case TYPE_STRING:
-        return exec_string_subscript(self, left_val.s, idx.i);
+        return exec_string_subscript(self, left_val->s, idx->i);
     default:
         expr_res.kind = EXPR_ERROR;
-        error(self, "unsupported type %s for indexing", left_val.type->name);
+        error(self, "unsupported type %s for indexing", left_val->type->name);
 
         break;
     }
@@ -439,7 +724,12 @@ static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
         Variable *arg = malloc(sizeof(*arg));
         arg->type = param->type;
         arg->name = cstr_dup(param->name);
-        arg->val = EXPR_GET_VALUE(expr);
+
+        arg->val.type = param->type;
+        if (!implicitly_clone_value(self, &arg->val, expr_get_value(&expr))) {
+            return false;
+        }
+
         arg->defined = true;
         arg->is_param = true;
 
@@ -465,7 +755,9 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
         return expr_res;
     }
 
-    Scope *caller_scope = self->env.curr_scope;
+    Scope *saved_scope = self->env.curr_scope;
+    Scope *saved_caller = self->env.caller_scope;
+
     env_enter_fn(&self->env, fn);
 
     const AstNode **args = node->fn_call.values.data;
@@ -476,7 +768,7 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
         goto finish;
     }
 
-    env_save_caller(&self->env, caller_scope);
+    self->env.caller_scope = saved_scope;
 
     StmtResult body_res = exec_node(self, fn->body);
 
@@ -487,7 +779,13 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
         break;
     case STMT_RETURN:
         expr_res.kind = EXPR_VALUE;
-        expr_res.val = body_res.ret_value;
+        expr_res.val.type = fn->type;
+
+        if (!implicitly_clone_value(self, &expr_res.val, &body_res.ret_value)) {
+            expr_res.kind = EXPR_ERROR;
+
+            goto finish;
+        }
 
         break;
     case STMT_VOID:
@@ -498,6 +796,9 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
                 self, "function %s was expected to return %s, but it didn't",
                 fn->name, fn->type->name
             );
+        } else {
+            expr_res.kind = EXPR_VALUE;
+            expr_res.val.type = self->types->builtin_void;
         }
 
         break;
@@ -507,7 +808,16 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
 
 finish:
     env_leave_fn(&self->env);
-    env_restore_caller(&self->env);
+    self->env.curr_scope = saved_scope;
+    self->env.caller_scope = saved_caller;
+
+    return expr_res;
+}
+
+static ExprResult exec_nil(const Interpreter *self) {
+    ExprResult expr_res = {0};
+    expr_res.kind = EXPR_VALUE;
+    expr_res.val.type = self->types->nil_type;
 
     return expr_res;
 }
@@ -527,6 +837,8 @@ exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
         return exec_string_literal(self, node);
     case AST_NODE_IDENT:
         return exec_identifier(self, node, assigning);
+    case AST_NODE_NIL:
+        return exec_nil(self);
     case AST_NODE_UNARY:
         return exec_unary(self, node);
     case AST_NODE_BINARY:
@@ -611,21 +923,27 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, {0}};
 
     Type *type = process_type(self, node->var_decl.type);
-    Value val = {self->types->error_type, {0}};
+    Value val = {type, {0}};
     bool defined = false;
 
     if (node->var_decl.rvalue) {
         ExprResult expr = exec_expr(self, node->var_decl.rvalue, false);
         STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
-        val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
+        Value *expr_val = expr_get_value(&expr);
 
-        if (!type_equal(val.type, type)) {
+        if (!type_can_implicitly_convert(expr_val->type, type)) {
             stmt_res.kind = STMT_ERROR;
             error(
                 self, "type mismatch: expected %s, found %s", type->name,
-                val.type->name
+                expr_val->type->name
             );
+
+            return stmt_res;
+        }
+
+        if (!implicitly_clone_value(self, &val, expr_val)) {
+            stmt_res.kind = STMT_ERROR;
 
             return stmt_res;
         }
@@ -668,9 +986,10 @@ static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
     const AstNode **params_nodes = node->fn_decl.params.data;
     for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
         const AstNode *param_node = params_nodes[i];
+        Type *param_type = process_type(self, param_node->param_decl.type);
 
         FnParam *param = vec_emplace(&fn->params);
-        param->type = type;
+        param->type = param_type;
         param->name = cstr_dup(param_node->param_decl.name->ident.str.data);
     }
 
@@ -724,9 +1043,9 @@ static StmtResult exec_if(Interpreter *self, const AstNode *node) {
     ExprResult cond = exec_expr(self, node->kw_if.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-    Value cond_val = EXPR_GET_VALUE(cond);
+    Value *cond_val = expr_get_value(&cond);
 
-    if (cond_val.i) {
+    if (cond_val->i) {
         return exec_node(self, node->kw_if.body);
     } else if (node->kw_if.else_body) {
         return exec_node(self, node->kw_if.else_body);
@@ -742,9 +1061,9 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
     ExprResult cond = exec_expr(self, node->kw_while.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-    Value cond_val = EXPR_GET_VALUE(cond);
+    Value *cond_val = expr_get_value(&cond);
 
-    while (cond_val.i) {
+    while (cond_val->i) {
         StmtResult res = exec_node(self, node->kw_while.body);
 
         switch (res.kind) {
@@ -758,10 +1077,14 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
             return stmt_res;
         }
 
+        if (self->halt) {
+            return stmt_res;
+        }
+
         cond = exec_expr(self, node->kw_while.cond, false);
         STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-        cond_val = EXPR_GET_VALUE(cond);
+        cond_val = expr_get_value(&cond);
     }
 
     return stmt_res;
@@ -793,9 +1116,9 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
                 goto failure;
             }
 
-            Value val = EXPR_GET_VALUE(expr);
+            Value *val = expr_get_value(&expr);
 
-            if (!val.i) {
+            if (!val->i) {
                 break;
             }
         }
@@ -814,6 +1137,12 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
 
                 return res;
             case STMT_BREAK:
+                env_leave_scope(&self->env);
+
+                return stmt_res;
+            }
+
+            if (self->halt) {
                 env_leave_scope(&self->env);
 
                 return stmt_res;
@@ -842,12 +1171,17 @@ failure:
 }
 
 static StmtResult exec_return(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_return.expr, false);
-    STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
-
-    StmtResult res;
+    StmtResult res = {0};
     res.kind = STMT_RETURN;
-    res.ret_value = EXPR_GET_VALUE(expr);
+
+    if (node->kw_return.expr) {
+        ExprResult expr = exec_expr(self, node->kw_return.expr, false);
+        STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
+
+        res.ret_value = *expr_get_value(&expr);
+    } else {
+        res.ret_value.type = self->types->builtin_void;
+    }
 
     return res;
 }
@@ -897,6 +1231,7 @@ void interp_init(Interpreter *self, Ast *ast, TypeSystem *types) {
     self->types = types;
     env_init(&self->env);
     vec_init(&self->strings, sizeof(StrBuf));
+    vec_init(&self->opts, sizeof(Value));
 
     self->ast = ast;
     self->exit_code = 0;
@@ -915,6 +1250,7 @@ void interp_deinit(Interpreter *self) {
     }
 
     vec_deinit(&self->strings);
+    vec_deinit(&self->opts);
 }
 
 int interp_walk(Interpreter *self) {
@@ -935,7 +1271,7 @@ int interp_walk(Interpreter *self) {
 }
 
 Value interp_eval(Interpreter *self) {
-    Value val;
+    Value val = {0};
 
     if (self->ast->nodes.len == 0) {
         val.type = self->types->builtin_void;
@@ -945,7 +1281,13 @@ Value interp_eval(Interpreter *self) {
 
     ExprResult expr =
         exec_expr(self, ((const AstNode **)self->ast->nodes.data)[0], false);
-    val = EXPR_GET_VALUE(expr);
+    Value *expr_val = expr_get_value(&expr);
+
+    if (!expr_val) {
+        val.type = self->types->error_type;
+    } else {
+        val = *expr_val;
+    }
 
     if (self->had_error) {
         val.type = self->types->error_type;

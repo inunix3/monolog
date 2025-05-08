@@ -1,42 +1,12 @@
 #pragma once
 
-#include "ast.h"
+#include "function.h"
 #include "hashmap.h"
-#include "type.h"
-#include "value.h"
+#include "scope.h"
+#include "variable.h"
 #include "vector.h"
 
 #include <stdbool.h>
-
-typedef struct Variable {
-    Type *type;
-    char *name;
-    Value val;
-    bool defined;
-    bool is_param;
-} Variable;
-
-typedef struct FnParam {
-    Type *type;
-    char *name;
-} FnParam;
-
-typedef struct Function {
-    Type *type;
-    char *name;
-    Vector params; /* Vector<FnParam> */
-    AstNode *body;
-    bool free_body;
-} Function;
-
-typedef struct Scope {
-    HashMap vars; /* HashMap<char *, Variable *> */
-} Scope;
-
-void scope_init(Scope *self);
-void scope_deinit(Scope *self);
-void scope_clear(Scope *self);
-void scope_add_var(Scope *scope, Variable *var);
 
 typedef struct Envrionment {
     Vector scopes; /* Vector<Scope> */
@@ -45,10 +15,8 @@ typedef struct Envrionment {
 
     Scope *caller_scope;
     Scope *curr_scope;
-    Function *curr_fn;
-
-    Scope *old_caller_scope;
     Scope *old_scope;
+    Function *curr_fn;
     Function *old_fn;
 } Environment;
 

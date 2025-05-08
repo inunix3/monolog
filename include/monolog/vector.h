@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define VECTOR_DEFAULT_CAP 256
+#define VECTOR_DEFAULT_CAP 64
 
 typedef struct Vector {
     void *data;

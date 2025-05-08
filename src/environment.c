@@ -3,57 +3,20 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-void scope_init(Scope *self) { hashmap_init(&self->vars); }
-
-void scope_deinit(Scope *self) {
-    scope_clear(self);
-    hashmap_deinit(&self->vars);
-}
-
-void scope_clear(Scope *self) {
-    for (HashMapIter it = hashmap_iter(&self->vars); it.bucket != NULL;
-         hashmap_iter_next(&it)) {
-        Variable *var = it.bucket->value;
-
-        hashmap_remove(&self->vars, var->name);
-
-        free(var->name);
-        var->name = NULL;
-
-        free(var);
-    }
-}
-
-void scope_add_var(Scope *scope, Variable *var) {
-    Variable *old_var = hashmap_get(&scope->vars, var->name);
-
-    if (old_var) {
-        hashmap_remove(&scope->vars, old_var->name);
-
-        free(old_var->name);
-        old_var->name = NULL;
-
-        free(old_var);
-    }
-
-    hashmap_add(&scope->vars, var->name, var);
-}
-
 void env_init(Environment *self) {
     vec_init(&self->scopes, sizeof(Scope));
 
     Scope global_scope;
     scope_init(&global_scope);
     vec_push(&self->scopes, &global_scope);
-    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
+
     self->global_scope = &VEC_LAST(&self->scopes, Scope);
+    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
     self->caller_scope = NULL;
-
     self->old_scope = NULL;
-    self->old_fn = NULL;
-    self->old_caller_scope = NULL;
-
     self->curr_fn = NULL;
+    self->old_fn = NULL;
+
     hashmap_init(&self->funcs);
 }
 
@@ -67,27 +30,8 @@ void env_deinit(Environment *self) {
     for (HashMapIter it = hashmap_iter(&self->funcs); it.bucket != NULL;
          hashmap_iter_next(&it)) {
         Function *fn = it.bucket->value;
-        FnParam *params = fn->params.data;
 
-        for (size_t i = 0; i < fn->params.len; ++i) {
-            FnParam *param = &params[i];
-
-            param->type = NULL;
-
-            free(param->name);
-            param->name = NULL;
-        }
-
-        vec_deinit(&fn->params);
-
-        if (fn->free_body) {
-            astnode_destroy(fn->body);
-            fn->body = NULL;
-        }
-
-        free(fn->name);
-        fn->name = NULL;
-
+        fn_deinit(fn);
         free(fn);
     }
 
@@ -134,13 +78,12 @@ void env_reset(Environment *self) {
 
     scope_clear(&scopes[0]);
 
-    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
     self->global_scope = &VEC_LAST(&self->scopes, Scope);
+    self->curr_scope = &VEC_LAST(&self->scopes, Scope);
     self->caller_scope = NULL;
     self->old_scope = NULL;
-    self->old_fn = NULL;
-    self->old_caller_scope = NULL;
     self->curr_fn = NULL;
+    self->old_fn = NULL;
 
     for (size_t i = 1; i < self->scopes.len; ++i) {
         vec_pop(&self->scopes);
@@ -150,18 +93,8 @@ void env_reset(Environment *self) {
          hashmap_iter_next(&it)) {
         Function *fn = it.bucket->value;
 
-        vec_deinit(&fn->params);
         hashmap_remove(&self->funcs, fn->name);
-
-        vec_deinit(&fn->params);
-
-        if (fn->free_body) {
-            astnode_destroy(fn->body);
-            fn->body = NULL;
-        }
-
-        free(fn->name);
-        fn->name = NULL;
+        fn_deinit(fn);
 
         free(fn);
     }
@@ -204,16 +137,6 @@ void env_leave_fn(Environment *self) {
     vec_pop(&self->scopes);
 
     self->curr_fn = self->old_fn;
-}
-
-void env_save_caller(Environment *self, Scope *caller_scope) {
-    self->old_caller_scope = self->caller_scope;
-    self->caller_scope = caller_scope;
-}
-
-void env_restore_caller(Environment *self) {
-    self->curr_scope = self->old_scope;
-    self->caller_scope = self->old_caller_scope;
 }
 
 void env_add_fn(Environment *self, Function *fn) {

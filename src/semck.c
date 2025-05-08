@@ -79,10 +79,18 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
     case TOKEN_OP_EQUAL:
     case TOKEN_OP_NOT_EQUAL:
-        if ((t1->id == TYPE_OPTION && t2->id == TYPE_NIL) ||
-            (t1->id == TYPE_NIL && t2->id == TYPE_OPTION)) {
+        if (t1->id == TYPE_OPTION && t2->id == TYPE_OPTION) {
+            /* opt1 == opt2 */
+            return self->types->builtin_int;
+        } else if ((t1->id == TYPE_OPTION && t2->id == TYPE_NIL) ||
+                   (t1->id == TYPE_NIL && t2->id == TYPE_OPTION)) {
+            /* opt == nil, nil == opt */
+            return self->types->builtin_int;
+        } else if (t1->id == TYPE_NIL && t2->id == TYPE_NIL) {
+            /* nil == nil */
             return self->types->builtin_int;
         } else if (t1->id == TYPE_STRING && t2->id == TYPE_STRING) {
+            /* string == string */
             return self->types->builtin_int;
         }
 
@@ -668,12 +676,12 @@ static void check_return(SemChecker *self, const AstNode *node) {
         return;
     }
 
-    if (ret_type != self->types->builtin_void &&
+    if (!type_can_implicitly_convert(ret_type, self->types->builtin_void) &&
         expected == self->types->builtin_void) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_VOID_RETURN, {0}};
 
         error(self, &dmsg);
-    } else if (expected != ret_type) {
+    } else if (!type_can_implicitly_convert(ret_type, expected)) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
         dmsg.type_mismatch.expected = self->env.curr_fn->type;
         dmsg.type_mismatch.found = ret_type;
@@ -782,12 +790,10 @@ static void clone_fn_params(Vector *self, const Vector *params_vec) {
     const FnParam *params = params_vec->data;
 
     for (size_t i = 0; i < params_vec->len; ++i) {
-        FnParam *param = malloc(sizeof(*param));
+        FnParam *param = vec_emplace(self);
 
         param->type = params[i].type;
         param->name = cstr_dup(params[i].name);
-
-        vec_push(self, param);
     }
 }
 
@@ -808,6 +814,7 @@ bool semck_check(
         for (HashMapIter it = hashmap_iter(funcs); it.bucket != NULL;
              hashmap_iter_next(&it)) {
             Function *fn = it.bucket->value;
+
             Function *fn_copy = malloc(sizeof(*fn_copy));
             vec_init(&fn_copy->params, sizeof(FnParam));
 

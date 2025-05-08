@@ -25,7 +25,11 @@ void format_type_name(const Type *type, int *pos) {
         break;
     case TYPE_OPTION:
         *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "option<");
-        format_type_name(type->opt_type.type, pos);
+
+        if (type->opt_type.type) {
+            format_type_name(type->opt_type.type, pos);
+        }
+
         *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, ">");
 
         break;
@@ -88,6 +92,9 @@ bool type_system_init(TypeSystem *self) {
 
     Type builtin_void = {TYPE_VOID, NULL, {0}};
     self->builtin_void = type_system_register(self, &builtin_void);
+
+    Type opt_type = {TYPE_OPTION, NULL, {0}};
+    self->opt_type = type_system_register(self, &opt_type);
 
     Type error_type = {TYPE_ERROR, NULL, {0}};
     self->error_type = type_system_register(self, &error_type);

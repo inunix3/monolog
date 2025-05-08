@@ -51,6 +51,7 @@ typedef struct TypeSystem {
     Type *builtin_int;
     Type *builtin_string;
     Type *builtin_void;
+    Type *opt_type;
     Type *error_type;
     Type *nil_type;
 } TypeSystem;

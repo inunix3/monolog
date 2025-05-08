@@ -597,36 +597,6 @@ TEST int_to_string(void) {
     PASS();
 }
 
-TEST int_var(void) {
-    run("int a = 115");
-    Value v = eval("a + 5");
-
-    ASSERT_EQ(TYPE_INT, v.type->id);
-    ASSERT_EQ(120, v.i);
-
-    ASSERT_EQ(&g_ast, g_interp.ast);
-    ASSERT_EQ(0, g_interp.exit_code);
-    ASSERT_EQ(false, g_interp.had_error);
-    ASSERT_EQ(false, g_interp.halt);
-
-    PASS();
-}
-
-TEST string_var(void) {
-    run("string s = \"Hello, World!\"");
-    Value v = eval("s + s + \"String\"");
-
-    ASSERT_EQ(TYPE_STRING, v.type->id);
-    ASSERT_STR_EQ("Hello, World!Hello, World!String", v.s->data);
-
-    ASSERT_EQ(&g_ast, g_interp.ast);
-    ASSERT_EQ(0, g_interp.exit_code);
-    ASSERT_EQ(false, g_interp.had_error);
-    ASSERT_EQ(false, g_interp.halt);
-
-    PASS();
-}
-
 TEST prefix_increment(void) {
     run("int a = 5;");
     Value v = eval("++a");
@@ -697,6 +667,577 @@ TEST suffix_decrement(void) {
     PASS();
 }
 
+TEST int_var(void) {
+    run("int a = 115");
+    Value v = eval("a + 5");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(120, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST string_var(void) {
+    run("string s = \"Hello, World!\"");
+    Value v = eval("s + s + \"String\"");
+
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("Hello, World!Hello, World!String", v.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_nil(void) {
+    run("int? o = nil");
+    Value v = eval("o == nil");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_int(void) {
+    run("int? o = 115");
+    Value v = eval("o != nil");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_deref(void) {
+    run("int? o = 115");
+    Value v = eval("*o");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(115, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_reassign(void) {
+    run(
+        "int? o = 115;"
+        "o = 94;"
+    );
+
+    Value v = eval("*o");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(94, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_deref_assign(void) {
+    run(
+        "int? o = 115;"
+        "*o = 94;"
+    );
+
+    Value v = eval("*o");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(94, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_assign_nil(void) {
+    run(
+        "int? o = 115;"
+        "o = nil;"
+    );
+
+    Value v = eval("o == nil");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_nested(void) {
+    run(
+        "int? a = 115;"
+        "int?? b = a;"
+        "int??? c = b;"
+    );
+
+    Value v = eval("***c");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(115, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_clone(void) {
+    run(
+        "string? a = \"Hello\";"
+        "string? b = a;"
+        "*b = *b + \", World!\";"
+    );
+
+    Value v1 = eval("*a");
+
+    ASSERT_EQ(TYPE_STRING, v1.type->id);
+    ASSERT_STR_EQ("Hello", v1.s->data);
+
+    Value v2 = eval("*b");
+
+    ASSERT_EQ(TYPE_STRING, v2.type->id);
+    ASSERT_STR_EQ("Hello, World!", v2.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_nested_clone(void) {
+    run(
+        "string? a = \"Hello\";"
+        "string?? b = a;"
+        "string??? c = b;"
+        "***c = ***c + \", World!\";"
+    );
+
+    Value v1 = eval("*a");
+
+    ASSERT_EQ(TYPE_STRING, v1.type->id);
+    ASSERT_STR_EQ("Hello", v1.s->data);
+
+    Value v2 = eval("**b");
+
+    ASSERT_EQ(TYPE_STRING, v2.type->id);
+    ASSERT_STR_EQ("Hello", v2.s->data);
+
+    Value v3 = eval("***c");
+
+    ASSERT_EQ(TYPE_STRING, v3.type->id);
+    ASSERT_STR_EQ("Hello, World!", v3.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_compare_not_equal(void) {
+    run(
+        "int? a = 5;"
+        "int? b = 10;"
+    );
+
+    Value v = eval("a == b");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(0, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_compare_equal(void) {
+    run(
+        "int? a = 5;"
+        "int? b = 5;"
+    );
+
+    Value v = eval("a == b");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_compare_nil_to_nonnil(void) {
+    run(
+        "int? a = 5;"
+        "int? b = nil;"
+    );
+
+    Value v = eval("a == b");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(0, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST option_compare_nil_to_nil(void) {
+    run(
+        "int? a = nil;"
+        "int? b = nil;"
+    );
+
+    Value v = eval("a == b");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_call_without_args(void) {
+    run(
+        "void foo() { exit(115); }"
+    );
+
+    Value v = eval("foo()");
+
+    ASSERT_EQ(TYPE_VOID, v.type->id);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(115, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(true, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_return_int(void) {
+    run(
+        "int foo() { return 3; }"
+    );
+
+    Value v = eval("foo()");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(3, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_return_string(void) {
+    run(
+        "string foo() { return \"Hello, World!\"; }"
+    );
+
+    Value v = eval("foo()");
+
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("Hello, World!", v.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_return_nested_opt(void) {
+    run(
+        "int?? foo() {"
+        "  int? temp = 5;"
+        "  return temp;"
+        "}"
+    );
+
+    Value v = eval("**foo()");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(5, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_return_opt(void) {
+    run(
+        "int? foo(int x) {"
+        "  if (x == 1) {"
+        "    return 115;"
+        "  } else {"
+        "    return nil;"
+        "  }"
+        "}"
+    );
+
+    Value v1 = eval("foo(1)");
+
+    ASSERT_EQ(TYPE_OPTION, v1.type->id);
+    ASSERT_NEQ(NULL, v1.opt.val);
+
+    ASSERT_EQ(TYPE_INT, v1.opt.val->type->id);
+    ASSERT_EQ(115, v1.opt.val->i);
+
+    Value v2 = eval("foo(0)");
+
+    ASSERT_EQ(TYPE_OPTION, v2.type->id);
+    ASSERT_EQ(NULL, v2.opt.val);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_with_param(void) {
+    run(
+        "int abs(int x) {"
+        "  if (x < 0) {"
+        "    return -x;"
+        " } else {"
+        "    return x;"
+        " }"
+        "}"
+    );
+
+    Value v1 = eval("abs(-115)");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(115, v1.i);
+
+    Value v2 = eval("abs(0)");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(0, v2.i);
+
+    Value v3 = eval("abs(94)");
+
+    ASSERT_EQ(TYPE_INT, v3.type->id);
+    ASSERT_EQ(94, v3.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_with_multiple_params(void) {
+    run(
+        "string list(int i, string s, int? o_i, string? o_s) {"
+        "  return $i + \", \" + s + \", \"+ $*o_i + \", \" + *o_s;"
+        "}"
+        ""
+        "int? o_i = 115;"
+    );
+
+    Value v = eval("list(94, \"string\", o_i, \"option\")");
+
+    ASSERT_EQ(TYPE_STRING, v.type->id);
+    ASSERT_STR_EQ("94, string, 115, option", v.s->data);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_isolation(void) {
+    run(
+        "int x = 1;"
+        "int foo() {"
+        "  int x = 2;"
+        "  return x;"
+        "}"
+    );
+
+    Value v1 = eval("foo()");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(2, v1.i);
+
+    Value v2 = eval("x");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(1, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_global_scope(void) {
+    run(
+        "int global = 115;"
+        ""
+        "int foo(int n) {"
+        "  global = 94;"
+        "  int x = 5;"
+        "  return global + n + x;"
+        "}"
+    );
+
+    Value v1 = eval("foo(200);");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(299, v1.i);
+
+    Value v2 = eval("global");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(94, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_early_return(void) {
+    run(
+        "int global = 115;"
+        ""
+        "void foo() {"
+        "  return;"
+        "  global = 94;"
+        "}"
+    );
+
+    Value v1 = eval("foo();");
+
+    ASSERT_EQ(TYPE_VOID, v1.type->id);
+
+    Value v2 = eval("global");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(115, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_recursion_factorial(void) {
+    run(
+        "int factorial(int n) {"
+        "  if (n == 0) return 1;"
+        "  return n * factorial(n - 1);"
+        "}"
+    );
+
+    Value v = eval("factorial(15);");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(1307674368000, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST fn_recursion_fibonacci(void) {
+    run(
+        "int fib(int n) {"
+        "  if (n <= 1) return n;"
+        "  return fib(n - 1) + fib(n - 2);"
+        "}"
+    );
+
+    Value v = eval("fib(20)");
+
+    ASSERT_EQ(TYPE_INT, v.type->id);
+    ASSERT_EQ(6765, v.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
 SUITE(expressions) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -741,11 +1282,36 @@ SUITE(expressions) {
     RUN_TEST(or_false);
     RUN_TEST(string_len);
     RUN_TEST(int_to_string);
-    RUN_TEST(int_var);
-    RUN_TEST(string_var);
     RUN_TEST(string_subscript);
     RUN_TEST(prefix_increment);
     RUN_TEST(prefix_decrement);
     RUN_TEST(suffix_increment);
     RUN_TEST(suffix_decrement);
+    RUN_TEST(int_var);
+    RUN_TEST(string_var);
+    RUN_TEST(option_nil);
+    RUN_TEST(option_int);
+    RUN_TEST(option_deref);
+    RUN_TEST(option_reassign);
+    RUN_TEST(option_deref_assign);
+    RUN_TEST(option_assign_nil);
+    RUN_TEST(option_nested);
+    RUN_TEST(option_clone);
+    RUN_TEST(option_nested_clone);
+    RUN_TEST(option_compare_not_equal);
+    RUN_TEST(option_compare_equal);
+    RUN_TEST(option_compare_nil_to_nonnil);
+    RUN_TEST(option_compare_nil_to_nil);
+    RUN_TEST(fn_call_without_args);
+    RUN_TEST(fn_return_int);
+    RUN_TEST(fn_return_string);
+    RUN_TEST(fn_return_opt);
+    RUN_TEST(fn_return_nested_opt);
+    RUN_TEST(fn_with_param);
+    RUN_TEST(fn_with_multiple_params);
+    RUN_TEST(fn_isolation);
+    RUN_TEST(fn_global_scope);
+    RUN_TEST(fn_early_return);
+    RUN_TEST(fn_recursion_factorial);
+    RUN_TEST(fn_recursion_fibonacci);
 }
