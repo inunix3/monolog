@@ -1238,6 +1238,18 @@ TEST fn_recursion_fibonacci(void) {
     PASS();
 }
 
+TEST array(void) {
+    run("[int, 5] a;");
+    run("[int, 6] b = a;");
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
 SUITE(expressions) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -1314,4 +1326,5 @@ SUITE(expressions) {
     RUN_TEST(fn_early_return);
     RUN_TEST(fn_recursion_factorial);
     RUN_TEST(fn_recursion_fibonacci);
+    RUN_TEST(array);
 }

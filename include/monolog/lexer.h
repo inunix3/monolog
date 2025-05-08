@@ -62,7 +62,9 @@ typedef enum TokenKind {
     TOKEN_KW_STRING,
     TOKEN_KW_PRINT,
     TOKEN_KW_PRINTLN,
-    TOKEN_KW_EXIT
+    TOKEN_KW_EXIT,
+    TOKEN_KW_PUSH,
+    TOKEN_KW_POP
 } TokenKind;
 
 const char *token_kind_to_str(TokenKind kind);

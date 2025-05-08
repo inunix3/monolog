@@ -13,6 +13,7 @@ typedef struct SemChecker {
     Environment env;
     TypeSystem *types;
     int loop_depth;
+    Vector builtin_fn_args;
 
     Vector dmsgs; /* Vector<DiagnosticMessage> */
     bool error_state;

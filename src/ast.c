@@ -69,23 +69,12 @@ void astnode_destroy(AstNode *self) {
 
         break;
     }
-    case AST_NODE_ARRAY_SUBSCRIPT:
-        astnode_destroy(self->array_sub.expr);
-        self->array_sub.expr = NULL;
+    case AST_NODE_SUBSCRIPT:
+        astnode_destroy(self->subscript.expr);
+        self->subscript.expr = NULL;
 
-        astnode_destroy(self->array_sub.left);
-        self->array_sub.left = NULL;
-
-        break;
-    case AST_NODE_PRINT:
-    case AST_NODE_PRINTLN:
-        astnode_destroy(self->kw_print.expr);
-        self->kw_print.expr = NULL;
-
-        break;
-    case AST_NODE_EXIT:
-        astnode_destroy(self->kw_exit.expr);
-        self->kw_exit.expr = NULL;
+        astnode_destroy(self->subscript.left);
+        self->subscript.left = NULL;
 
         break;
     case AST_NODE_IF:
@@ -141,12 +130,9 @@ void astnode_destroy(AstNode *self) {
         self->opt_type.type = NULL;
 
         break;
-    case AST_NODE_ARRAY_TYPE:
-        astnode_destroy(self->array_type.type);
-        self->array_type.type = NULL;
-
-        astnode_destroy(self->array_type.size);
-        self->array_type.size = NULL;
+    case AST_NODE_LIST_TYPE:
+        astnode_destroy(self->list_type.type);
+        self->list_type.type = NULL;
 
         break;
     case AST_NODE_VAR_DECL:
@@ -262,25 +248,10 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
 
         break;
     }
-    case AST_NODE_ARRAY_SUBSCRIPT:
-        fprintf(out, "array-subscript:\n");
-        print_node(node->array_sub.expr, out, indent + 1);
-        print_node(node->array_sub.left, out, indent + 1);
-
-        break;
-    case AST_NODE_PRINT:
-        fprintf(out, "print:\n");
-        print_node(node->kw_print.expr, out, indent + 1);
-
-        break;
-    case AST_NODE_PRINTLN:
-        fprintf(out, "println:\n");
-        print_node(node->kw_print.expr, out, indent + 1);
-
-        break;
-    case AST_NODE_EXIT:
-        fprintf(out, "exit:\n");
-        print_node(node->kw_exit.expr, out, indent + 1);
+    case AST_NODE_SUBSCRIPT:
+        fprintf(out, "subscript:\n");
+        print_node(node->subscript.expr, out, indent + 1);
+        print_node(node->subscript.left, out, indent + 1);
 
         break;
     case AST_NODE_IF:
@@ -341,10 +312,9 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
         print_node(node->opt_type.type, out, indent + 1);
 
         break;
-    case AST_NODE_ARRAY_TYPE:
-        fprintf(out, "array-type:\n");
-        print_node(node->array_type.type, out, indent + 1);
-        print_node(node->array_type.size, out, indent + 1);
+    case AST_NODE_LIST_TYPE:
+        fprintf(out, "list-type:\n");
+        print_node(node->list_type.type, out, indent + 1);
 
         break;
     case AST_NODE_VAR_DECL:

@@ -18,15 +18,16 @@ typedef struct Value {
 
         struct {
             /* Pointer to a Vector<Value>, allocated inside interpreter */
-            Vector *array; /* Vector<Value> */
-        } array;
+            Vector *values; /* Vector<Value> */
+        } list;
 
         struct {
+            /* Pointer to a value, allocated inside interpreter */
             struct Value *val;
         } opt;
 
-        struct {
-            char *ptr;
-        } str_sub;
+        // struct {
+        //     char *ptr;
+        // } str_sub;
     };
 } Value;

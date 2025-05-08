@@ -43,21 +43,21 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_subscript_missing_rbracket,
-    "array[2 +",
-    "array-subscript-missing-rbracket.txt"
+    list_subscript_missing_rbracket,
+    "list[2 +",
+    "list-subscript-missing-rbracket.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_subscript_bad_expression_1,
-    "array[@]",
-    "array-subscript-bad-expression-1.txt"
+    list_subscript_bad_expression_1,
+    "list[@]",
+    "list-subscript-bad-expression-1.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_subscript_bad_expression_2,
-    "array[2 + @]",
-    "array-subscript-bad-expression-2.txt"
+    list_subscript_bad_expression_2,
+    "list[2 + @]",
+    "list-subscript-bad-expression-2.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
@@ -165,9 +165,9 @@ SUITE(SUITE_NAME) {
     RUN_TEST(invalid_expr_4);
     RUN_TEST(fn_call_bad_arg);
     RUN_TEST(fn_call_missing_rparen);
-    RUN_TEST(array_subscript_missing_rbracket);
-    RUN_TEST(array_subscript_bad_expression_1);
-    RUN_TEST(array_subscript_bad_expression_2);
+    RUN_TEST(list_subscript_missing_rbracket);
+    RUN_TEST(list_subscript_bad_expression_1);
+    RUN_TEST(list_subscript_bad_expression_2);
     RUN_TEST(unterminated_string);
     RUN_TEST(if_missing_cond);
     RUN_TEST(var_with_bad_name);

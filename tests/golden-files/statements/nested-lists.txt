@@ -1,0 +1,7 @@
+var-decl:
+  list-type:
+    list-type:
+      list-type:
+        int-type
+  identifier foo
+  null

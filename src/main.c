@@ -22,8 +22,8 @@ static void
 highlighter(ic_highlight_env_t *henv, const char *input, void *arg) {
     (void)arg;
 
-    static const char *keywords[] = {"break", "continue", "return",
-                                     "print", "println",  NULL};
+    static const char *keywords[] = {"break",   "continue", "return", "print",
+                                     "println", "exit",     NULL};
     static const char *controls[] = {"if", "else", "while", "for", NULL};
     static const char *types[] = {"int", "string", "void", NULL};
 
@@ -131,9 +131,12 @@ static void cmd_parse(char *buf, size_t size) {
     ast_dump(&ast, stdout);
 
     if (!parser.error_state) {
+        TypeSystem types;
+        type_system_init(&types);
+
         SemChecker semck;
-        semck_init(&semck);
-        semck_check(&semck, &ast);
+        semck_init(&semck, &types);
+        semck_check(&semck, &ast, NULL, NULL);
 
         DiagnosticMessage *dmsgs = semck.dmsgs.data;
 
@@ -142,6 +145,7 @@ static void cmd_parse(char *buf, size_t size) {
         }
 
         semck_deinit(&semck);
+        type_system_deinit(&types);
     }
 
     vec_deinit(&tokens);
@@ -158,12 +162,15 @@ static int cmd_run(char *buf, size_t size) {
 
     Ast ast = parser_parse(&parser);
 
+    TypeSystem types;
+    type_system_init(&types);
+
     bool has_error = parser.error_state;
     if (!has_error) {
-        SemChecker semck;
-        semck_init(&semck);
-        has_error = !semck_check(&semck, &ast);
 
+        SemChecker semck;
+        semck_init(&semck, &types);
+        has_error = !semck_check(&semck, &ast, NULL, NULL);
         DiagnosticMessage *dmsgs = semck.dmsgs.data;
 
         for (size_t i = 0; i < semck.dmsgs.len; ++i) {
@@ -177,11 +184,14 @@ static int cmd_run(char *buf, size_t size) {
 
     if (!has_error) {
         Interpreter interp;
-        interp_init(&interp, &ast);
+        interp_init(&interp, &ast, &types);
         interp.log_errors = true;
 
         exit_code = interp_walk(&interp);
+        interp_deinit(&interp);
     }
+
+    type_system_deinit(&types);
 
     ast_destroy(&ast);
     vec_deinit(&tokens);
@@ -205,23 +215,31 @@ static void cmd_repl(void) {
     ic_set_default_highlighter(highlighter, NULL);
     ic_set_history(".monologhist", -1); /* -1 for default 200 entries */
 
+    TypeSystem types;
+    type_system_init(&types);
+
+    Interpreter interp;
+    interp_init(&interp, NULL, &types);
+    interp.log_errors = true;
+
     char *input;
     while ((input = ic_readline(""))) {
         bool stop = strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0;
 
         if (!stop) {
             lexer_lex(input, strlen(input), &tokens);
-
             Parser parser = parser_new(tokens.data, tokens.len);
             parser.log_errors = true;
             Ast ast = parser_parse(&parser);
-
             bool has_error = parser.error_state;
 
             if (!has_error) {
                 SemChecker semck;
-                semck_init(&semck);
-                has_error = !semck_check(&semck, &ast);
+                semck_init(&semck, &types);
+                has_error = !semck_check(
+                    &semck, &ast, &interp.env.global_scope->vars,
+                    &interp.env.funcs
+                );
 
                 DiagnosticMessage *dmsgs = semck.dmsgs.data;
 
@@ -233,10 +251,8 @@ static void cmd_repl(void) {
             }
 
             if (!has_error) {
-                Interpreter interp;
-                interp_init(&interp, &ast);
-                interp.log_errors = true;
-
+                interp.had_error = false;
+                interp.ast = &ast;
                 interp_walk(&interp);
 
                 if (interp.halt) {
@@ -255,6 +271,7 @@ static void cmd_repl(void) {
         }
     }
 
+    type_system_deinit(&types);
     vec_deinit(&tokens);
 }
 

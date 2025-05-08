@@ -17,7 +17,7 @@ static AstNode *binary(Parser *self, AstNode *left);
 static AstNode *suffix(Parser *self, AstNode *left);
 static AstNode *grouping(Parser *self);
 static AstNode *fn_call(Parser *self, AstNode *left);
-static AstNode *array_sub(Parser *self, AstNode *left);
+static AstNode *subscript(Parser *self, AstNode *left);
 static AstNode *block(Parser *self);
 static AstNode *statement(Parser *self);
 static AstNode *declaration(Parser *self);
@@ -33,7 +33,7 @@ static ParseRule g_rules[] = {
     [TOKEN_OP_SEMICOLON]     = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_OP_LPAREN]        = {grouping,        fn_call, NULL,      PREC_SUFFIX},
     [TOKEN_OP_RPAREN]        = {NULL,            NULL,    NULL,      PREC_NONE},
-    [TOKEN_OP_LBRACKET]      = {NULL,            NULL,    array_sub, PREC_SUFFIX},
+    [TOKEN_OP_LBRACKET]      = {NULL,            NULL,    subscript, PREC_SUFFIX},
     [TOKEN_OP_RBRACKET]      = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_OP_LBRACE]        = {NULL,            NULL,    NULL,      PREC_NONE},
     [TOKEN_OP_RBRACE]        = {NULL,            NULL,    NULL,      PREC_NONE},
@@ -197,9 +197,6 @@ static void sync(Parser *self, unsigned modes) {
             case TOKEN_KW_IF:
             case TOKEN_KW_FOR:
             case TOKEN_KW_WHILE:
-            case TOKEN_KW_PRINT:
-            case TOKEN_KW_PRINTLN:
-            case TOKEN_KW_EXIT:
             case TOKEN_KW_INT:
             case TOKEN_KW_STRING:
             case TOKEN_KW_VOID:
@@ -396,7 +393,7 @@ static AstNode *fn_call(Parser *self, AstNode *left) {
     return node;
 }
 
-static AstNode *array_sub(Parser *self, AstNode *left) {
+static AstNode *subscript(Parser *self, AstNode *left) {
     advance(self); /* consume the [ */
 
     AstNode *expr = expression(self, PREC_NONE);
@@ -408,9 +405,9 @@ static AstNode *array_sub(Parser *self, AstNode *left) {
         return astnode_new(AST_NODE_ERROR);
     }
 
-    AstNode *node = astnode_new(AST_NODE_ARRAY_SUBSCRIPT);
-    node->array_sub.expr = expr;
-    node->array_sub.left = left;
+    AstNode *node = astnode_new(AST_NODE_SUBSCRIPT);
+    node->subscript.expr = expr;
+    node->subscript.left = left;
 
     return node;
 }
@@ -812,7 +809,7 @@ static AstNode *parse_type(Parser *self) {
 
         break;
     case TOKEN_OP_LBRACKET:
-        type_id = AST_NODE_ARRAY_TYPE;
+        type_id = AST_NODE_LIST_TYPE;
 
         break;
     default:
@@ -826,24 +823,14 @@ static AstNode *parse_type(Parser *self) {
     AstNode *node = NULL;
 
     if (type_id == AST_NODE_ERROR) {
-        error(self, "expected type specifier: int, string, void or array");
+        error(self, "expected type specifier: int, string, void or list");
 
         return astnode_new(AST_NODE_ERROR);
-    } else if (type_id == AST_NODE_ARRAY_TYPE) {
+    } else if (type_id == AST_NODE_LIST_TYPE) {
         AstNode *type = parse_type(self);
 
         if (type->kind == AST_NODE_ERROR) {
-            sync(self, SYNC_TO_COMMA_KEEP);
-        }
-
-        AstNode *size = NULL;
-
-        if (!expect(self, TOKEN_OP_COMMA)) {
-            size = astnode_new(AST_NODE_ERROR);
-
             sync(self, SYNC_TO_RBRACKET_KEEP);
-        } else {
-            size = expression(self, PREC_NONE);
         }
 
         if (!expect(self, TOKEN_OP_RBRACKET)) {
@@ -851,8 +838,7 @@ static AstNode *parse_type(Parser *self) {
         }
 
         node = astnode_new(type_id);
-        node->array_type.type = type;
-        node->array_type.size = size;
+        node->list_type.type = type;
     } else {
         node = astnode_new(type_id);
     }

@@ -6,11 +6,10 @@
  */
 
 #include <monolog/lexer.h>
+#include <monolog/utils.h>
 
 #include <assert.h>
 #include <string.h>
-
-#define ARRAY_SIZE(_a) (sizeof(_a) / (sizeof((_a)[0])))
 
 static bool at_eof(const Lexer *self) {
     return self->ch == '\0' && self->next_ch_idx >= self->len;
@@ -64,7 +63,7 @@ static TokenKind identifier_kind(const char *s, size_t len) {
     static const char *keywords[] = {"if",      "else",  "for",      "while",
                                      "return",  "break", "continue", "nil",
                                      "int",     "void",  "string",   "print",
-                                     "println", "exit"};
+                                     "println", "exit",  "push",     "pop"};
 
     for (size_t i = 0; i < ARRAY_SIZE(keywords); ++i) {
         if (strlen(keywords[i]) == len && strncmp(s, keywords[i], len) == 0) {
@@ -309,7 +308,8 @@ const char *token_kind_to_str(TokenKind kind) {
         "&&",      "||",       "?",       "#",          "$",
         "if",      "else",     "for",     "while",      "return",
         "break",   "continue", "nil",     "int",        "void",
-        "string",  "print",    "println", "exit"
+        "string",  "print",    "println", "exit",       "push",
+        "pop"
     };
 
     return strs[kind];
@@ -365,7 +365,9 @@ const char *token_kind_to_name(TokenKind kind) {
         "keyword string",
         "keyword print",
         "keyword println",
-        "keyword exit"
+        "keyword exit",
+        "keyword push",
+        "keyword pop"
     };
 
     return names[kind];

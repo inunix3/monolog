@@ -7,41 +7,11 @@
 
 #include <stdbool.h>
 
-typedef enum ExprResultKind {
-    EXPR_ERROR,
-    EXPR_VALUE,
-    EXPR_VAR,
-    EXPR_REF
-} ExprResultKind;
-
-typedef struct ExprResult {
-    ExprResultKind kind;
-
-    union {
-        Value val;
-        Variable *var;
-        Value *ref;
-    };
-} ExprResult;
-
-typedef enum StmtResultKind {
-    STMT_ERROR,
-    STMT_VOID,
-    STMT_BREAK,
-    STMT_CONTINUE,
-    STMT_RETURN
-} StmtResultKind;
-
-typedef struct StmtResult {
-    StmtResultKind kind;
-    Value ret_value;
-} StmtResult;
-
 typedef struct Interpreter {
     Environment env;
     TypeSystem *types;
     Vector strings; /* Vector<StrBuf> */
-    // Vector arrays; /* Vector<Vector<Value>> */
+    Vector lists; /* Vector<Vector<Value>> */
     Vector opts; /* Vector<Value> */
 
     Ast *ast;

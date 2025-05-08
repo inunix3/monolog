@@ -1,0 +1,5 @@
+var-decl:
+  list-type:
+    int-type
+  identifier my_list
+  null

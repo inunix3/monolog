@@ -1,7 +1,10 @@
 #include <monolog/ast.h>
+#include <monolog/expr_result.h>
+#include <monolog/stmt_result.h>
 #include <monolog/interp.h>
 #include <monolog/utils.h>
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -25,6 +28,13 @@
 
 #define STMT_RETURN_IF_ERROR(_e, _err)                                         \
     if ((_e).kind == (_err)) {                                                 \
+        StmtResult __stmt_res = {STMT_ERROR, {0}};                             \
+                                                                               \
+        return __stmt_res;                                                     \
+    }
+
+#define STMT_RETURN_IF_INVALID_TYPE(_t)                                        \
+    if (!(_t)) {                                                               \
         StmtResult __stmt_res = {STMT_ERROR, {0}};                             \
                                                                                \
         return __stmt_res;                                                     \
@@ -91,6 +101,30 @@ static bool make_opt(Interpreter *self, Value *dest, const Value *val) {
     return true;
 }
 
+static bool clone_value(Interpreter *self, Value *dest, const Value *src);
+
+static bool clone_list(Interpreter *self, Value *dest, const Value *src) {
+    assert(dest->type);
+    assert(type_equal(dest->type, src->type));
+
+    Vector *values = vec_emplace(&self->lists);
+    vec_init(values, sizeof(Value));
+
+    dest->list.values = values;
+
+    const Value *src_values = src->list.values->data;
+
+    for (size_t i = 0; i < src->list.values->len; ++i) {
+        Value *elem = vec_emplace(values);
+
+        if (!clone_value(self, elem, &src_values[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bool clone_value(Interpreter *self, Value *dest, const Value *src) {
     switch (src->type->id) {
     case TYPE_ERROR:
@@ -111,9 +145,8 @@ static bool clone_value(Interpreter *self, Value *dest, const Value *src) {
         dest->type = self->types->builtin_void;
 
         break;
-    case TYPE_ARRAY:
-        /* TODO: implement */
-        break;
+    case TYPE_LIST:
+        return clone_list(self, dest, src);
     case TYPE_OPTION:
         return make_opt(self, dest, src);
     case TYPE_NIL:
@@ -139,8 +172,8 @@ static bool value_equal(const Value *v1, const Value *v2) {
         return v1->i == v2->i;
     case TYPE_STRING:
         return str_equal(v1->s, v2->s);
-    case TYPE_ARRAY:
-        /* arrays cannot be compared */
+    case TYPE_LIST:
+        /* lists cannot be compared */
 
         return false;
     case TYPE_OPTION:
@@ -364,6 +397,23 @@ exec_unary_string(Interpreter *self, TokenKind op, const Value *v1) {
     return val;
 }
 
+static Value
+exec_unary_list(Interpreter *self, TokenKind op, const Value *v1) {
+    Value val = {self->types->error_type, {0}};
+
+    switch (op) {
+    case TOKEN_OP_HASHTAG:
+        val.type = self->types->builtin_int;
+        val.i = (Int)v1->list.values->len;
+
+        break;
+    default:
+        break;
+    }
+
+    return val;
+}
+
 static Value *
 exec_unary_option(Interpreter *self, TokenKind op, const Value *v1) {
     Value *val = NULL;
@@ -399,6 +449,10 @@ static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
         break;
     case TYPE_STRING:
         expr_res.val = exec_unary_string(self, node->unary.op, expr_val);
+
+        break;
+    case TYPE_LIST:
+        expr_res.val = exec_unary_list(self, node->unary.op, expr_val);
 
         break;
     case TYPE_OPTION:
@@ -467,7 +521,7 @@ static ExprResult assign_ref(Interpreter *self, Value *val, ExprResult expr) {
 
     Value *expr_val = expr_get_value(&expr);
 
-    clone_value(self, val, expr_val);
+    implicitly_clone_value(self, val, expr_val);
 
     ExprResult expr_res;
     expr_res.kind = EXPR_REF;
@@ -643,7 +697,8 @@ exec_identifier(Interpreter *self, const AstNode *node, bool assigning) {
         return expr_res;
     }
 
-    if (!assigning && !var->defined && !var->is_param) {
+    if (!assigning && !var->defined && !var->is_param &&
+        var->type->id != TYPE_LIST) {
         expr_res.kind = EXPR_ERROR;
         error(
             self, "variable %s is declared, but no value was assigned to it",
@@ -682,11 +737,35 @@ exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
     return expr_res;
 }
 
+static ExprResult
+exec_list_subscript(Interpreter *self, const Value *val, Int idx) {
+    ExprResult expr_res = {0};
+
+    if ((size_t)idx >= val->list.values->len) {
+        expr_res.kind = EXPR_ERROR;
+        error(
+            self,
+            "list index out of range: %" PRId64 " but the list size is %zu",
+            idx, val->list.values->len
+        );
+
+        return expr_res;
+    }
+
+    Value *values = val->list.values->data;
+
+    expr_res.kind = EXPR_REF;
+    expr_res.val.type = val->type->list_type.type;
+    expr_res.ref = &values[idx];
+
+    return expr_res;
+}
+
 static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
-    ExprResult left_expr = exec_expr(self, node->array_sub.left, false);
+    ExprResult left_expr = exec_expr(self, node->subscript.left, false);
     EXPR_RETURN_IF_ERROR(left_expr, EXPR_ERROR);
 
-    ExprResult idx_expr = exec_expr(self, node->array_sub.expr, false);
+    ExprResult idx_expr = exec_expr(self, node->subscript.expr, false);
     EXPR_RETURN_IF_ERROR(idx_expr, EXPR_ERROR);
 
     ExprResult expr_res = {0};
@@ -696,6 +775,8 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     switch (left_val->type->id) {
     case TYPE_STRING:
         return exec_string_subscript(self, left_val->s, idx->i);
+    case TYPE_LIST:
+        return exec_list_subscript(self, left_val, idx->i);
     default:
         expr_res.kind = EXPR_ERROR;
         error(self, "unsupported type %s for indexing", left_val->type->name);
@@ -845,7 +926,7 @@ exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
         return exec_binary(self, node);
     case AST_NODE_SUFFIX:
         return exec_suffix(self, node);
-    case AST_NODE_ARRAY_SUBSCRIPT:
+    case AST_NODE_SUBSCRIPT:
         return exec_subscript(self, node);
     case AST_NODE_GROUPING:
         return exec_expr(self, node->grouping.expr, assigning);
@@ -867,15 +948,25 @@ static Type *process_type(Interpreter *self, const AstNode *node) {
         return self->types->builtin_string;
     case AST_NODE_VOID_TYPE:
         return self->types->builtin_void;
-    case AST_NODE_ARRAY_TYPE: {
-        Type *contained_type = process_type(self, node->array_type.type);
-        Type array = {TYPE_ARRAY, NULL, {0}};
-        array.array_type.type = contained_type;
+    case AST_NODE_LIST_TYPE: {
+        Type *contained_type = process_type(self, node->list_type.type);
 
-        return type_system_register(self->types, &array);
+        if (!contained_type) {
+            return NULL;
+        }
+
+        Type list = {TYPE_LIST, NULL, {0}};
+        list.list_type.type = contained_type;
+
+        return type_system_register(self->types, &list);
     }
     case AST_NODE_OPTION_TYPE: {
         Type *contained_type = process_type(self, node->opt_type.type);
+
+        if (!contained_type) {
+            return NULL;
+        }
+
         Type option = {TYPE_OPTION, NULL, {0}};
         option.opt_type.type = contained_type;
 
@@ -919,10 +1010,25 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
+static bool new_value(Interpreter *self, Value *val, Type *type) {
+    memset(val, 0, sizeof(*val));
+    val->type = type;
+
+    if (type->id == TYPE_LIST) {
+        Vector *values = vec_emplace(&self->lists);
+        vec_init(values, sizeof(Value));
+        val->list.values = values;
+    }
+
+    return true;
+}
+
 static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, {0}};
 
     Type *type = process_type(self, node->var_decl.type);
+    STMT_RETURN_IF_INVALID_TYPE(type);
+
     Value val = {type, {0}};
     bool defined = false;
 
@@ -949,6 +1055,10 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
         }
 
         defined = true;
+    } else if (!new_value(self, &val, type)) {
+        stmt_res.kind = STMT_ERROR;
+
+        return stmt_res;
     }
 
     Variable *var = malloc(sizeof(*var));
@@ -966,6 +1076,8 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
 static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, {0}};
     Type *type = process_type(self, node->fn_decl.type);
+    STMT_RETURN_IF_INVALID_TYPE(type);
+
     AstNode *body = node->fn_decl.body;
 
     if (body) {
@@ -987,6 +1099,7 @@ static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
     for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
         const AstNode *param_node = params_nodes[i];
         Type *param_type = process_type(self, param_node->param_decl.type);
+        STMT_RETURN_IF_INVALID_TYPE(type);
 
         FnParam *param = vec_emplace(&fn->params);
         param->type = param_type;
@@ -1196,12 +1309,6 @@ static StmtResult exec_node(Interpreter *self, AstNode *node) {
         return exec_var_decl(self, node);
     case AST_NODE_FN_DECL:
         return exec_fn_decl(self, node);
-    case AST_NODE_PRINT:
-        return exec_print(self, node);
-    case AST_NODE_PRINTLN:
-        return exec_println(self, node);
-    case AST_NODE_EXIT:
-        return exec_exit(self, node);
     case AST_NODE_IF:
         return exec_if(self, node);
     case AST_NODE_WHILE:
@@ -1231,6 +1338,7 @@ void interp_init(Interpreter *self, Ast *ast, TypeSystem *types) {
     self->types = types;
     env_init(&self->env);
     vec_init(&self->strings, sizeof(StrBuf));
+    vec_init(&self->lists, sizeof(Vector));
     vec_init(&self->opts, sizeof(Value));
 
     self->ast = ast;
@@ -1249,6 +1357,13 @@ void interp_deinit(Interpreter *self) {
         str_deinit(&strings[i]);
     }
 
+    Vector *lists = self->lists.data;
+
+    for (size_t i = 0; i < lists->len; ++i) {
+        vec_deinit(&lists[i]);
+    }
+
+    vec_deinit(&self->lists);
     vec_deinit(&self->strings);
     vec_deinit(&self->opts);
 }

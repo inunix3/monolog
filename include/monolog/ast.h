@@ -17,11 +17,8 @@ typedef enum AstNodeKind {
     AST_NODE_SUFFIX,
     AST_NODE_GROUPING,
     AST_NODE_FN_CALL,
-    AST_NODE_ARRAY_SUBSCRIPT,
+    AST_NODE_SUBSCRIPT,
     AST_NODE_BLOCK,
-    AST_NODE_PRINT,
-    AST_NODE_PRINTLN,
-    AST_NODE_EXIT,
     AST_NODE_IF,
     AST_NODE_WHILE,
     AST_NODE_FOR,
@@ -29,7 +26,7 @@ typedef enum AstNodeKind {
     AST_NODE_STRING_TYPE,
     AST_NODE_VOID_TYPE,
     AST_NODE_OPTION_TYPE,
-    AST_NODE_ARRAY_TYPE,
+    AST_NODE_LIST_TYPE,
     AST_NODE_VAR_DECL,
     AST_NODE_PARAM_DECL,
     AST_NODE_FN_DECL,
@@ -80,19 +77,11 @@ typedef struct AstNode {
         struct {
             struct AstNode *expr;
             struct AstNode *left;
-        } array_sub;
+        } subscript;
 
         struct {
             Vector nodes; /* Vector<AstNode *> */
         } block;
-
-        struct {
-            struct AstNode *expr;
-        } kw_print;
-
-        struct {
-            struct AstNode *expr;
-        } kw_exit;
 
         struct {
             struct AstNode *cond;
@@ -118,8 +107,7 @@ typedef struct AstNode {
 
         struct {
             struct AstNode *type;
-            struct AstNode *size;
-        } array_type;
+        } list_type;
 
         struct {
             struct AstNode *type;

@@ -319,21 +319,15 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_with_known_size,
-    "[int, 5] my_array;",
-    "array-with-known-size.txt"
+    empty_list,
+    "[int] my_list;",
+    "empty-list.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_with_unknown_size,
-    "[string, n] list;",
-    "array-with-unknown-size.txt"
-)
-
-TEST_STRING_AGAINST_FILE(
-    nested_arrays,
-    "[[[int, 3], 4], 5] foo;",
-    "nested-arrays.txt"
+    nested_lists,
+    "[[[int]]] foo;",
+    "nested-lists.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
@@ -433,9 +427,8 @@ SUITE(SUITE_NAME) {
     RUN_TEST(var_with_expression);
     RUN_TEST(option_type);
     RUN_TEST(nested_option_type);
-    RUN_TEST(array_with_known_size);
-    RUN_TEST(array_with_unknown_size);
-    RUN_TEST(nested_arrays);
+    RUN_TEST(empty_list);
+    RUN_TEST(nested_lists);
     RUN_TEST(fn_decl_empty_without_params);
     RUN_TEST(fn_decl_empty_with_1_param);
     RUN_TEST(fn_decl_empty_with_params);

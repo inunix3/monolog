@@ -27,7 +27,7 @@ static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
         return node->unary.op == TOKEN_OP_MUL
                    ? expr_is_mutable(self, node->unary.right)
                    : false;
-    case AST_NODE_ARRAY_SUBSCRIPT:
+    case AST_NODE_SUBSCRIPT:
         return true;
     default:
         return false;
@@ -195,7 +195,7 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
 
         return type;
     case TOKEN_OP_HASHTAG:
-        if (type->id != TYPE_ARRAY && type->id != TYPE_STRING) {
+        if (type->id != TYPE_LIST && type->id != TYPE_STRING) {
             DiagnosticMessage dmsg = {
                 DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
             };
@@ -286,7 +286,7 @@ check_var(SemChecker *self, const Variable *var, char *name, bool assigning) {
         error(self, &dmsg);
 
         return false;
-    } else if (!assigning && (var->type->id != TYPE_ARRAY && !var->defined) &&
+    } else if (!assigning && (var->type->id != TYPE_LIST && !var->defined) &&
                !var->is_param) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_UNDEFINED_VARIABLE, {0}};
         dmsg.undef_sym.name = name;
@@ -373,15 +373,15 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
     return type;
 }
 
-static Type *check_array_sub(SemChecker *self, const AstNode *node) {
-    const AstNode *expr = node->array_sub.expr;
-    const AstNode *left = node->array_sub.left;
+static Type *check_subscript(SemChecker *self, const AstNode *node) {
+    const AstNode *expr = node->subscript.expr;
+    const AstNode *left = node->subscript.left;
 
     Type *left_type = check_expr(self, left, false);
 
     if (left_type->id == TYPE_ERROR) {
         return self->types->error_type;
-    } else if (left_type->id != TYPE_ARRAY && left_type->id != TYPE_STRING) {
+    } else if (left_type->id != TYPE_LIST && left_type->id != TYPE_STRING) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_INDEXABLE, {0}};
 
         error(self, &dmsg);
@@ -399,8 +399,8 @@ static Type *check_array_sub(SemChecker *self, const AstNode *node) {
         error(self, &dmsg);
     }
 
-    if (left_type->id == TYPE_ARRAY) {
-        return left_type->array_type.type;
+    if (left_type->id == TYPE_LIST) {
+        return left_type->list_type.type;
     } else {
         return self->types->builtin_int;
     }
@@ -426,8 +426,8 @@ static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning) {
         return check_expr(self, node->grouping.expr, assigning);
     case AST_NODE_FN_CALL:
         return check_fn_call(self, node);
-    case AST_NODE_ARRAY_SUBSCRIPT:
-        return check_array_sub(self, node);
+    case AST_NODE_SUBSCRIPT:
+        return check_subscript(self, node);
     default:
         return self->types->error_type;
     }
@@ -441,12 +441,12 @@ static Type *parse_type(SemChecker *self, const AstNode *node) {
         return self->types->builtin_string;
     case AST_NODE_VOID_TYPE:
         return self->types->builtin_void;
-    case AST_NODE_ARRAY_TYPE: {
-        Type *contained_type = parse_type(self, node->array_type.type);
-        Type array = {TYPE_ARRAY, NULL, {0}};
-        array.array_type.type = contained_type;
+    case AST_NODE_LIST_TYPE: {
+        Type *contained_type = parse_type(self, node->list_type.type);
+        Type list = {TYPE_LIST, NULL, {0}};
+        list.list_type.type = contained_type;
 
-        return type_system_register(self->types, &array);
+        return type_system_register(self->types, &list);
     }
     case AST_NODE_OPTION_TYPE: {
         Type *contained_type = parse_type(self, node->opt_type.type);
@@ -690,18 +690,6 @@ static void check_return(SemChecker *self, const AstNode *node) {
     }
 }
 
-static void check_print(SemChecker *self, const AstNode *node) {
-    Type *expr_type = check_expr(self, node->kw_print.expr, false);
-
-    if (expr_type->id != TYPE_ERROR && expr_type->id != TYPE_STRING) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
-        dmsg.type_mismatch.expected = self->types->builtin_string;
-        dmsg.type_mismatch.found = expr_type;
-
-        error(self, &dmsg);
-    }
-}
-
 static void check_node(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
     case AST_NODE_VAR_DECL:
@@ -726,11 +714,6 @@ static void check_node(SemChecker *self, const AstNode *node) {
         break;
     case AST_NODE_FOR:
         check_for(self, node);
-
-        break;
-    case AST_NODE_PRINT:
-    case AST_NODE_PRINTLN:
-        check_print(self, node);
 
         break;
     case AST_NODE_BREAK:

@@ -1,6 +1,0 @@
-var-decl:
-  array-type:
-    string-type
-    identifier n
-  identifier list
-  null

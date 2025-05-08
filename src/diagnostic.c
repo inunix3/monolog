@@ -132,7 +132,7 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
     case DIAGNOSTIC_EXPR_NOT_INDEXABLE:
         snprintf(
             g_buf, BUFFER_SIZE,
-            "expression is not indexable: expected array or string"
+            "expression is not indexable: expected list or string"
         );
 
         break;

@@ -1,3 +1,0 @@
-array-subscript:
-  error
-  identifier array

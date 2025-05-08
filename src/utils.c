@@ -75,3 +75,21 @@ void *cstr_dup_n(const char *str, size_t len) {
 }
 
 void *cstr_dup(const char *str) { return cstr_dup_n(str, strlen(str)); }
+
+bool is_ident_builtin(const char *name) {
+    static const char *builtins[] = {
+        "print",
+        "println",
+        "exit",
+        "push",
+        "pop"
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(builtins); ++i) {
+        if (strcmp(name, builtins[i]) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}

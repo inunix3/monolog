@@ -10,7 +10,7 @@ typedef enum TypeId {
     TYPE_INT,
     TYPE_STRING,
     TYPE_VOID,
-    TYPE_ARRAY,
+    TYPE_LIST,
     TYPE_OPTION,
     TYPE_NIL
 } TypeId;
@@ -26,7 +26,7 @@ typedef struct Type {
 
         struct {
             struct Type *type;
-        } array_type;
+        } list_type;
     };
 } Type;
 
@@ -43,7 +43,7 @@ typedef struct TypeSystem {
      *
      * If we had only basic types like int, string and
      * void, they could be stored statically. But since there are also
-     * parametrized types like array<T> and T?, they have to be allocated. So it
+     * parametrized types like list<T> and T?, they have to be allocated. So it
      * will be simpler to store everything here. */
     HashMap types; /* HashMap<char *, Type *> */
     Vector type_names; /* Vector<char *> */

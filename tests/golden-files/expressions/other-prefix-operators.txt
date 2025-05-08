@@ -1,5 +1,5 @@
 unary ($):
   unary (#):
-    identifier array
+    identifier list
 unary (*):
   identifier opt_var

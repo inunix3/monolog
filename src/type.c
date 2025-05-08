@@ -33,9 +33,9 @@ void format_type_name(const Type *type, int *pos) {
         *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, ">");
 
         break;
-    case TYPE_ARRAY:
-        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "array<");
-        format_type_name(type->array_type.type, pos);
+    case TYPE_LIST:
+        *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, "list<");
+        format_type_name(type->list_type.type, pos);
         *pos += snprintf(g_buf + *pos, BUF_SIZE - (size_t)*pos, ">");
 
         break;

@@ -111,14 +111,14 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(
     other_prefix_operators,
-    "$#array; *opt_var;",
+    "$#list; *opt_var;",
     "other-prefix-operators.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
-    array_subscript,
+    list_subscript,
     "a[2 + 2] + a[i] * input[a[i] % 2]",
-    "array-subscript.txt"
+    "list-subscript.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
@@ -198,7 +198,7 @@ SUITE(SUITE_NAME) {
     RUN_TEST(suffix_increment);
     RUN_TEST(suffix_decrement);
     RUN_TEST(other_prefix_operators);
-    RUN_TEST(array_subscript);
+    RUN_TEST(list_subscript);
     RUN_TEST(equality);
     RUN_TEST(inequality);
     RUN_TEST(and_or_precedence);
