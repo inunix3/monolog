@@ -7,7 +7,8 @@ typedef enum ExprResultKind {
     EXPR_ERROR,
     EXPR_VALUE,
     EXPR_VAR,
-    EXPR_REF
+    EXPR_REF,
+    EXPR_CHAR_REF
 } ExprResultKind;
 
 typedef struct ExprResult {
@@ -17,5 +18,6 @@ typedef struct ExprResult {
         Value val;
         Variable *var;
         Value *ref;
+        char *char_ref;
     };
 } ExprResult;

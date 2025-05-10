@@ -69,16 +69,49 @@ static void error(Interpreter *self, const char *fmt, ...) {
     }
 }
 
-static Value *expr_get_value(ExprResult *expr) {
+static Value expr_get_value(const Interpreter *self, ExprResult *expr) {
+    Value err_val = {self->types->error_type, {0}};
+
     switch (expr->kind) {
     case EXPR_ERROR:
-        return NULL;
+        return err_val;
     case EXPR_VALUE:
-        return &expr->val;
+        return expr->val;
     case EXPR_VAR:
-        return &expr->var->val;
+        return expr->var->val;
     case EXPR_REF:
-        return expr->ref;
+        return *expr->ref;
+    case EXPR_CHAR_REF: {
+        Value val = {self->types->builtin_int, {0}};
+        val.i = *expr->char_ref;
+
+        return val;
+    }
+    }
+}
+
+static void expr_set_value(ExprResult *expr, const Value *val) {
+    switch (expr->kind) {
+    case EXPR_ERROR:
+        break;
+    case EXPR_VALUE:
+        expr->val = *val;
+
+        break;
+    case EXPR_VAR:
+        expr->var->val = *val;
+
+        break;
+    case EXPR_REF:
+        *expr->ref = *val;
+
+        break;
+    case EXPR_CHAR_REF:
+        assert(val->type->id == TYPE_INT);
+
+        *expr->char_ref = (char)val->i;
+
+        break;
     }
 }
 
@@ -230,8 +263,21 @@ static void new_value(Interpreter *self, Value *val, Type *type) {
     }
 }
 
-static Variable *
-new_var(Interpreter *self, Type *type, const char *name, const Value *val) {
+static Variable *new_var_shallow(
+    Interpreter *self, Type *type, const char *name, const Value *val
+) {
+    Variable *arg = mem_alloc(sizeof(*arg));
+
+    arg->type = type;
+    arg->name = cstr_dup(name);
+    arg->val = *val;
+
+    return arg;
+}
+
+static Variable *new_var_deep(
+    Interpreter *self, Type *type, const char *name, const Value *val
+) {
     Variable *arg = mem_alloc(sizeof(*arg));
 
     arg->type = type;
@@ -541,33 +587,37 @@ static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
     ExprResult expr = exec_expr(self, node->unary.right, false);
     EXPR_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
-    const Value *expr_val = expr_get_value(&expr);
-    ExprResult expr_res;
+    Value expr_val = expr_get_value(self, &expr);
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    Value new_val = {0};
 
-    switch (expr_val->type->id) {
+    switch (expr_val.type->id) {
     case TYPE_INT:
-        expr_res.val = exec_unary_int(self, node->unary.op, expr_val);
+        new_val = exec_unary_int(self, node->unary.op, &expr_val);
+        expr_set_value(&expr_res, &new_val);
 
         break;
     case TYPE_STRING:
-        expr_res.val = exec_unary_string(self, node->unary.op, expr_val);
+        new_val = exec_unary_string(self, node->unary.op, &expr_val);
+        expr_set_value(&expr_res, &new_val);
 
         break;
     case TYPE_LIST:
-        expr_res.val = exec_unary_list(self, node->unary.op, expr_val);
+        new_val = exec_unary_list(self, node->unary.op, &expr_val);
+        expr_set_value(&expr_res, &new_val);
 
         break;
     case TYPE_OPTION:
     case TYPE_NIL: {
-        Value *val = exec_unary_option(self, node->unary.op, expr_val);
+        Value *inner_val = exec_unary_option(self, node->unary.op, &expr_val);
 
-        if (!val) {
+        if (!inner_val) {
             expr_res.kind = EXPR_ERROR;
 
             return expr_res;
         } else {
             expr_res.kind = EXPR_REF;
-            expr_res.ref = val;
+            expr_res.ref = inner_val;
         }
 
         return expr_res;
@@ -596,10 +646,10 @@ static ExprResult
 assign_var(Interpreter *self, Variable *var, ExprResult expr) {
     (void)self;
 
-    Value *expr_val = expr_get_value(&expr);
+    Value expr_val = expr_get_value(self, &expr);
     ExprResult expr_res = {0};
 
-    implicitly_clone_value(self, &var->val, expr_val);
+    implicitly_clone_value(self, &var->val, &expr_val);
 
     expr_res.kind = EXPR_VALUE;
     expr_res.val = var->val;
@@ -609,12 +659,29 @@ assign_var(Interpreter *self, Variable *var, ExprResult expr) {
 
 static ExprResult assign_ref(Interpreter *self, Value *val, ExprResult expr) {
     ExprResult expr_res = {0};
-    Value *expr_val = expr_get_value(&expr);
+    Value expr_val = expr_get_value(self, &expr);
 
-    implicitly_clone_value(self, val, expr_val);
+    implicitly_clone_value(self, val, &expr_val);
 
     expr_res.kind = EXPR_REF;
     expr_res.ref = val;
+
+    return expr_res;
+}
+
+static ExprResult
+assign_char_ref(Interpreter *self, char *dest, ExprResult expr) {
+    ExprResult expr_res = {0};
+    Value expr_val = expr_get_value(self, &expr);
+
+    /* clang-format off */
+    assert(type_can_implicitly_convert(expr_val.type, self->types->builtin_int));
+    /* clang-format on */
+
+    *dest = (char)expr_val.i;
+
+    expr_res.kind = EXPR_CHAR_REF;
+    expr_res.char_ref = dest;
 
     return expr_res;
 }
@@ -626,6 +693,8 @@ assign_expr(Interpreter *self, ExprResult expr1, ExprResult expr2) {
         return assign_var(self, expr1.var, expr2);
     case EXPR_REF:
         return assign_ref(self, expr1.ref, expr2);
+    case EXPR_CHAR_REF:
+        return assign_char_ref(self, expr1.char_ref, expr2);
     default:
         break;
     }
@@ -643,6 +712,7 @@ static bool expr_assignable(ExprResult expr) {
         return false;
     case EXPR_VAR:
     case EXPR_REF:
+    case EXPR_CHAR_REF:
         return true;
     }
 }
@@ -660,35 +730,35 @@ static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
         return assign_expr(self, expr1, expr2);
     }
 
-    Value *v1 = expr_get_value(&expr1);
-    const Value *v2 = expr_get_value(&expr2);
+    Value v1 = expr_get_value(self, &expr1);
+    const Value v2 = expr_get_value(self, &expr2);
 
     ExprResult expr;
 
-    switch (v1->type->id) {
+    switch (v1.type->id) {
     case TYPE_INT:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_int(self, node->binary.op, v1, v2);
+        expr.val = exec_binary_int(self, node->binary.op, &v1, &v2);
 
         break;
     case TYPE_STRING:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_string(self, node->binary.op, v1, v2);
+        expr.val = exec_binary_string(self, node->binary.op, &v1, &v2);
 
         break;
     case TYPE_NIL:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_nil(self, node->binary.op, v1, v2);
+        expr.val = exec_binary_nil(self, node->binary.op, &v1, &v2);
 
         break;
     case TYPE_OPTION:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_option(self, node->binary.op, v1, v2);
+        expr.val = exec_binary_option(self, node->binary.op, &v1, &v2);
 
         break;
     case TYPE_LIST:
         expr.kind = EXPR_VALUE;
-        expr.val = exec_binary_list(self, node->binary.op, v1, v2);
+        expr.val = exec_binary_list(self, node->binary.op, &v1, &v2);
 
         break;
     default:
@@ -782,8 +852,9 @@ static ExprResult exec_identifier(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
-static ExprResult
-exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
+static ExprResult exec_string_subscript(
+    Interpreter *self, const StrBuf *str, Int idx, bool assigning
+) {
     ExprResult expr_res = {0};
 
     if ((size_t)idx >= str->len) {
@@ -798,9 +869,14 @@ exec_string_subscript(Interpreter *self, const StrBuf *str, Int idx) {
         return expr_res;
     }
 
-    expr_res.kind = EXPR_VALUE;
-    expr_res.val.type = self->types->builtin_int;
-    expr_res.val.i = str->data[idx];
+    if (assigning) {
+        expr_res.kind = EXPR_CHAR_REF;
+        expr_res.char_ref = &str->data[idx];
+    } else {
+        expr_res.kind = EXPR_VALUE;
+        expr_res.val.type = self->types->builtin_int;
+        expr_res.val.i = str->data[idx];
+    }
 
     return expr_res;
 }
@@ -829,7 +905,8 @@ exec_list_subscript(Interpreter *self, const Value *val, Int idx) {
     return expr_res;
 }
 
-static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
+static ExprResult
+exec_subscript(Interpreter *self, const AstNode *node, bool assigning) {
     ExprResult left_expr = exec_expr(self, node->subscript.left, false);
     EXPR_RETURN_IF_ERROR(left_expr, EXPR_ERROR);
 
@@ -837,14 +914,14 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     EXPR_RETURN_IF_ERROR(idx_expr, EXPR_ERROR);
 
     ExprResult expr_res = {0};
-    Value *left_val = expr_get_value(&left_expr);
-    Value *idx = expr_get_value(&idx_expr);
+    Value left_val = expr_get_value(self, &left_expr);
+    Value idx = expr_get_value(self, &idx_expr);
 
-    switch (left_val->type->id) {
+    switch (left_val.type->id) {
     case TYPE_STRING:
-        return exec_string_subscript(self, left_val->s, idx->i);
+        return exec_string_subscript(self, left_val.s, idx.i, assigning);
     case TYPE_LIST:
-        return exec_list_subscript(self, left_val, idx->i);
+        return exec_list_subscript(self, &left_val, idx.i);
     default:
         UNREACHABLE();
 
@@ -855,6 +932,45 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
 }
 
 static StmtResult exec_node(Interpreter *self, AstNode *node);
+
+static Value shallowly_clone_value(Interpreter *self, const Value *val) {
+    Value arg = {val->type, {0}};
+
+    switch (val->type->id) {
+    case TYPE_INT:
+        arg.i = val->i;
+
+        break;
+    case TYPE_STRING:
+        arg.s = val->s;
+
+        break;
+    case TYPE_OPTION:
+        arg.opt.val = val->opt.val;
+
+        break;
+    case TYPE_LIST:
+        arg.list.values = val->list.values;
+
+        break;
+    case TYPE_NIL:
+    case TYPE_VOID:
+        break;
+    case TYPE_ERROR:
+        UNREACHABLE();
+    }
+
+    return arg;
+}
+
+static void shallowly_implicitly_clone_value(Interpreter *self, Value *dest, const Value *src) {
+    if (dest->type->id == TYPE_OPTION && src->type->id != TYPE_OPTION &&
+        type_can_implicitly_convert(src->type, dest->type)) {
+        make_opt(self, dest, dest->type, src);
+    } else {
+        *dest = shallowly_clone_value(self, src);
+    }
+}
 
 static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
     const FnParam *params = self->env.curr_fn->params.data;
@@ -869,9 +985,12 @@ static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
             return false;
         }
 
-        const Value *arg_val = expr_get_value(&expr);
+        Value arg_val = expr_get_value(self, &expr);
+        Value val = {arg_val.type, {0}};
 
-        Variable *arg = new_var(self, param->type, param->name, arg_val);
+        shallowly_implicitly_clone_value(self, &val, &arg_val);
+
+        Variable *arg = new_var_shallow(self, param->type, param->name, &val);
         arg->is_param = true;
 
         env_add_local_var(&self->env, arg);
@@ -884,8 +1003,11 @@ static bool
 pass_args_builtin(Interpreter *self, Function *fn, const AstNode **args) {
     vec_clear(&self->builtin_fn_args);
 
+    const FnParam *params = fn->params.data;
+
     for (size_t i = 0; i < fn->params.len; ++i) {
         const AstNode *arg_node = args[i];
+        const FnParam *param = &params[i];
 
         ExprResult expr = exec_expr(self, arg_node, false);
 
@@ -894,9 +1016,15 @@ pass_args_builtin(Interpreter *self, Function *fn, const AstNode **args) {
         }
 
         Value *arg = vec_emplace(&self->builtin_fn_args);
-        arg->type = expr_get_value(&expr)->type;
+        Value arg_val = expr_get_value(self, &expr);
+        arg->type = param->type;
 
-        implicitly_clone_value(self, arg, expr_get_value(&expr));
+        if (param->type->id == TYPE_OPTION && arg_val.type->id != TYPE_OPTION &&
+            type_can_implicitly_convert(arg_val.type, param->type)) {
+            make_opt(self, arg, param->type, &arg_val);
+        } else {
+            *arg = shallowly_clone_value(self, &arg_val);
+        }
     }
 
     return true;
@@ -953,7 +1081,7 @@ exec_fn_body(Interpreter *self, Function *fn, const AstNode *node) {
         expr_res.kind = EXPR_VALUE;
         expr_res.val.type = fn->type;
 
-        implicitly_clone_value(self, &expr_res.val, &body_res.ret_value);
+        shallowly_implicitly_clone_value(self, &expr_res.val, &body_res.ret_val);
 
         break;
     case STMT_VOID:
@@ -1036,7 +1164,7 @@ exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
     case AST_NODE_SUFFIX:
         return exec_suffix(self, node);
     case AST_NODE_SUBSCRIPT:
-        return exec_subscript(self, node);
+        return exec_subscript(self, node, assigning);
     case AST_NODE_GROUPING:
         return exec_expr(self, node->grouping.expr, assigning);
     case AST_NODE_FN_CALL:
@@ -1123,11 +1251,11 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
         ExprResult expr = exec_expr(self, node->var_decl.rvalue, false);
         STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
-        Value *expr_val = expr_get_value(&expr);
+        Value var_val = expr_get_value(self, &expr);
 
-        assert(type_can_implicitly_convert(expr_val->type, type));
+        assert(type_can_implicitly_convert(var_val.type, type));
 
-        implicitly_clone_value(self, &val, expr_val);
+        implicitly_clone_value(self, &val, &var_val);
     } else {
         new_value(self, &val, type);
     }
@@ -1190,9 +1318,9 @@ static StmtResult exec_if(Interpreter *self, const AstNode *node) {
     ExprResult cond = exec_expr(self, node->kw_if.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-    Value *cond_val = expr_get_value(&cond);
+    Value cond_val = expr_get_value(self, &cond);
 
-    if (cond_val->i) {
+    if (cond_val.i) {
         return exec_node(self, node->kw_if.body);
     } else if (node->kw_if.else_body) {
         return exec_node(self, node->kw_if.else_body);
@@ -1208,9 +1336,9 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
     ExprResult cond = exec_expr(self, node->kw_while.cond, false);
     STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-    Value *cond_val = expr_get_value(&cond);
+    Value cond_val = expr_get_value(self, &cond);
 
-    while (cond_val->i) {
+    while (cond_val.i) {
         StmtResult res = exec_node(self, node->kw_while.body);
 
         if (self->halt) {
@@ -1231,7 +1359,7 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
         cond = exec_expr(self, node->kw_while.cond, false);
         STMT_RETURN_IF_ERROR(cond, EXPR_ERROR);
 
-        cond_val = expr_get_value(&cond);
+        cond_val = expr_get_value(self, &cond);
     }
 
     return stmt_res;
@@ -1263,9 +1391,9 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
                 goto error;
             }
 
-            Value *val = expr_get_value(&expr);
+            Value val = expr_get_value(self, &expr);
 
-            if (!val->i) {
+            if (!val.i) {
                 break;
             }
         }
@@ -1325,9 +1453,9 @@ static StmtResult exec_return(Interpreter *self, const AstNode *node) {
         ExprResult expr = exec_expr(self, node->kw_return.expr, false);
         STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
 
-        res.ret_value = *expr_get_value(&expr);
+        res.ret_val = expr_get_value(self, &expr);
     } else {
-        res.ret_value.type = self->types->builtin_void;
+        res.ret_val.type = self->types->builtin_void;
     }
 
     return res;
@@ -1434,13 +1562,9 @@ Value interp_eval(Interpreter *self) {
 
     ExprResult expr =
         exec_expr(self, ((const AstNode **)self->ast->nodes.data)[0], false);
-    Value *expr_val = expr_get_value(&expr);
 
-    if (!expr_val) {
-        val.type = self->types->error_type;
-    } else {
-        val = *expr_val;
-    }
+    Value expr_val = expr_get_value(self, &expr);
+    val = expr_val;
 
     if (self->had_error) {
         val.type = self->types->error_type;

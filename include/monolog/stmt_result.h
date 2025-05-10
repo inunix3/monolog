@@ -12,5 +12,5 @@ typedef enum StmtResultKind {
 
 typedef struct StmtResult {
     StmtResultKind kind;
-    Value ret_value;
+    Value ret_val;
 } StmtResult;

@@ -25,9 +25,5 @@ typedef struct Value {
             /* Pointer to a value, allocated inside interpreter */
             struct Value *val;
         } opt;
-
-        // struct {
-        //     char *ptr;
-        // } str_sub;
     };
 } Value;
