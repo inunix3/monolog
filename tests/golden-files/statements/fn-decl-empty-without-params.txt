@@ -1,4 +1,4 @@
 fn-decl:
   int-type
   identifier foo
-  null
+  block (0):

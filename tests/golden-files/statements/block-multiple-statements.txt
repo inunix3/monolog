@@ -1,8 +1,10 @@
 block (3):
-  println:
+  fn-call:
+    identifier println
     literal "aaabbbbccccddeeefff"
   binary (+):
     literal 2
     literal 2
-  print:
+  fn-call:
+    identifier print
     literal ""

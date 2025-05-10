@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-void scope_init(Scope *self) { hashmap_init(&self->vars); }
+bool scope_init(Scope *self) { return hashmap_init(&self->vars); }
 
 void scope_deinit(Scope *self) {
     scope_clear(self);
@@ -23,7 +23,7 @@ void scope_clear(Scope *self) {
     }
 }
 
-void scope_add_var(Scope *scope, Variable *var) {
+bool scope_add_var(Scope *scope, Variable *var) {
     Variable *old_var = hashmap_get(&scope->vars, var->name);
 
     if (old_var) {
@@ -35,5 +35,5 @@ void scope_add_var(Scope *scope, Variable *var) {
         free(old_var);
     }
 
-    hashmap_add(&scope->vars, var->name, var);
+    return hashmap_add(&scope->vars, var->name, var);
 }

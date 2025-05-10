@@ -30,7 +30,7 @@ char *read_file_stream(FILE *file) {
         return NULL;
     }
 
-    char *buf = malloc((size_t)size + 1);
+    char *buf = mem_alloc((size_t)size + 1);
 
     if (!buf) {
         fprintf(stderr, "cannot allocate buffer: %s\n", strerror(errno));
@@ -61,35 +61,47 @@ char *read_file(const char *filename) {
     return buf;
 }
 
-void *cstr_dup_n(const char *str, size_t len) {
-    char *new_str = malloc(len + 1);
-
-    if (!new_str) {
-        return NULL;
-    }
-
+char *cstr_dup_n(const char *str, size_t len) {
+    char *new_str = mem_alloc(len + 1);
     memcpy(new_str, str, len);
-    new_str[len] = '\0';
 
     return new_str;
 }
 
-void *cstr_dup(const char *str) { return cstr_dup_n(str, strlen(str)); }
+char *cstr_dup(const char *str) { return cstr_dup_n(str, strlen(str)); }
 
-bool is_ident_builtin(const char *name) {
-    static const char *builtins[] = {
-        "print",
-        "println",
-        "exit",
-        "push",
-        "pop"
-    };
+void *mem_alloc(size_t size) {
+    void *block = malloc(size);
 
-    for (size_t i = 0; i < ARRAY_SIZE(builtins); ++i) {
-        if (strcmp(name, builtins[i]) == 0) {
-            return true;
-        }
+    if (!block) {
+        fprintf(
+            stderr,
+            "fatal error: cannot allocate %zu bytes: out of memory. "
+            "Terminating due to lack of memory\n",
+            size
+        );
+
+        exit(EXIT_FAILURE);
     }
 
-    return false;
+    memset(block, 0, size);
+
+    return block;
+}
+
+void *mem_realloc(void *block, size_t size) {
+    block = realloc(block, size);
+
+    if (!block) {
+        fprintf(
+            stderr,
+            "fatal error: cannot allocate %zu bytes: out of memory. "
+            "Terminating due to lack of memory\n",
+            size
+        );
+
+        exit(EXIT_FAILURE);
+    }
+
+    return block;
 }

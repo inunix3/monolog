@@ -50,6 +50,8 @@ static ParseRule g_rules[] = {
     [TOKEN_OP_LESS]          = {NULL,            binary,  NULL,      PREC_INEQUALITY},
     [TOKEN_OP_GREATER]       = {NULL,            binary,  NULL,      PREC_INEQUALITY},
     [TOKEN_OP_ASSIGN]        = {NULL,            binary,  NULL,      PREC_ASSIGN},
+    [TOKEN_OP_ADD_ASSIGN]    = {NULL,            binary,  NULL,      PREC_ASSIGN},
+    [TOKEN_OP_SUB_ASSIGN]    = {NULL,            binary,  NULL,      PREC_ASSIGN},
     [TOKEN_OP_EQUAL]         = {NULL,            binary,  NULL,      PREC_EQUALITY},
     [TOKEN_OP_NOT_EQUAL]     = {NULL,            binary,  NULL,      PREC_EQUALITY},
     [TOKEN_OP_LESS_EQUAL]    = {NULL,            binary,  NULL,      PREC_INEQUALITY},
@@ -646,60 +648,6 @@ static AstNode *for_statement(Parser *self) {
     return stmt;
 }
 
-static AstNode *print_statement(Parser *self) {
-    advance(self); /* consume print keyword */
-
-    expect(self, TOKEN_OP_LPAREN);
-    AstNode *expr = expression(self, PREC_NONE);
-
-    if (expr->kind == AST_NODE_ERROR) {
-        sync(self, SYNC_TO_RPAREN_KEEP);
-    }
-
-    expect(self, TOKEN_OP_RPAREN);
-
-    AstNode *stmt = astnode_new(AST_NODE_PRINT);
-    stmt->kw_print.expr = expr;
-
-    return stmt;
-}
-
-static AstNode *println_statement(Parser *self) {
-    advance(self); /* consume println keyword */
-
-    expect(self, TOKEN_OP_LPAREN);
-    AstNode *expr = expression(self, PREC_NONE);
-
-    if (expr->kind == AST_NODE_ERROR) {
-        sync(self, SYNC_TO_RPAREN_KEEP);
-    }
-
-    expect(self, TOKEN_OP_RPAREN);
-
-    AstNode *stmt = astnode_new(AST_NODE_PRINTLN);
-    stmt->kw_print.expr = expr;
-
-    return stmt;
-}
-
-static AstNode *exit_statement(Parser *self) {
-    advance(self); /* consume exit keyword */
-
-    expect(self, TOKEN_OP_LPAREN);
-    AstNode *expr = expression(self, PREC_NONE);
-
-    if (expr->kind == AST_NODE_ERROR) {
-        sync(self, SYNC_TO_RPAREN_KEEP);
-    }
-
-    expect(self, TOKEN_OP_RPAREN);
-
-    AstNode *stmt = astnode_new(AST_NODE_EXIT);
-    stmt->kw_exit.expr = expr;
-
-    return stmt;
-}
-
 static AstNode *return_statement(Parser *self) {
     advance(self); /* consume the return keyword */
 
@@ -735,18 +683,6 @@ static AstNode *statement(Parser *self) {
         return while_statement(self);
     case TOKEN_KW_FOR:
         return for_statement(self);
-    case TOKEN_KW_PRINT:
-        stmt = print_statement(self);
-
-        break;
-    case TOKEN_KW_PRINTLN:
-        stmt = println_statement(self);
-
-        break;
-    case TOKEN_KW_EXIT:
-        stmt = exit_statement(self);
-
-        break;
     case TOKEN_OP_LBRACE:
         advance(self);
         stmt = block(self);
@@ -955,7 +891,15 @@ static AstNode *declaration(Parser *self) {
 
         AstNode *body = statement(self);
 
-        if (body && body->kind == AST_NODE_ERROR) {
+        if (!body) {
+            error(self, "expected statement or block");
+
+            sync(
+                self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT
+            );
+
+            body = astnode_new(AST_NODE_ERROR);
+        } else if (body->kind == AST_NODE_ERROR) {
             sync(
                 self, SYNC_TO_SEMICOLON_SKIP | SYNC_TO_BLOCK | SYNC_TO_STATEMENT
             );

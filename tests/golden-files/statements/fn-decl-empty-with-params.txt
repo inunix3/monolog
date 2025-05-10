@@ -10,4 +10,4 @@ fn-decl:
   param-decl:
     int-type
     identifier y
-  null
+  block (0):

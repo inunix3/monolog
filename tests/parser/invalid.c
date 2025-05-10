@@ -108,7 +108,7 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_with_bad_name,
-    "int 1231();",
+    "int 1231() {}",
     "fn-decl-with-bad-name.txt"
 )
 
@@ -126,25 +126,25 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_with_missing_rparen,
-    "int foo(int a, int b;",
+    "int foo(int a, int b",
     "fn-decl-with-missing-rparen.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_with_bad_param_name,
-    "void foo(int @, int b);",
+    "void foo(int @, int b) {}",
     "fn-decl-with-bad-param-name.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_with_bad_param_type,
-    "void foo(3434 a, int b);",
+    "void foo(3434 a, int b) {}",
     "fn-decl-with-bad-param-type.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_with_missing_comma,
-    "void foo(int a int b);",
+    "void foo(int a int b) {}",
     "fn-decl-with-missing-comma.txt"
 )
 

@@ -4,4 +4,4 @@ fn-decl:
   param-decl:
     int-type
     identifier x
-  null
+  block (0):

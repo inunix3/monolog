@@ -1,4 +1,5 @@
 #include <monolog/hashmap.h>
+#include <monolog/utils.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +65,7 @@ static bool should_resize(const HashMap *self) {
 
 static bool grow(HashMap *self) {
     size_t new_cap = self->cap * 2;
-    Bucket *new_buckets = calloc(new_cap, sizeof(Bucket));
+    Bucket *new_buckets = mem_alloc(new_cap * sizeof(Bucket));
 
     if (!new_buckets) {
         return false;

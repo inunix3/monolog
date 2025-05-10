@@ -147,52 +147,6 @@ TEST capacity_remains_the_same_after_clearing(void) {
     PASS();
 }
 
-TEST custom_capacity(void) {
-    vec_reserve(&g_vec, 300);
-
-    ASSERT_EQ(300, g_vec.cap);
-    ASSERT_EQ(0, g_vec.len);
-    ASSERT(g_vec.data != NULL);
-
-    PASS();
-}
-
-TEST custom_capacity_on_nonempty_vector(void) {
-    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2; ++i) {
-        vec_push(&g_vec, &i);
-    }
-
-    vec_reserve(&g_vec, VECTOR_DEFAULT_CAP * 5);
-
-    ASSERT_EQ(VECTOR_DEFAULT_CAP * 5, g_vec.cap);
-    ASSERT_EQ(VECTOR_DEFAULT_CAP * 2, g_vec.len);
-    ASSERT(g_vec.data != NULL);
-
-    for (int i = 0; i < VECTOR_DEFAULT_CAP * 2; ++i) {
-        ASSERT_EQ(i, NTH_VALUE(i));
-    }
-
-    PASS();
-}
-
-TEST custom_capacity_less_than_actual_is_not_applied(void) {
-    for (int i = 0; i < 50; ++i) {
-        vec_push(&g_vec, &i);
-    }
-
-    vec_reserve(&g_vec, 10);
-
-    ASSERT_EQ(VECTOR_DEFAULT_CAP, g_vec.cap);
-    ASSERT_EQ(50, g_vec.len);
-    ASSERT(g_vec.data != NULL);
-
-    for (int i = 0; i < 50; ++i) {
-        ASSERT_EQ(i, NTH_VALUE(i));
-    }
-
-    PASS();
-}
-
 SUITE(vector) {
     GREATEST_SET_SETUP_CB(set_up, NULL);
     GREATEST_SET_TEARDOWN_CB(tear_down, NULL);
@@ -205,9 +159,6 @@ SUITE(vector) {
     RUN_TEST(pop_50_values);
     RUN_TEST(capacity_remains_the_same_after_popping_all);
     RUN_TEST(capacity_remains_the_same_after_clearing);
-    RUN_TEST(custom_capacity);
-    RUN_TEST(custom_capacity_on_nonempty_vector);
-    RUN_TEST(custom_capacity_less_than_actual_is_not_applied);
 }
 
 GREATEST_MAIN_DEFS();

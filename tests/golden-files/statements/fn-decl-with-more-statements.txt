@@ -2,7 +2,8 @@ fn-decl:
   void-type
   identifier foo
   block (4):
-    println:
+    fn-call:
+      identifier println
       literal "In foo()"
     var-decl:
       int-type
@@ -13,5 +14,6 @@ fn-decl:
       binary (+):
         literal 6
         literal 8
-    println:
+    fn-call:
+      identifier println
       literal "After x = 14"

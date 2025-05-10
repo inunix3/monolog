@@ -1,4 +1,5 @@
 while:
   literal 1
-  println:
+  fn-call:
+    identifier println
     literal "Hello, World!"

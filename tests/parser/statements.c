@@ -32,24 +32,6 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
-    print_keyword,
-    "print(\"Hello\")",
-    "print-keyword.txt"
-)
-
-TEST_STRING_AGAINST_FILE(
-    println_keyword,
-    "println(\"Hello\" + \", World!\")",
-    "println-keyword.txt"
-)
-
-TEST_STRING_AGAINST_FILE(
-    exit_keyword,
-    "exit(-1 - 1 + 1)",
-    "exit-keyword.txt"
-)
-
-TEST_STRING_AGAINST_FILE(
     return_keyword,
     "return (2 + 4) * 3",
     "return-keyword.txt"
@@ -332,19 +314,19 @@ TEST_STRING_AGAINST_FILE(
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_empty_without_params,
-    "int foo();",
+    "int foo() {}",
     "fn-decl-empty-without-params.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_empty_with_1_param,
-    "string bar(int x);",
+    "string bar(int x) {}",
     "fn-decl-empty-with-1-param.txt"
 )
 
 TEST_STRING_AGAINST_FILE(
     fn_decl_empty_with_params,
-    "void __someFunc115(int x, string bar, int y);",
+    "void __someFunc115(int x, string bar, int y) {}",
     "fn-decl-empty-with-params.txt"
 )
 
@@ -385,9 +367,6 @@ SUITE(SUITE_NAME) {
     RUN_TEST(semicolon_misuse_6);
     RUN_TEST(multiple_exprs_1);
     RUN_TEST(multiple_exprs_2);
-    RUN_TEST(print_keyword);
-    RUN_TEST(println_keyword);
-    RUN_TEST(exit_keyword);
     RUN_TEST(return_keyword);
     RUN_TEST(break_keyword);
     RUN_TEST(continue_keyword);

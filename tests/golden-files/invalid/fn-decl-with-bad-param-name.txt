@@ -5,4 +5,4 @@ fn-decl:
   param-decl:
     int-type
     identifier b
-  null
+  block (0):

@@ -28,5 +28,6 @@ if:
         literal 2
         literal 3
       literal 4
-    println:
+    fn-call:
+      identifier println
       literal "Hello, World!"

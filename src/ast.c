@@ -1,11 +1,12 @@
 #include <monolog/ast.h>
+#include <monolog/utils.h>
 
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
 AstNode *astnode_new(AstNodeKind kind) {
-    AstNode *node = calloc(1, sizeof(*node));
+    AstNode *node = mem_alloc(sizeof(*node));
 
     if (!node) {
         return NULL;

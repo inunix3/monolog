@@ -8,8 +8,7 @@
 #include <greatest.h>
 
 /* Suites and test cases are defined in other .c files in the same directory */
-SUITE(expressions);
-SUITE(statements);
+SUITE(valid);
 SUITE(invalid);
 
 GREATEST_MAIN_DEFS();
@@ -17,8 +16,7 @@ GREATEST_MAIN_DEFS();
 int main(int argc, char *argv[]) {
     GREATEST_MAIN_BEGIN();
 
-    RUN_SUITE(expressions);
-    RUN_SUITE(statements);
+    RUN_SUITE(valid);
     RUN_SUITE(invalid);
 
     GREATEST_MAIN_END();

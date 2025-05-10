@@ -24,7 +24,6 @@ void vec_deinit(Vector *self);
 void *vec_push(Vector *self, const void *data);
 void *vec_emplace(Vector *self);
 void vec_pop(Vector *self);
-bool vec_reserve(Vector *self, size_t new_cap);
 void vec_clear(Vector *self);
 
 /* NOTE: using on empty vector is an undefined behavior */

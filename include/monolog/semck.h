@@ -16,7 +16,8 @@ typedef struct SemChecker {
     Vector builtin_fn_args;
 
     Vector dmsgs; /* Vector<DiagnosticMessage> */
-    bool error_state;
+    bool had_error;
+    bool fatal_error;
 } SemChecker;
 
 void semck_init(SemChecker *self, TypeSystem *types);

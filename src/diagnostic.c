@@ -53,6 +53,15 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
 
         break;
     }
+    case DIAGNOSTIC_EXPECTED_LIST: {
+        const Type *found = dmsg->bad_arg_type.found;
+
+        snprintf(
+            g_buf, BUFFER_SIZE, "expected list, but found %s", found->name
+        );
+
+        break;
+    }
     case DIAGNOSTIC_UNDECLARED_VARIABLE:
         snprintf(
             g_buf, BUFFER_SIZE, "undeclared variable %s", dmsg->undef_sym.name
@@ -62,14 +71,6 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
     case DIAGNOSTIC_UNDECLARED_FUNCTION:
         snprintf(
             g_buf, BUFFER_SIZE, "undeclared function %s", dmsg->undef_sym.name
-        );
-
-        break;
-    case DIAGNOSTIC_UNDEFINED_VARIABLE:
-        snprintf(
-            g_buf, BUFFER_SIZE,
-            "variable %s exists, but no value is assigned to it",
-            dmsg->undef_sym.name
         );
 
         break;

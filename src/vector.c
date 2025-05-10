@@ -5,13 +5,14 @@
  * (see LICENSE.md in the root of project).
  */
 
+#include <monolog/utils.h>
 #include <monolog/vector.h>
 
 #include <stdlib.h>
 #include <string.h>
 
 bool vec_init(Vector *self, size_t element_size) {
-    self->data = calloc(element_size, VECTOR_DEFAULT_CAP);
+    self->data = mem_alloc(element_size * VECTOR_DEFAULT_CAP);
 
     if (!self->data) {
         return false;
@@ -39,7 +40,7 @@ void vec_deinit(Vector *self) {
 static bool grow(Vector *self) {
     size_t new_cap = self->cap * 2;
 
-    self->data = realloc(self->data, new_cap * self->element_size);
+    self->data = mem_realloc(self->data, new_cap * self->element_size);
 
     if (!self->data) {
         return false;
@@ -57,7 +58,7 @@ static bool grow(Vector *self) {
 
 void *vec_push(Vector *self, const void *data) {
     if (self->len >= self->cap && !grow(self)) {
-        return false;
+        return NULL;
     }
 
     void *block = self->data + self->len++ * self->element_size;
@@ -68,7 +69,7 @@ void *vec_push(Vector *self, const void *data) {
 
 void *vec_emplace(Vector *self) {
     if (self->len >= self->cap && !grow(self)) {
-        return false;
+        return NULL;
     }
 
     void *block = self->data + self->len++ * self->element_size;
@@ -87,18 +88,6 @@ void vec_pop(Vector *self) {
     );
 
     --self->len;
-}
-
-bool vec_reserve(Vector *self, size_t new_cap) {
-    if (new_cap <= self->cap) {
-        return false;
-    }
-
-    self->data = realloc(self->data, new_cap * self->element_size);
-
-    self->cap = new_cap;
-
-    return true;
 }
 
 void vec_clear(Vector *self) {

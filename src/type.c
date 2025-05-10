@@ -147,7 +147,7 @@ Type *type_system_register(TypeSystem *self, const Type *type) {
     if (existing_type) {
         return existing_type;
     } else {
-        Type *new_type = malloc(sizeof(*new_type));
+        Type *new_type = mem_alloc(sizeof(*new_type));
         char *name = cstr_dup(g_buf);
 
         memcpy(new_type, type, sizeof(*new_type));
@@ -157,4 +157,8 @@ Type *type_system_register(TypeSystem *self, const Type *type) {
 
         return new_type;
     }
+}
+
+Type *type_system_get(TypeSystem *self, const char *name) {
+    return hashmap_get(&self->types, name);
 }

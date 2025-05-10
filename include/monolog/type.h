@@ -60,3 +60,4 @@ bool type_system_init(TypeSystem *self);
 void type_system_deinit(TypeSystem *self);
 char *type_system_name(TypeSystem *self, const Type *type);
 Type *type_system_register(TypeSystem *self, const Type *type);
+Type *type_system_get(TypeSystem *self, const char *name);

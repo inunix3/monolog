@@ -8,7 +8,7 @@ TEST div_by_zero(void) {
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(-1, g_interp.exit_code);
     ASSERT_EQ(true, g_interp.had_error);
-    ASSERT_EQ(false, g_interp.halt);
+    ASSERT_EQ(true, g_interp.halt);
 
     PASS();
 }
@@ -21,7 +21,7 @@ TEST mod_by_zero(void) {
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(-1, g_interp.exit_code);
     ASSERT_EQ(true, g_interp.had_error);
-    ASSERT_EQ(false, g_interp.halt);
+    ASSERT_EQ(true, g_interp.halt);
 
     PASS();
 }

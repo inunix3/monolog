@@ -1,7 +1,0 @@
-exit:
-  binary (+):
-    binary (-):
-      unary (-):
-        literal 1
-      literal 1
-    literal 1

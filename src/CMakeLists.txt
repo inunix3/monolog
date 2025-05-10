@@ -10,6 +10,7 @@ set(HEADERS
     "${INCLUDE_DIR}/ast.h"
     "${INCLUDE_DIR}/environment.h"
     "${INCLUDE_DIR}/function.h"
+    "${INCLUDE_DIR}/builtin_funcs.h"
     "${INCLUDE_DIR}/hashmap.h"
     "${INCLUDE_DIR}/interp.h"
     "${INCLUDE_DIR}/lexer.h"

@@ -6,12 +6,12 @@
 #include <string.h>
 
 void error(SemChecker *self, const DiagnosticMessage *dmsg) {
-    self->error_state = true;
+    self->had_error = true;
 
     vec_push(&self->dmsgs, dmsg);
 }
 
-static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning);
+static Type *check_expr(SemChecker *self, const AstNode *node);
 
 static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
@@ -34,26 +34,10 @@ static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
     }
 }
 
-Type *assign_expr(SemChecker *self, const AstNode *node, Type *type) {
-    switch (node->kind) {
-    case AST_NODE_IDENT: {
-        Variable *var = env_find_var(&self->env, node->ident.str.data);
-
-        var->defined = true;
-
-        return var->type;
-    }
-    case AST_NODE_GROUPING:
-        return assign_expr(self, node->grouping.expr, type);
-    default:
-        return self->types->error_type;
-    }
-}
-
 static Type *check_binary(SemChecker *self, const AstNode *node) {
     TokenKind op = node->binary.op;
-    Type *t1 = check_expr(self, node->binary.left, op == TOKEN_OP_ASSIGN);
-    Type *t2 = check_expr(self, node->binary.right, false);
+    Type *t1 = check_expr(self, node->binary.left);
+    Type *t2 = check_expr(self, node->binary.right);
 
     if (t1->id == TYPE_ERROR || t2->id == TYPE_ERROR) {
         return self->types->error_type;
@@ -138,7 +122,65 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             return self->types->error_type;
         }
 
-        return assign_expr(self, node->binary.left, t2);
+        return t1;
+    case TOKEN_OP_ADD_ASSIGN:
+        if (!expr_is_mutable(self, node->binary.left)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        if (t1->id != TYPE_LIST) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPECTED_LIST, {0}};
+            dmsg.type_mismatch.found = t2;
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        if (!type_can_implicitly_convert(t2, t1->list_type.type)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            dmsg.type_mismatch.expected = t1;
+            dmsg.type_mismatch.found = self->types->builtin_int;
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        return self->types->builtin_void;
+    case TOKEN_OP_SUB_ASSIGN:
+        if (!expr_is_mutable(self, node->binary.left)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        if (t1->id != TYPE_LIST) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPECTED_LIST, {0}};
+            dmsg.type_mismatch.found = t2;
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        if (!type_can_implicitly_convert(t2, self->types->builtin_int)) {
+            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            dmsg.type_mismatch.expected = t1;
+            dmsg.type_mismatch.found = self->types->builtin_int;
+
+            error(self, &dmsg);
+
+            return self->types->error_type;
+        }
+
+        return self->types->builtin_void;
     default: {
         DiagnosticMessage dmsg = {DIAGNOSTIC_INTERNAL_ERROR, {0}};
         error(self, &dmsg);
@@ -150,7 +192,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
 static Type *check_unary(SemChecker *self, const AstNode *node) {
     TokenKind op = node->unary.op;
-    Type *type = check_expr(self, node->unary.right, false);
+    Type *type = check_expr(self, node->unary.right);
 
     if (type->id == TYPE_ERROR) {
         return self->types->error_type;
@@ -244,7 +286,7 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
 
 static Type *check_suffix(SemChecker *self, const AstNode *node) {
     TokenKind op = node->suffix.op;
-    Type *type = check_expr(self, node->suffix.left, false);
+    Type *type = check_expr(self, node->suffix.left);
 
     if (type->id == TYPE_ERROR) {
         return self->types->error_type;
@@ -277,18 +319,9 @@ static Type *check_suffix(SemChecker *self, const AstNode *node) {
     }
 }
 
-static bool
-check_var(SemChecker *self, const Variable *var, char *name, bool assigning) {
+static bool check_var(SemChecker *self, const Variable *var, char *name) {
     if (!var) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_UNDECLARED_VARIABLE, {0}};
-        dmsg.undef_sym.name = name;
-
-        error(self, &dmsg);
-
-        return false;
-    } else if (!assigning && (var->type->id != TYPE_LIST && !var->defined) &&
-               !var->is_param) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_UNDEFINED_VARIABLE, {0}};
         dmsg.undef_sym.name = name;
 
         error(self, &dmsg);
@@ -299,11 +332,10 @@ check_var(SemChecker *self, const Variable *var, char *name, bool assigning) {
     return true;
 }
 
-static Type *
-check_ident(SemChecker *self, const AstNode *node, bool assigning) {
+static Type *check_ident(SemChecker *self, const AstNode *node) {
     Variable *var = env_find_var(&self->env, node->ident.str.data);
 
-    if (!check_var(self, var, node->ident.str.data, assigning)) {
+    if (!check_var(self, var, node->ident.str.data)) {
         return self->types->error_type;
     }
 
@@ -354,7 +386,7 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
         const AstNode *value = values[i];
         const FnParam *param = &params[i];
 
-        Type *value_type = check_expr(self, value, false);
+        Type *value_type = check_expr(self, value);
 
         if (value_type->id == TYPE_ERROR) {
             continue;
@@ -377,7 +409,7 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
     const AstNode *expr = node->subscript.expr;
     const AstNode *left = node->subscript.left;
 
-    Type *left_type = check_expr(self, left, false);
+    Type *left_type = check_expr(self, left);
 
     if (left_type->id == TYPE_ERROR) {
         return self->types->error_type;
@@ -389,7 +421,7 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
         return self->types->error_type;
     }
 
-    Type *expr_type = check_expr(self, expr, false);
+    Type *expr_type = check_expr(self, expr);
 
     if (expr_type->id != TYPE_ERROR && expr_type->id != TYPE_INT) {
         DiagnosticMessage dmsg;
@@ -406,14 +438,14 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
     }
 }
 
-static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning) {
+static Type *check_expr(SemChecker *self, const AstNode *node) {
     switch (node->kind) {
     case AST_NODE_INTEGER:
         return self->types->builtin_int;
     case AST_NODE_STRING:
         return self->types->builtin_string;
     case AST_NODE_IDENT:
-        return check_ident(self, node, assigning);
+        return check_ident(self, node);
     case AST_NODE_NIL:
         return self->types->nil_type;
     case AST_NODE_BINARY:
@@ -423,7 +455,7 @@ static Type *check_expr(SemChecker *self, const AstNode *node, bool assigning) {
     case AST_NODE_SUFFIX:
         return check_suffix(self, node);
     case AST_NODE_GROUPING:
-        return check_expr(self, node->grouping.expr, assigning);
+        return check_expr(self, node->grouping.expr);
     case AST_NODE_FN_CALL:
         return check_fn_call(self, node);
     case AST_NODE_SUBSCRIPT:
@@ -468,7 +500,7 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
     const AstNode *rvalue = node->var_decl.rvalue;
 
     if (rvalue) {
-        Type *value_type = check_expr(self, node->var_decl.rvalue, false);
+        Type *value_type = check_expr(self, node->var_decl.rvalue);
 
         if (value_type->id != TYPE_ERROR &&
             !type_can_implicitly_convert(value_type, type)) {
@@ -480,10 +512,10 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
         }
     }
 
-    Variable *var = malloc(sizeof(*var));
+    Variable *var = mem_alloc(sizeof(*var));
+
     var->type = type;
     var->name = cstr_dup(name);
-    var->defined = rvalue != NULL;
     var->is_param = false;
 
     env_add_local_var(&self->env, var);
@@ -506,7 +538,7 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
         return;
     }
 
-    Function *fn = malloc(sizeof(*fn));
+    Function *fn = mem_alloc(sizeof(*fn));
     fn->type = type;
     fn->name = cstr_dup_n(name, node->fn_decl.name->ident.str.len);
     fn->body = body;
@@ -545,10 +577,9 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
             param->type = type;
             param->name = cstr_dup(name);
 
-            Variable *var = malloc(sizeof(*var));
+            Variable *var = mem_alloc(sizeof(*var));
             var->type = type;
             var->name = cstr_dup(name);
-            var->defined = false;
             var->is_param = true;
 
             env_add_local_var(&self->env, var);
@@ -584,7 +615,7 @@ static void check_if(SemChecker *self, const AstNode *node) {
     const AstNode *body = node->kw_if.body;
     const AstNode *else_body = node->kw_if.else_body;
 
-    Type *cond_type = check_expr(self, cond, false);
+    Type *cond_type = check_expr(self, cond);
 
     if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
@@ -607,7 +638,7 @@ static void check_while(SemChecker *self, const AstNode *node) {
     const AstNode *cond = node->kw_while.cond;
     const AstNode *body = node->kw_while.body;
 
-    Type *cond_type = check_expr(self, cond, false);
+    Type *cond_type = check_expr(self, cond);
 
     if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
@@ -635,7 +666,7 @@ static void check_for(SemChecker *self, const AstNode *node) {
     }
 
     if (cond) {
-        Type *cond_type = check_expr(self, cond, false);
+        Type *cond_type = check_expr(self, cond);
 
         if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
@@ -647,7 +678,7 @@ static void check_for(SemChecker *self, const AstNode *node) {
     }
 
     if (iter) {
-        check_expr(self, iter, false);
+        check_expr(self, iter);
     }
 
     if (body) {
@@ -668,8 +699,7 @@ static void check_return(SemChecker *self, const AstNode *node) {
         return;
     }
 
-    Type *ret_type =
-        expr ? check_expr(self, expr, false) : self->types->builtin_void;
+    Type *ret_type = expr ? check_expr(self, expr) : self->types->builtin_void;
     Type *expected = self->env.curr_fn->type;
 
     if (ret_type->id == TYPE_ERROR) {
@@ -737,7 +767,7 @@ static void check_node(SemChecker *self, const AstNode *node) {
 
         break;
     default:
-        check_expr(self, node, false);
+        check_expr(self, node);
 
         break;
     }
@@ -745,10 +775,10 @@ static void check_node(SemChecker *self, const AstNode *node) {
 
 void semck_init(SemChecker *self, TypeSystem *types) {
     self->types = types;
-    env_init(&self->env);
+    env_init(&self->env, types);
 
     vec_init(&self->dmsgs, sizeof(DiagnosticMessage));
-    self->error_state = false;
+    self->had_error = false;
     self->loop_depth = 0;
 }
 
@@ -756,14 +786,13 @@ void semck_deinit(SemChecker *self) {
     env_deinit(&self->env);
 
     vec_deinit(&self->dmsgs);
-    self->error_state = false;
+    self->had_error = false;
 }
 
 static Variable *var_clone(const Variable *var) {
-    Variable *var_copy = malloc(sizeof(*var));
+    Variable *var_copy = mem_alloc(sizeof(*var));
     var_copy->type = var->type;
     var_copy->name = cstr_dup(var->name);
-    var_copy->defined = var->defined;
     var_copy->is_param = var->is_param;
 
     return var_copy;
@@ -776,7 +805,11 @@ static void clone_fn_params(Vector *self, const Vector *params_vec) {
         FnParam *param = vec_emplace(self);
 
         param->type = params[i].type;
-        param->name = cstr_dup(params[i].name);
+
+        /* only builtin functions don't have names for params */
+        if (params[i].name) {
+            param->name = cstr_dup(params[i].name);
+        }
     }
 }
 
@@ -798,7 +831,7 @@ bool semck_check(
              hashmap_iter_next(&it)) {
             Function *fn = it.bucket->value;
 
-            Function *fn_copy = malloc(sizeof(*fn_copy));
+            Function *fn_copy = mem_alloc(sizeof(*fn_copy));
             vec_init(&fn_copy->params, sizeof(FnParam));
 
             fn_copy->type = fn->type;
@@ -817,7 +850,7 @@ bool semck_check(
         check_node(self, nodes[i]);
     }
 
-    return !self->error_state;
+    return !self->had_error;
 }
 
 void semck_reset(SemChecker *self) { env_reset(&self->env); }

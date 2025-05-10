@@ -2,5 +2,6 @@ for:
   literal 1
   literal 2
   literal 3
-  println:
+  fn-call:
+    identifier println
     literal "in for"

@@ -13,6 +13,7 @@ typedef struct Interpreter {
     Vector strings; /* Vector<StrBuf> */
     Vector lists; /* Vector<Vector<Value>> */
     Vector opts; /* Vector<Value> */
+    Vector builtin_fn_args;
 
     Ast *ast;
     int exit_code;

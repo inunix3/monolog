@@ -4,15 +4,15 @@
 #include "hashmap.h"
 #include "scope.h"
 #include "variable.h"
+#include "type.h"
 #include "vector.h"
 
 #include <stdbool.h>
 
-typedef struct Envrionment {
+typedef struct Environment {
     Vector scopes; /* Vector<Scope> */
     Scope *global_scope;
     HashMap funcs; /* HashMap<char *, Function *> */
-
     Scope *caller_scope;
     Scope *curr_scope;
     Scope *old_scope;
@@ -20,7 +20,7 @@ typedef struct Envrionment {
     Function *old_fn;
 } Environment;
 
-void env_init(Environment *self);
+bool env_init(Environment *self, TypeSystem *types);
 void env_deinit(Environment *self);
 Variable *env_find_var(const Environment *self, const char *name);
 Function *env_find_fn(const Environment *self, const char *name);
@@ -31,6 +31,6 @@ Scope *env_enter_fn(Environment *self, Function *fn);
 void env_leave_fn(Environment *self);
 void env_save_caller(Environment *self, Scope *caller_scope);
 void env_restore_caller(Environment *self);
-void env_add_fn(Environment *self, Function *fn);
-void env_add_local_var(Environment *self, Variable *var);
-void env_add_global_var(Environment *self, Variable *var);
+bool env_add_fn(Environment *self, Function *fn);
+bool env_add_local_var(Environment *self, Variable *var);
+bool env_add_global_var(Environment *self, Variable *var);

@@ -2,5 +2,6 @@ fn-decl:
   int-type
   identifier foo
   block (1):
-    println:
+    fn-call:
+      identifier println
       literal "In foo()"

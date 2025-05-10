@@ -14,5 +14,6 @@ bool str_dup(StrBuf *self, const char *cstr);
 bool str_dup_n(StrBuf *self, const char *cstr, size_t len);
 void str_deinit(StrBuf *self);
 bool str_cat(StrBuf *self, const StrBuf *src);
-bool str_set(StrBuf *self, const char *cstr);
+bool str_set_cstr(StrBuf *self, const char *cstr);
 bool str_equal(const StrBuf *self, const StrBuf *str);
+bool str_resize(StrBuf *self, size_t n);

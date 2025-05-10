@@ -1,7 +1,7 @@
 #include <monolog/ast.h>
 #include <monolog/expr_result.h>
-#include <monolog/stmt_result.h>
 #include <monolog/interp.h>
+#include <monolog/stmt_result.h>
 #include <monolog/utils.h>
 
 #include <assert.h>
@@ -40,8 +40,21 @@
         return __stmt_res;                                                     \
     }
 
-static void error(Interpreter *self, const char *fmt, ...) {
+#define INPUT_BUFSIZE 1024
+
+static void clear_stdin(void) {
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF)
+        ;
+}
+
+static void set_fatal_error(Interpreter *self) {
     self->had_error = true;
+    self->halt = true;
+}
+
+static void error(Interpreter *self, const char *fmt, ...) {
+    set_fatal_error(self);
 
     if (self->log_errors) {
         fputs("runtime error: ", stderr);
@@ -69,39 +82,37 @@ static Value *expr_get_value(ExprResult *expr) {
     }
 }
 
-static bool clone_value(Interpreter *self, Value *dest, const Value *src);
+static void clone_value(Interpreter *self, Value *dest, const Value *src);
 
-static bool make_opt(Interpreter *self, Value *dest, const Value *val) {
+static void
+make_opt(Interpreter *self, Value *dest, Type *dest_type, const Value *val) {
+    dest->type = dest_type;
     dest->opt.val = NULL;
 
     if (val && val->type->id != TYPE_NIL) {
         Value *owned_val = vec_emplace(&self->opts);
 
-        if (!owned_val) {
-            return false;
-        }
-
         dest->opt.val = owned_val;
 
         if (val->type->id == TYPE_OPTION && type_equal(val->type, dest->type)) {
+            /* When assigning option<int> to option<int>, for example. */
+
             if (!val->opt.val) {
                 vec_pop(&self->opts);
                 dest->opt.val = NULL;
             } else {
                 owned_val->type = val->opt.val->type;
-                return clone_value(self, dest->opt.val, val->opt.val);
+                clone_value(self, dest->opt.val, val->opt.val);
             }
         } else {
+            /* When assigning string to option<string>. */
+
             owned_val->type = val->type;
 
-            return clone_value(self, dest->opt.val, val);
+            clone_value(self, dest->opt.val, val);
         }
     }
-
-    return true;
 }
-
-static bool clone_value(Interpreter *self, Value *dest, const Value *src);
 
 static bool clone_list(Interpreter *self, Value *dest, const Value *src) {
     assert(dest->type);
@@ -117,15 +128,13 @@ static bool clone_list(Interpreter *self, Value *dest, const Value *src) {
     for (size_t i = 0; i < src->list.values->len; ++i) {
         Value *elem = vec_emplace(values);
 
-        if (!clone_value(self, elem, &src_values[i])) {
-            return false;
-        }
+        clone_value(self, elem, &src_values[i]);
     }
 
     return true;
 }
 
-static bool clone_value(Interpreter *self, Value *dest, const Value *src) {
+static void clone_value(Interpreter *self, Value *dest, const Value *src) {
     switch (src->type->id) {
     case TYPE_ERROR:
         dest->type = self->types->error_type;
@@ -140,22 +149,26 @@ static bool clone_value(Interpreter *self, Value *dest, const Value *src) {
         dest->type = self->types->builtin_string;
         dest->s = vec_emplace(&self->strings);
 
-        return str_dup_n(dest->s, src->s->data, src->s->len);
+        str_dup_n(dest->s, src->s->data, src->s->len);
+
+        break;
     case TYPE_VOID:
         dest->type = self->types->builtin_void;
 
         break;
     case TYPE_LIST:
-        return clone_list(self, dest, src);
+        clone_list(self, dest, src);
+
+        break;
     case TYPE_OPTION:
-        return make_opt(self, dest, src);
+        make_opt(self, dest, src->type, src);
+
+        break;
     case TYPE_NIL:
         *dest = *src;
 
         break;
     }
-
-    return true;
 }
 
 static bool value_equal(const Value *v1, const Value *v2) {
@@ -187,6 +200,47 @@ static bool value_equal(const Value *v1, const Value *v2) {
     }
 
     return true;
+}
+
+static void
+implicitly_clone_value(Interpreter *self, Value *dest, const Value *src) {
+    if (dest->type->id == TYPE_OPTION) {
+        make_opt(self, dest, dest->type, src);
+    } else {
+        clone_value(self, dest, src);
+    }
+}
+
+static void new_value(Interpreter *self, Value *val, Type *type) {
+    memset(val, 0, sizeof(*val));
+    val->type = type;
+
+    if (type->id == TYPE_LIST) {
+        Vector *values = vec_emplace(&self->lists);
+
+        vec_init(values, sizeof(Value));
+
+        val->list.values = values;
+    } else if (type->id == TYPE_STRING) {
+        StrBuf *str = vec_emplace(&self->strings);
+
+        str_init_n(str, 0);
+
+        val->s = str;
+    }
+}
+
+static Variable *
+new_var(Interpreter *self, Type *type, const char *name, const Value *val) {
+    Variable *arg = mem_alloc(sizeof(*arg));
+
+    arg->type = type;
+    arg->name = cstr_dup(name);
+    arg->val.type = type;
+
+    implicitly_clone_value(self, &arg->val, val);
+
+    return arg;
 }
 
 static Value
@@ -235,7 +289,7 @@ exec_binary_int(Interpreter *self, TokenKind op, Value *v1, const Value *v2) {
     case TOKEN_OP_OR:
         CASE_BINARY_INT(||, v1, v2);
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -253,7 +307,7 @@ static Value exec_binary_string(
 
         break;
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -298,7 +352,7 @@ static Value exec_binary_option(
 
         break;
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -332,7 +386,56 @@ static Value exec_binary_nil(
 
         break;
     default:
+        UNREACHABLE();
+    }
+
+    return val;
+}
+
+static Value
+exec_binary_list(Interpreter *self, TokenKind op, Value *v1, const Value *v2) {
+    Value val = *v1;
+    Type *type = v1->type->list_type.type;
+    val.type = type;
+
+    Vector *values = v1->list.values;
+
+    switch (op) {
+    case TOKEN_OP_ADD_ASSIGN: {
+        assert(type_equal(type, v2->type));
+
+        Value *elem = vec_emplace(values);
+        elem->type = type;
+
+        implicitly_clone_value(self, elem, v2);
+
         break;
+    }
+    case TOKEN_OP_SUB_ASSIGN: {
+        assert(type_equal(self->types->builtin_int, v2->type));
+
+        if (v2->i < 0) {
+            error(self, "the right side cannot be negative");
+            val.type = self->types->error_type;
+
+            break;
+        }
+
+        if (values->len == 0) {
+            error(self, "cannot pop more on empty list");
+            val.type = self->types->error_type;
+
+            break;
+        }
+
+        for (Int i = 0; i < v2->i; ++i) {
+            vec_pop(values);
+        }
+
+        break;
+    }
+    default:
+        UNREACHABLE();
     }
 
     return val;
@@ -362,9 +465,9 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, const Value *v1) {
 
         break;
     case TOKEN_OP_DOLAR: {
-        size_t len = (size_t)snprintf(NULL, 0, "%" PRId64, v1->i);
-
         StrBuf *str = vec_emplace(&self->strings);
+
+        size_t len = (size_t)snprintf(NULL, 0, "%" PRId64, v1->i);
         str_init_n(str, len);
         snprintf(str->data, len + 1, "%" PRId64, v1->i);
 
@@ -374,7 +477,7 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, const Value *v1) {
         break;
     }
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -391,14 +494,13 @@ exec_unary_string(Interpreter *self, TokenKind op, const Value *v1) {
 
         break;
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
 }
 
-static Value
-exec_unary_list(Interpreter *self, TokenKind op, const Value *v1) {
+static Value exec_unary_list(Interpreter *self, TokenKind op, const Value *v1) {
     Value val = {self->types->error_type, {0}};
 
     switch (op) {
@@ -408,7 +510,7 @@ exec_unary_list(Interpreter *self, TokenKind op, const Value *v1) {
 
         break;
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -429,7 +531,7 @@ exec_unary_option(Interpreter *self, TokenKind op, const Value *v1) {
 
         break;
     default:
-        break;
+        UNREACHABLE();
     }
 
     return val;
@@ -490,15 +592,6 @@ static ExprResult exec_unary(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
-static bool
-implicitly_clone_value(Interpreter *self, Value *dest, const Value *src) {
-    if (dest->type->id == TYPE_OPTION) {
-        return make_opt(self, dest, src);
-    }
-
-    return clone_value(self, dest, src);
-}
-
 static ExprResult
 assign_var(Interpreter *self, Variable *var, ExprResult expr) {
     (void)self;
@@ -506,24 +599,20 @@ assign_var(Interpreter *self, Variable *var, ExprResult expr) {
     Value *expr_val = expr_get_value(&expr);
     ExprResult expr_res = {0};
 
-    if (!implicitly_clone_value(self, &var->val, expr_val)) {
-        expr_res.kind = EXPR_ERROR;
-    } else {
-        expr_res.kind = EXPR_VALUE;
-        expr_res.val = var->val;
-    }
+    implicitly_clone_value(self, &var->val, expr_val);
+
+    expr_res.kind = EXPR_VALUE;
+    expr_res.val = var->val;
 
     return expr_res;
 }
 
 static ExprResult assign_ref(Interpreter *self, Value *val, ExprResult expr) {
-    (void)self;
-
+    ExprResult expr_res = {0};
     Value *expr_val = expr_get_value(&expr);
 
     implicitly_clone_value(self, val, expr_val);
 
-    ExprResult expr_res;
     expr_res.kind = EXPR_REF;
     expr_res.ref = val;
 
@@ -597,14 +686,13 @@ static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
         expr.val = exec_binary_option(self, node->binary.op, v1, v2);
 
         break;
-    default:
-        expr.kind = EXPR_ERROR;
-        error(
-            self, "unsupported binary operation for %s and %s", v1->type->name,
-            v2->type->name
-        );
+    case TYPE_LIST:
+        expr.kind = EXPR_VALUE;
+        expr.val = exec_binary_list(self, node->binary.op, v1, v2);
 
         break;
+    default:
+        UNREACHABLE();
     }
 
     return expr;
@@ -633,10 +721,7 @@ exec_suffix_int(Interpreter *self, Variable *var, TokenKind op) {
         break;
     }
     default:
-        expr_res.kind = EXPR_ERROR;
-        error(self, "bad suffix operator %s", token_kind_to_str(op));
-
-        return expr_res;
+        UNREACHABLE();
     }
 
     expr_res.val = val;
@@ -657,12 +742,7 @@ static ExprResult exec_suffix(Interpreter *self, const AstNode *node) {
     case TYPE_INT:
         return exec_suffix_int(self, var, node->suffix.op);
     default:
-        expr_res.kind = EXPR_ERROR;
-
-        error(
-            self, "unsupported type %s for suffix operator %s", var->type->name,
-            node->suffix.op
-        );
+        UNREACHABLE();
 
         break;
     }
@@ -684,8 +764,7 @@ static ExprResult exec_string_literal(Interpreter *self, const AstNode *node) {
     return expr_res;
 }
 
-static ExprResult
-exec_identifier(Interpreter *self, const AstNode *node, bool assigning) {
+static ExprResult exec_identifier(Interpreter *self, const AstNode *node) {
     ExprResult expr_res;
 
     Variable *var = env_find_var(&self->env, node->ident.str.data);
@@ -693,17 +772,6 @@ exec_identifier(Interpreter *self, const AstNode *node, bool assigning) {
     if (!var) {
         expr_res.kind = EXPR_ERROR;
         error(self, "undeclared variable %s", node->ident.str.data);
-
-        return expr_res;
-    }
-
-    if (!assigning && !var->defined && !var->is_param &&
-        var->type->id != TYPE_LIST) {
-        expr_res.kind = EXPR_ERROR;
-        error(
-            self, "variable %s is declared, but no value was assigned to it",
-            var->name
-        );
 
         return expr_res;
     }
@@ -778,8 +846,7 @@ static ExprResult exec_subscript(Interpreter *self, const AstNode *node) {
     case TYPE_LIST:
         return exec_list_subscript(self, left_val, idx->i);
     default:
-        expr_res.kind = EXPR_ERROR;
-        error(self, "unsupported type %s for indexing", left_val->type->name);
+        UNREACHABLE();
 
         break;
     }
@@ -802,16 +869,9 @@ static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
             return false;
         }
 
-        Variable *arg = malloc(sizeof(*arg));
-        arg->type = param->type;
-        arg->name = cstr_dup(param->name);
+        const Value *arg_val = expr_get_value(&expr);
 
-        arg->val.type = param->type;
-        if (!implicitly_clone_value(self, &arg->val, expr_get_value(&expr))) {
-            return false;
-        }
-
-        arg->defined = true;
+        Variable *arg = new_var(self, param->type, param->name, arg_val);
         arg->is_param = true;
 
         env_add_local_var(&self->env, arg);
@@ -820,26 +880,58 @@ static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
     return true;
 }
 
-static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
-    const char *name = node->fn_call.name->ident.str.data;
-    Function *fn = env_find_fn(&self->env, name);
-    ExprResult expr_res = {0};
+static bool
+pass_args_builtin(Interpreter *self, Function *fn, const AstNode **args) {
+    vec_clear(&self->builtin_fn_args);
 
-    if (!fn) {
-        expr_res.kind = EXPR_ERROR;
+    for (size_t i = 0; i < fn->params.len; ++i) {
+        const AstNode *arg_node = args[i];
 
-        return expr_res;
-    } else if (!fn->body) {
-        expr_res.kind = EXPR_ERROR;
-        error(self, "function %s has no body to execute", name);
+        ExprResult expr = exec_expr(self, arg_node, false);
+
+        if (expr.kind == EXPR_ERROR) {
+            return false;
+        }
+
+        Value *arg = vec_emplace(&self->builtin_fn_args);
+        arg->type = expr_get_value(&expr)->type;
+
+        implicitly_clone_value(self, arg, expr_get_value(&expr));
+    }
+
+    return true;
+}
+
+static ExprResult
+exec_builtin(Interpreter *self, Function *fn, const AstNode *node) {
+    (void)node;
+
+    const AstNode **arg_nodes = node->fn_call.values.data;
+
+    if (!pass_args_builtin(self, fn, arg_nodes)) {
+        ExprResult expr_res = {EXPR_ERROR, {0}};
 
         return expr_res;
     }
 
+    Value *args = self->builtin_fn_args.data;
+
+    return fn->builtin(self, args);
+}
+
+static ExprResult
+exec_fn_body(Interpreter *self, Function *fn, const AstNode *node) {
+    ExprResult expr_res = {0};
+
     Scope *saved_scope = self->env.curr_scope;
     Scope *saved_caller = self->env.caller_scope;
+    Function *saved_fn = self->env.curr_fn;
 
-    env_enter_fn(&self->env, fn);
+    if (!env_enter_fn(&self->env, fn)) {
+        expr_res.kind = EXPR_ERROR;
+
+        return expr_res;
+    }
 
     const AstNode **args = node->fn_call.values.data;
 
@@ -850,7 +942,6 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
     }
 
     self->env.caller_scope = saved_scope;
-
     StmtResult body_res = exec_node(self, fn->body);
 
     switch (body_res.kind) {
@@ -862,11 +953,7 @@ static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
         expr_res.kind = EXPR_VALUE;
         expr_res.val.type = fn->type;
 
-        if (!implicitly_clone_value(self, &expr_res.val, &body_res.ret_value)) {
-            expr_res.kind = EXPR_ERROR;
-
-            goto finish;
-        }
+        implicitly_clone_value(self, &expr_res.val, &body_res.ret_value);
 
         break;
     case STMT_VOID:
@@ -891,8 +978,30 @@ finish:
     env_leave_fn(&self->env);
     self->env.curr_scope = saved_scope;
     self->env.caller_scope = saved_caller;
+    self->env.curr_fn = saved_fn;
 
     return expr_res;
+}
+
+static ExprResult exec_fn_call(Interpreter *self, const AstNode *node) {
+    const char *name = node->fn_call.name->ident.str.data;
+    Function *fn = env_find_fn(&self->env, name);
+    ExprResult expr_res = {0};
+
+    if (!fn) {
+        expr_res.kind = EXPR_ERROR;
+
+        return expr_res;
+    } else if (fn->is_builtin) {
+        return exec_builtin(self, fn, node);
+    } else if (!fn->body) {
+        expr_res.kind = EXPR_ERROR;
+        error(self, "function %s has no body to execute", name);
+
+        return expr_res;
+    }
+
+    return exec_fn_body(self, fn, node);
 }
 
 static ExprResult exec_nil(const Interpreter *self) {
@@ -917,7 +1026,7 @@ exec_expr(Interpreter *self, const AstNode *node, bool assigning) {
     case AST_NODE_STRING:
         return exec_string_literal(self, node);
     case AST_NODE_IDENT:
-        return exec_identifier(self, node, assigning);
+        return exec_identifier(self, node);
     case AST_NODE_NIL:
         return exec_nil(self);
     case AST_NODE_UNARY:
@@ -951,10 +1060,6 @@ static Type *process_type(Interpreter *self, const AstNode *node) {
     case AST_NODE_LIST_TYPE: {
         Type *contained_type = process_type(self, node->list_type.type);
 
-        if (!contained_type) {
-            return NULL;
-        }
-
         Type list = {TYPE_LIST, NULL, {0}};
         list.list_type.type = contained_type;
 
@@ -962,10 +1067,6 @@ static Type *process_type(Interpreter *self, const AstNode *node) {
     }
     case AST_NODE_OPTION_TYPE: {
         Type *contained_type = process_type(self, node->opt_type.type);
-
-        if (!contained_type) {
-            return NULL;
-        }
 
         Type option = {TYPE_OPTION, NULL, {0}};
         option.opt_type.type = contained_type;
@@ -1010,19 +1111,6 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
-static bool new_value(Interpreter *self, Value *val, Type *type) {
-    memset(val, 0, sizeof(*val));
-    val->type = type;
-
-    if (type->id == TYPE_LIST) {
-        Vector *values = vec_emplace(&self->lists);
-        vec_init(values, sizeof(Value));
-        val->list.values = values;
-    }
-
-    return true;
-}
-
 static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, {0}};
 
@@ -1030,7 +1118,6 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     STMT_RETURN_IF_INVALID_TYPE(type);
 
     Value val = {type, {0}};
-    bool defined = false;
 
     if (node->var_decl.rvalue) {
         ExprResult expr = exec_expr(self, node->var_decl.rvalue, false);
@@ -1038,39 +1125,36 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
 
         Value *expr_val = expr_get_value(&expr);
 
-        if (!type_can_implicitly_convert(expr_val->type, type)) {
-            stmt_res.kind = STMT_ERROR;
-            error(
-                self, "type mismatch: expected %s, found %s", type->name,
-                expr_val->type->name
-            );
+        assert(type_can_implicitly_convert(expr_val->type, type));
 
-            return stmt_res;
-        }
-
-        if (!implicitly_clone_value(self, &val, expr_val)) {
-            stmt_res.kind = STMT_ERROR;
-
-            return stmt_res;
-        }
-
-        defined = true;
-    } else if (!new_value(self, &val, type)) {
-        stmt_res.kind = STMT_ERROR;
-
-        return stmt_res;
+        implicitly_clone_value(self, &val, expr_val);
+    } else {
+        new_value(self, &val, type);
     }
 
-    Variable *var = malloc(sizeof(*var));
+    Variable *var = mem_alloc(sizeof(*var));
     var->name = cstr_dup(node->var_decl.name->ident.str.data);
     var->type = type;
     var->val = val;
-    var->defined = defined;
     var->is_param = false;
 
     hashmap_add(&self->env.curr_scope->vars, var->name, var);
 
     return stmt_res;
+}
+
+static void
+create_param_list(Interpreter *self, Function *fn, const AstNode *node) {
+    const AstNode **params_nodes = node->fn_decl.params.data;
+    for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
+        const AstNode *param_node = params_nodes[i];
+        Type *param_type = process_type(self, param_node->param_decl.type);
+
+        FnParam *param = vec_emplace(&fn->params);
+
+        param->type = param_type;
+        param->name = cstr_dup(param_node->param_decl.name->ident.str.data);
+    }
 }
 
 static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
@@ -1081,73 +1165,23 @@ static StmtResult exec_fn_decl(Interpreter *self, AstNode *node) {
     AstNode *body = node->fn_decl.body;
 
     if (body) {
-        /* steal ownership, so interpreter can later use the body and execute it
-         * (the problem is that REPL destroys AST after every interpretation).
+        /* steal ownership, so interpreter can later use the body and execute
+         * it. REPL destroys AST every time and cloning is too expensive.
          */
         node->fn_decl.body = NULL;
     }
 
-    Function *fn = malloc(sizeof(*fn));
+    Function *fn = mem_alloc(sizeof(*fn));
+
     fn->type = type;
     fn->name = cstr_dup(node->fn_decl.name->ident.str.data);
     fn->body = body;
     fn->free_body = true;
+    fn->is_builtin = false;
 
     vec_init(&fn->params, sizeof(FnParam));
-
-    const AstNode **params_nodes = node->fn_decl.params.data;
-    for (size_t i = 0; i < node->fn_decl.params.len; ++i) {
-        const AstNode *param_node = params_nodes[i];
-        Type *param_type = process_type(self, param_node->param_decl.type);
-        STMT_RETURN_IF_INVALID_TYPE(type);
-
-        FnParam *param = vec_emplace(&fn->params);
-        param->type = param_type;
-        param->name = cstr_dup(param_node->param_decl.name->ident.str.data);
-    }
-
+    create_param_list(self, fn, node);
     env_add_fn(&self->env, fn);
-
-    return stmt_res;
-}
-
-static StmtResult exec_print(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_print.expr, false);
-    STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
-
-    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-    fputs(val.s->data, stdout);
-
-    StmtResult stmt_res = {STMT_VOID, {0}};
-
-    return stmt_res;
-}
-
-static StmtResult exec_println(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_print.expr, false);
-    STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
-
-    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-    fputs(val.s->data, stdout);
-    fputc('\n', stdout);
-
-    StmtResult stmt_res = {STMT_VOID, {0}};
-
-    return stmt_res;
-}
-
-static StmtResult exec_exit(Interpreter *self, const AstNode *node) {
-    ExprResult expr = exec_expr(self, node->kw_exit.expr, false);
-    STMT_RETURN_IF_ERROR(expr, EXPR_ERROR);
-
-    Value val = expr.kind == EXPR_VAR ? expr.var->val : expr.val;
-
-    self->exit_code = (int)val.i;
-    self->halt = true;
-
-    StmtResult stmt_res = {STMT_VOID, {0}};
 
     return stmt_res;
 }
@@ -1179,6 +1213,10 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
     while (cond_val->i) {
         StmtResult res = exec_node(self, node->kw_while.body);
 
+        if (self->halt) {
+            return stmt_res;
+        }
+
         switch (res.kind) {
         case STMT_VOID:
         case STMT_CONTINUE:
@@ -1187,10 +1225,6 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
         case STMT_RETURN:
             return res;
         case STMT_BREAK:
-            return stmt_res;
-        }
-
-        if (self->halt) {
             return stmt_res;
         }
 
@@ -1217,7 +1251,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
         exec_node(self, init);
 
         if (self->had_error) {
-            goto failure;
+            goto error;
         }
     }
 
@@ -1226,7 +1260,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
             ExprResult expr = exec_expr(self, cond, false);
 
             if (expr.kind == EXPR_ERROR) {
-                goto failure;
+                goto error;
             }
 
             Value *val = expr_get_value(&expr);
@@ -1239,23 +1273,23 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
         if (body) {
             StmtResult res = exec_node(self, body);
 
-            switch (res.kind) {
-            case STMT_VOID:
-            case STMT_CONTINUE:
-                break;
-            case STMT_ERROR:
-                goto failure;
-            case STMT_RETURN:
-                env_leave_scope(&self->env);
-
-                return res;
-            case STMT_BREAK:
+            if (self->halt) {
                 env_leave_scope(&self->env);
 
                 return stmt_res;
             }
 
-            if (self->halt) {
+            switch (res.kind) {
+            case STMT_VOID:
+            case STMT_CONTINUE:
+                break;
+            case STMT_ERROR:
+                goto error;
+            case STMT_RETURN:
+                env_leave_scope(&self->env);
+
+                return res;
+            case STMT_BREAK:
                 env_leave_scope(&self->env);
 
                 return stmt_res;
@@ -1266,7 +1300,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
             ExprResult expr = exec_expr(self, iter, false);
 
             if (expr.kind == EXPR_ERROR) {
-                goto failure;
+                goto error;
             }
         }
     }
@@ -1275,7 +1309,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
 
     return stmt_res;
 
-failure:
+error:
     env_leave_scope(&self->env);
 
     stmt_res.kind = STMT_ERROR;
@@ -1336,10 +1370,12 @@ static StmtResult exec_node(Interpreter *self, AstNode *node) {
 
 void interp_init(Interpreter *self, Ast *ast, TypeSystem *types) {
     self->types = types;
-    env_init(&self->env);
+
+    env_init(&self->env, types);
     vec_init(&self->strings, sizeof(StrBuf));
     vec_init(&self->lists, sizeof(Vector));
     vec_init(&self->opts, sizeof(Value));
+    vec_init(&self->builtin_fn_args, sizeof(Value));
 
     self->ast = ast;
     self->exit_code = 0;
@@ -1366,6 +1402,7 @@ void interp_deinit(Interpreter *self) {
     vec_deinit(&self->lists);
     vec_deinit(&self->strings);
     vec_deinit(&self->opts);
+    vec_deinit(&self->builtin_fn_args);
 }
 
 int interp_walk(Interpreter *self) {
@@ -1376,8 +1413,9 @@ int interp_walk(Interpreter *self) {
 
         if (self->had_error) {
             self->exit_code = -1;
-            break;
-        } else if (self->halt) {
+        }
+
+        if (self->halt) {
             break;
         }
     }
@@ -1410,4 +1448,92 @@ Value interp_eval(Interpreter *self) {
     }
 
     return val;
+}
+
+ExprResult builtin_print(Interpreter *self, Value *args) {
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    expr_res.val.type = self->types->builtin_void;
+
+    fputs(args[0].s->data, stdout);
+
+    return expr_res;
+}
+
+ExprResult builtin_println(Interpreter *self, Value *args) {
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    expr_res.val.type = self->types->builtin_void;
+
+    fputs(args[0].s->data, stdout);
+    fputc('\n', stdout);
+
+    return expr_res;
+}
+
+ExprResult builtin_exit(Interpreter *self, Value *args) {
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    expr_res.val.type = self->types->builtin_void;
+
+    self->exit_code = (int)args[0].i;
+    self->halt = true;
+
+    return expr_res;
+}
+
+ExprResult builtin_input_int(Interpreter *self, Value *args) {
+    (void)args;
+
+    Type *opt_int = type_system_get(self->types, "option<int>");
+
+    /* This type has to be registered by env_init() */
+    assert(opt_int != NULL);
+
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    expr_res.val.type = opt_int;
+
+    Value val;
+
+    new_value(self, &val, self->types->builtin_int);
+
+    /* TODO: change to fgets() + strtoll */
+    if (scanf("%" PRId64, &val.i) < 1) {
+        expr_res.val.opt.val = NULL;
+    } else {
+        make_opt(self, &expr_res.val, opt_int, &val);
+    }
+
+    return expr_res;
+}
+
+ExprResult builtin_input_string(Interpreter *self, Value *args) {
+    (void)args;
+
+    static char temp_buf[INPUT_BUFSIZE];
+
+    Type *opt_string = type_system_get(self->types, "option<int>");
+
+    /* This type has to be registered by env_init() */
+    assert(opt_string != NULL);
+
+    ExprResult expr_res = {EXPR_VALUE, {0}};
+    expr_res.val.type = opt_string;
+    expr_res.val.opt.val = NULL;
+
+    Value temp_val;
+
+    new_value(self, &temp_val, self->types->builtin_string);
+
+    if (fgets(temp_buf, INPUT_BUFSIZE, stdin)) {
+        size_t newline_idx = strcspn(temp_buf, "\n");
+
+        if (temp_buf[newline_idx] == '\n') {
+            temp_buf[newline_idx] = '\0';
+        } else {
+            clear_stdin();
+        }
+
+        str_set_cstr(temp_val.s, temp_buf);
+        make_opt(self, &expr_res.val, opt_string, &temp_val);
+    }
+
+    return expr_res;
 }

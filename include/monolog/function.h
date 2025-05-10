@@ -18,6 +18,7 @@ typedef struct Function {
     char *name;
     Vector params; /* Vector<FnParam> */
     bool free_body;
+    bool is_builtin;
 
     union {
         FnBuiltin builtin;

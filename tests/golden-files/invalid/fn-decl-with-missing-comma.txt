@@ -5,4 +5,4 @@ fn-decl:
     int-type
     identifier a
   error
-  null
+  block (0):

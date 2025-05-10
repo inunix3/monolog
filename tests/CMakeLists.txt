@@ -50,11 +50,10 @@ set(SEMCK_SOURCES
 create_test(semck_test ${SEMCK_SOURCES})
 
 set(INTERP_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/interp/expressions.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/interp/valid.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/invalid.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/main.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/interp/shared.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/interp/statements.c"
 )
 
 create_test(interp_test ${INTERP_SOURCES})

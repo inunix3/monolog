@@ -9,6 +9,5 @@ typedef struct Variable {
     Type *type;
     char *name;
     Value val;
-    bool defined;
     bool is_param;
 } Variable;
