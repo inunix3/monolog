@@ -59,7 +59,7 @@ const char *type_name(const Type *type) {
     return g_buf;
 }
 
-bool type_can_implicitly_convert(const Type *self, const Type *type) {
+bool type_convertable(const Type *self, const Type *type) {
     if (type_equal(self, type)) {
         return true;
     }
@@ -75,14 +75,9 @@ bool type_can_implicitly_convert(const Type *self, const Type *type) {
     return false;
 }
 
-bool type_system_init(TypeSystem *self) {
-    if (!hashmap_init(&self->types)) {
-        return false;
-    }
-
-    if (!vec_init(&self->type_names, sizeof(char *))) {
-        return false;
-    }
+void type_system_init(TypeSystem *self) {
+    hashmap_init(&self->types);
+    vec_init(&self->type_names, sizeof(char *));
 
     Type builtin_int = {TYPE_INT, NULL, {0}};
     self->builtin_int = type_system_register(self, &builtin_int);
@@ -101,8 +96,6 @@ bool type_system_init(TypeSystem *self) {
 
     Type nil_type = {TYPE_NIL, NULL, {0}};
     self->nil_type = type_system_register(self, &nil_type);
-
-    return true;
 }
 
 void type_system_deinit(TypeSystem *self) {

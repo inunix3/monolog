@@ -7,9 +7,11 @@
 #include <stdint.h>
 
 typedef int64_t Int;
+typedef struct Scope Scope;
 
 typedef struct Value {
     Type *type;
+    Scope *scope;
 
     union {
         Int i;

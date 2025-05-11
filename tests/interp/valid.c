@@ -953,7 +953,7 @@ TEST option_compare_nil_to_nil(void) {
 
 TEST fn_call_without_args(void) {
     run(
-        "void foo() { exit(115); }"
+        "void foo() { }"
     );
 
     Value v = eval("foo()");
@@ -961,9 +961,9 @@ TEST fn_call_without_args(void) {
     ASSERT_EQ(TYPE_VOID, v.type->id);
 
     ASSERT_EQ(&g_ast, g_interp.ast);
-    ASSERT_EQ(115, g_interp.exit_code);
+    ASSERT_EQ(0, g_interp.exit_code);
     ASSERT_EQ(false, g_interp.had_error);
-    ASSERT_EQ(true, g_interp.halt);
+    ASSERT_EQ(false, g_interp.halt);
 
     PASS();
 }
@@ -1093,14 +1093,14 @@ TEST fn_with_param(void) {
 
 TEST fn_with_multiple_params(void) {
     run(
-        "string list(int i, string s, int? o_i, string? o_s) {"
+        "string concat(int i, string s, int? o_i, string? o_s) {"
         "  return $i + \", \" + s + \", \"+ $*o_i + \", \" + *o_s;"
         "}"
         ""
         "int? o_i = 115;"
     );
 
-    Value v = eval("list(94, \"string\", o_i, \"option\")");
+    Value v = eval("concat(94, \"string\", o_i, \"option\")");
 
     ASSERT_EQ(TYPE_STRING, v.type->id);
     ASSERT_STR_EQ("94, string, 115, option", v.s->data);

@@ -36,7 +36,7 @@ static inline bool type_equal(const Type *self, const Type *type) {
     return self->name == type->name;
 }
 
-bool type_can_implicitly_convert(const Type *self, const Type *type);
+bool type_convertable(const Type *self, const Type *type);
 
 typedef struct TypeSystem {
     /* Used for type interning.
@@ -56,7 +56,7 @@ typedef struct TypeSystem {
     Type *nil_type;
 } TypeSystem;
 
-bool type_system_init(TypeSystem *self);
+void type_system_init(TypeSystem *self);
 void type_system_deinit(TypeSystem *self);
 char *type_system_name(TypeSystem *self, const Type *type);
 Type *type_system_register(TypeSystem *self, const Type *type);

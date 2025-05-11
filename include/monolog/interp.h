@@ -10,9 +10,6 @@
 typedef struct Interpreter {
     Environment env;
     TypeSystem *types;
-    Vector strings; /* Vector<StrBuf> */
-    Vector lists; /* Vector<Vector<Value>> */
-    Vector opts; /* Vector<Value> */
     Vector builtin_fn_args;
 
     Ast *ast;

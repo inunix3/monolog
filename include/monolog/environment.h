@@ -20,7 +20,7 @@ typedef struct Environment {
     Function *old_fn;
 } Environment;
 
-bool env_init(Environment *self, TypeSystem *types);
+void env_init(Environment *self, TypeSystem *types);
 void env_deinit(Environment *self);
 Variable *env_find_var(const Environment *self, const char *name);
 Function *env_find_fn(const Environment *self, const char *name);
@@ -31,6 +31,6 @@ Scope *env_enter_fn(Environment *self, Function *fn);
 void env_leave_fn(Environment *self);
 void env_save_caller(Environment *self, Scope *caller_scope);
 void env_restore_caller(Environment *self);
-bool env_add_fn(Environment *self, Function *fn);
-bool env_add_local_var(Environment *self, Variable *var);
-bool env_add_global_var(Environment *self, Variable *var);
+void env_add_fn(Environment *self, Function *fn);
+void env_add_local_var(Environment *self, Variable *var);
+void env_add_global_var(Environment *self, Variable *var);

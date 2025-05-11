@@ -112,7 +112,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             return self->types->error_type;
         }
 
-        if (!type_can_implicitly_convert(t2, t1)) {
+        if (!type_convertable(t2, t1)) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = t2;
@@ -141,7 +141,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             return self->types->error_type;
         }
 
-        if (!type_can_implicitly_convert(t2, t1->list_type.type)) {
+        if (!type_convertable(t2, t1->list_type.type)) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = self->types->builtin_int;
@@ -170,7 +170,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             return self->types->error_type;
         }
 
-        if (!type_can_implicitly_convert(t2, self->types->builtin_int)) {
+        if (!type_convertable(t2, self->types->builtin_int)) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = self->types->builtin_int;
@@ -392,7 +392,7 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
             continue;
         }
 
-        if (!type_can_implicitly_convert(value_type, param->type)) {
+        if (!type_convertable(value_type, param->type)) {
             DiagnosticMessage dmsg;
             dmsg.kind = DIAGNOSTIC_BAD_ARG_TYPE;
             dmsg.bad_arg_type.expected = param->type;
@@ -503,7 +503,7 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
         Type *value_type = check_expr(self, node->var_decl.rvalue);
 
         if (value_type->id != TYPE_ERROR &&
-            !type_can_implicitly_convert(value_type, type)) {
+            !type_convertable(value_type, type)) {
             DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
             dmsg.type_mismatch.expected = type;
             dmsg.type_mismatch.found = value_type;
@@ -706,12 +706,12 @@ static void check_return(SemChecker *self, const AstNode *node) {
         return;
     }
 
-    if (!type_can_implicitly_convert(ret_type, self->types->builtin_void) &&
+    if (!type_convertable(ret_type, self->types->builtin_void) &&
         expected == self->types->builtin_void) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_VOID_RETURN, {0}};
 
         error(self, &dmsg);
-    } else if (!type_can_implicitly_convert(ret_type, expected)) {
+    } else if (!type_convertable(ret_type, expected)) {
         DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
         dmsg.type_mismatch.expected = self->env.curr_fn->type;
         dmsg.type_mismatch.found = ret_type;

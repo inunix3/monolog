@@ -5,6 +5,7 @@
 
 typedef enum ExprResultKind {
     EXPR_ERROR,
+    EXPR_HALT,
     EXPR_VALUE,
     EXPR_VAR,
     EXPR_REF,

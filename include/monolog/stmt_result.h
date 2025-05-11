@@ -4,6 +4,7 @@
 
 typedef enum StmtResultKind {
     STMT_ERROR,
+    STMT_HALT,
     STMT_VOID,
     STMT_BREAK,
     STMT_CONTINUE,
