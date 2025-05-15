@@ -3,7 +3,21 @@ title: Monolog
 author: Alexey Kachaev, E1
 include-before:
 - '`\newpage{}`{=latex}'
+header-includes:
+- '\usepackage{amssymb}'
+- '\usepackage{enumitem}'
+- '\setlist[itemize,1]{label=\tiny$\blacksquare$}'
 ---
+
+\newpage
+
+# Pro učitelé
+
+Myslím si, že celkem mám projekt dokončený, proto považoval bych to za final draft. Samozřejmně,
+počítam s možnými výtkami a návrhy pro vylepšení.
+
+Implementace neodpovídá 100% původnímu zadání, ale odchylka je velice malá, a implementoval jsem
+dokonce trochu víc, než mělo být.
 
 \newpage
 
@@ -309,103 +323,133 @@ index. Důležitý je, že hodnota indexu musí být v rozmezí $\left[0, N\righ
 Pokud výsledkem výrazu bude destinace, jako třeba proměnná nebo prvek v seznamu, a je na pravý straně,
 dá se změnit hodnotu, která je umistěna v destinaci.
 
-| Levá strana           | Pravá strana | Operátor | Operace                                     | Vedlejší učínky | Výsledný typ  |
-|:---------------------:|:------------:|:--------:|---------------------------------------------|:---------------:|:-------------:|
-| proměnná typu `T`     | `T`          | `=`      | změní hodnotu proměnné                      | ANO             | `T`           |
-| prvek v poli typu `T` | `T`          | `=`      | změní hodnotu uloženou v poli               | ANO             | `T`           |
-| znak v řetězci        | `int`        | `=`      | změní specifikovaný znak                    | ANO             | `int`         |
+| Levá strana                          | Pravá strana | Operátor | Operace                                     | Vedlejší učínky | Výsledný typ  |
+|:------------------------------------:|:------------:|:--------:|---------------------------------------------|:---------------:|:-------------:|
+| proměnná typu `T`                    | `T`          | `=`      | změní hodnotu proměnné                      | ANO             | `T`           |
+| prvek v poli typu `T`                | `T`          | `=`      | změní hodnotu uloženou v poli               | ANO             | `T`           |
+| proměnná nebo prvek v poli typu `T?` | `T`          | `=`      | uloží hodnotu do volitelného typu           | ANO             | `T`           |
+| proměnná nebo prvek v poli typu `T?` | `nil`        | `==`     | ověří, zda levá straná je prazdná           | ANO             | `T`           |
+| znak v řetězci                       | `int`        | `=`      | změní specifikovaný znak                    | ANO             | `int`         |
 
 Při přiřazování hodnoty, hodnota se **kopiruje**. Takže, když například proměnné `b` přiřadíme
 hodnotu proměnné `a`, následně modifikace hodnoty `b` nebude ovlivňovat hodnotu `a`.
+
+## Priorita operátoru a asociativita
+
+Monolog respektuje prioritu a asociativitu operátorů, zejmena u matematických.
+
+Následující tabulka uvádí prioritu a asociativitu všech operátorů. Operátory jsou uvedeny sestupně
+shora dolů, od nejvyšší priority po nejnižší.
+
+| Priorita | Operátor(y)         | Popis               | Asociativita  |
+|:--------:|:--------------------|:--------------------|:--------------|
+| 1        | `++ -- () []`       | Sufixové operátory  | zleva doprava |
+| 2        | `+ - ! # $ * ++ --` | Prefixové operátory | zprava doleva |
+| 3        | `* / %`             | Násobení, dělení    | zleva doprava |
+| 4        | `+ -`               | Sčítání, odčítání   | zleva doprava |
+| 5        | `< <= > >=`         | Relační operátory   | zleva doprava |
+| 6        | `== !=`             | Rovnost, nerovnost  | zleva doprava |
+| 7        | `&&`                | Konjunkce           | zleva doprava |
+| 8        | `||`                | Disjunkce           | zleva doprava |
+| 9        | `=`                 | Přiřazování         | zprava doleva |
 
 # Řídicí příkazy
 
 Monolog obsahuje základni příkazy pro větvení a cyklování kodu:
 
 - Větvení
-    - `if`
-    - `else`
+    - `if` - podminečné vykonávání kodu.
+    - `else` - alternativní cesta kodu.
 - Cyklování
-    - `while`
-    - `for`
+    - `while` - cyklování.
+    - `for` - iterace/cyklování.
+- Další
+    - `return` - návrat z funkce.
+    - `break` - ukončení cyklu.
+    - `continue` - přeskočení těla cyklu.
 
 ## if, else
 
-### Syntaxe
-
 ```
-if-statement ::= 'if' '(' condition-expr ')' statement? ()?
-
-if
+if-statement ::= 'if' '(' expression ')' statement? else-statement? 
+else-statement ::= 'else' statement?
 ```
 
-- `podmínka` je výraz.
-- `hlavní-tělo` je výraz nebo příkaz, je opcionální.
-- `alternativní-tělo` je výraz nebo příkaz, je opcionální.
+1. Ověří, jestli podmínka je pravdivá. Pokud ano, vykoná se tělo.
 
-### Chování
-
-1. Příkaz `if` ověří, jestli podmínka (výraz v závorkach) je pravdivý (tj. nenulový). Pokud ano,
-vykoná se jeho hlavní tělo.
-
-Tělo nemusí být.
-
-2. Příkaz `if` ověří, jestli podmínka (výraz v závorkach) je pravdivý (tj. nenulový). Pokud ano,
-vykoná se jeho tělo.
-
-Pokud není (tj. je nulové), vykoná se `else` větev (alternativní tělo).
-
-Oba těla nemusejí být.
+2. Pokud podmínka není pravdivá, vykoná se alternativní tělo, dané větví `else`.
 
 ## while
 
-### Syntaxe
-
 ```
-while (podmínka)
-    tělo
+while-statement ::= 'while' '(' expression ')' statement?
 ```
 
-- `podmínka` je výraz, je opcionální.
-- `tělo` je výraz nebo příkaz, je opcionální.
+1. Ověří, jestli podmínka je pravdivá.. Pokud ano, vykoná se tělo.
 
-### Chování
-
-Příkaz `while` ověří, jestli podmínka (výraz v závorkach) je pravdivý (tj. nenulový). Pokud ano,
-vykoná se jeho hlavní tělo.
-
-Pak opětovně zkontroluje podmínku, jestli je pravdivá. Pokud ano, tento proces se zopakuje.
-Pokud není, ukončí se.
-
-Tělo nemusí být.
+2. Po vykonání těla, Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
+zopakuje. Pokud není, cyklus se ukončí.
 
 ## for
 
-### Syntaxe
-
 ```
-for-statement ::= 'for' '(' init-clause? ';' condition? ';' iter-expr? ')' for-body
+for-statement ::= 'for' '(' init-clause? ';' condition? ';' iter-expr? ')' statement?
 init-clause ::= expression | declaration
 condition ::= expression
 iter-expr ::= expression
 ```
 
-- `inicializační-příkaz` je výraz nebo deklarace, je opcionální.
-- `podmínka` je výraz, je opcionální.
-- `iterační-příkaz` je výraz, je opcionální.
-- `tělo` je výraz nebo příkaz, je opcionální.
+1. Pokud `init-clause` je dán, nejdřív vykona jeho.
 
-### Chování
+2. Pokud výraz `condition` je dán, ověří zda je podmínka pravdivá. Pokud `condition` není, jeho vychozí
+hodnotou bude čislo 1.
 
-1. Pokud `inicializační-příkaz` je uveden, příkaz `for` nejdřív vykoná jeho.
-2. Pak, pokud výraz `podmínka` je uveden, ověří, zda je pravdivý.
-3. Pokud `podmínka` je pravdivá nebo není uvedena, výkona `tělo`.
-4. Po výkonávání těla, vykoná `iterační-příkaz`
+3. Pokud podmínka je pravdivá, vykoná tělo.
 
-1. Příkaz `for` ověří, jestli podmínka (výraz v závorkach) je pravdivý (tj. nenulový). Pokud ano,
-vykoná se jeho tělo (1. případ).
+4. Hned po vykonávání těla, vykoná výraz `iter-expr`, pokud je dán.
 
-2. Příkaz `if` ověří, jestli podmínka (výraz v závorkach) je pravdivý (tj. nenulový).
+5. Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
+zopakuje. Pokud není, cyklus se ukončí.
+
+## return
+
+```
+return-statement ::= 'return' expression?
+```
+
+- Tento příkaz může se vyskytovat jenom ve funkcích.
+
+- Způsobí, že vykonávání opustí aktuální funkcí a bude pokřacovat hned po místu v kodě, kde
+byla funkce vyvoláná.
+
+- Pokud funkce má týp rozdilný od `void`, tento příkaz musi obsahovat návratový výraz, hodnota
+kterého bude vracená
+
+- Pokud funkce má typ `void`, tento příkaz musí být bez návratového výrazu.
+
+## break
+
+```
+break-statement ::= 'break'
+```
+
+- Tento příkaz může se vyskytovat jenom v cyklech.
+
+- Způsobí, že vykonávání opustí aktualní cyklus a bude pokračovat hned po konci tela cyklu.
+
+## continue
+
+```
+continue-statement ::= 'continue'
+```
+
+- Tento příkaz může se vyskytovat jenom v cyklech.
+
+- Způsobí, že vykonávání přeskočí zbýtek těla cyklu a cyklus bude opakovan.
+
+- Po přeskočení, `while` ověří pravdivost podmínky.
+
+- Po přeskočení, `for` nebude vykonávát iterační příkaz, ověří pravdivost podmínky.
 
 # Vázba jmen a entit
 
@@ -464,6 +508,10 @@ které může využit.
 Volání funkce znamena vykonat určitou funkcí, a pokud má definované parametry, vykonat s určitými
 argumentemi.
 
+Když funkce má parametry a je vyvoláváná syntaxi `function-call`, na místo parametru jsou
+předáváný tzv. argumenty, a interpretátor pak vytvoří proměnné s názvem parametru a hodnotou
+přislušného argumentu, a kód funkce pak bude moci využit tyto proměnné (parametry).
+
 Při volání funkce, typ každého argumentu se musí schodovat s typem parametru, jehož pozici zaujímá.
 
 # Rozsah platnosti
@@ -502,6 +550,36 @@ int z;
 Vyvolávání funkce vytváří rozsah platnosti hned po globálním rozsahu, což dovoluje vyhnout se
 situací, když funkce má přístup k rozsahu volajícího a jejích rodičovským rozsahum (kromě
 globálního), což je kontraintuitivní a obvykle nechtěné chování.
+
+Protože cyklus for dovoluje deklarovat proměnné, on taký vytváří nový rozsah, ale ten je
+podrozsahem rozsahu, ve kterém se vyskytuje tento cyklus:
+
+```c
+// Zápis:
+
+int z;
+
+for (int i = 0; i < 10; ++i) {
+    z = z + i * i;
+}
+
+println($z);
+
+// Význam:
+
+int z;
+
+{
+    int i = 0;
+
+    while (i < 10) {
+        z = z + i * i;
+        ++i;
+    }
+}
+
+println($z);
+```
 
 # Rezoluce jmen
 
@@ -545,10 +623,16 @@ int y;
 
 # Paměťový Model
 
-Paměťový model v Monologu je stavěn na základě rozsahu platnosti.
+Paměťový model v Monologu je stavěn na základě **rozsahu životnosti**, které úzce souvisejí s
+rozsahy platnosti.
 
-**Rozsah žitovnosti** pokrývá celý rozsah platnosti, a obsahuje všechny hodnoty a proměnné, které byly
+## Rozsah životnosti
+
+**Rozsah životnosti** pokrývá celý rozsah platnosti, a obsahuje všechny hodnoty a proměnné, které byly
 vytvořeny/deklarováný v příslušnem rozsahu platnosti.
+
+Konec životnosti znamená, ze hodnota nebo proměnná se uvolnějí z pamětí a přestanou existovat,
+a pamět, kterou zaujímalí, interpretátor bude moci opětovně využit.
 
 ```c
 // globální rozsah
@@ -574,7 +658,88 @@ int y;
 // životnost proměnných x a y končí tady
 ```
 
-Každá hodnota má určit
+## Statické a dynamické hodnoty
 
-Každá funkce a
-`for` cyklus definují vlastní oblasti.
+Podle využití paměti, hodnoty se děli na:
+
+1. statické
+
+    - celá čísla (`int`)
+    - prázdný typ (`void`)
+    - `nil`
+    - prazdné volitelné typy (`T?`)
+
+2. dynamické
+
+    - řetězce (`string`)
+    - seznamy (`[T]`)
+    - neprázdné volitelné typy (`T?`)
+
+Dynamické hodnoty se uvolňují, když končí jejích rozsah životnosti. Pokud dynamická hodnota je
+hodnotou proměnné, hodnota bude uvolněná spolu s proměnnou.
+
+## Předávání argumentů u funkcí
+
+Argumenty předávájí se takovým způsobem, že buď se kopírují, nebo předávájí se odkazem - změná
+parametru uvnitř funkce ovlivní hodnotu argumentu u volájicího.
+
+Pokud hodnota argumentu je výsledkem nějakého výrazu a nemá vázané jmeno, tento argument bude vždy
+zkopírován. Pokud ale argument je proměnná, v závislosti od její typu, bude předan odkazem a změna
+hodnoty argumentu bude ovlivňovat proměnnu/prvek. Pokud argument je prvek v seznamu/řetězci,
+argument je vždy předáván odkazem. Take 
+
+| Původ argumentu              | Typ                                  | Typ argumentu |
+|------------------------------|:------------------------------------:|---------------|
+| Výsledek výrazu              | `T`                                  | kopie         |
+| Proměnná                     | `T`, `T` != `int`, `void` nebo `nil` | odkáz         |
+| Proměnná                     | `T`, `T` = `int`, `void` nebo `nil`  | kopie         |
+| Prvek v seznamu nebo řetězci | `T`                                  | odkáz         |
+
+# Zabudováné funkce
+
+Monolog obsahuje zabudované funkce, které jsou všude přístupné.
+
+## print
+
+```c
+void print(string s);
+```
+
+Vypíše řetězec `s` do standárdního výstupu.
+
+## println
+
+```c
+void println(string s);
+```
+
+Vypíše řetězec `s` do standárdního výstupu spolu se znakem přenosu řádku.
+
+## exit
+
+```c
+void exit(int code);
+```
+
+Ukončí program s hodnotou, danou parametrem `code`.
+
+## input_int
+
+```c
+int? input_int();
+```
+
+Načté celé číslo ze standárdního vstupu. V případě, že celé číslo bude špatně zadano, nebo v
+průběhu načítání se stane chyba vstupu/výstupu, vratí `nil`.
+
+Tato funkce je blokovací.
+
+## input_string
+
+```c
+string? input_string();
+```
+
+Načté řetězec ze standárdního vstupu. V případě chyby vstupu/výstupu, vratí `nil`.
+
+Tato funkce je blokovací.
