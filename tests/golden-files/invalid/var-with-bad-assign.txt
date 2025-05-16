@@ -1,11 +1,5 @@
-var-decl:
-  int-type
-  identifier a
-  error
-var-decl:
-  string-type
-  identifier var
-  error
+error
+error
 error
 var-decl:
   string-type

@@ -1,12 +1,20 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
 #include "lexer.h"
+#include "src_info.h"
 #include "type.h"
 
 typedef enum DiagnosticKind {
     DIAGNOSTIC_INTERNAL_ERROR,
     DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION,
-    DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION,
+    DIAGNOSTIC_BAD_UNARY_OPERAND,
     DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION,
     DIAGNOSTIC_MISMATCHED_TYPES,
     DIAGNOSTIC_EXPECTED_LIST,
@@ -14,6 +22,7 @@ typedef enum DiagnosticKind {
     DIAGNOSTIC_UNDECLARED_FUNCTION,
     DIAGNOSTIC_PARAM_REDECLARATION,
     DIAGNOSTIC_FN_REDEFINITION,
+    DIAGNOSTIC_FN_BAD_PLACE,
     DIAGNOSTIC_TOO_FEW_ARGS,
     DIAGNOSTIC_TOO_MANY_ARGS,
     DIAGNOSTIC_BAD_ARG_TYPE,
@@ -28,6 +37,7 @@ typedef enum DiagnosticKind {
 
 typedef struct DiagnosticMessage {
     enum DiagnosticKind kind;
+    SourceInfo src_info;
 
     union {
         struct {

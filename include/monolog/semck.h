@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
 #include "ast.h"
@@ -13,11 +20,9 @@ typedef struct SemChecker {
     Environment env;
     TypeSystem *types;
     int loop_depth;
-    Vector builtin_fn_args;
 
     Vector dmsgs; /* Vector<DiagnosticMessage> */
     bool had_error;
-    bool fatal_error;
 } SemChecker;
 
 void semck_init(SemChecker *self, TypeSystem *types);

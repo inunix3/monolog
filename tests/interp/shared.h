@@ -46,7 +46,7 @@ static bool parse(const char *input) {
 
     semck_reset(&g_semck);
 
-    if (!parser.error_state &&
+    if (!parser.had_error &&
         semck_check(
             &g_semck, &g_ast, &g_interp.env.global_scope->vars,
             &g_interp.env.funcs

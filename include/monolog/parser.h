@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
 #include "ast.h"
@@ -24,12 +31,13 @@ typedef struct Parser {
     Token *toks;
     size_t tok_count;
     size_t tok_idx;
+    SourceInfo src_info;
 
     Token *prev;
     Token *curr;
 
     /* Indicates if there was an error */
-    bool error_state;
+    bool had_error;
     /* Used for error recovery */
     bool panic_mode;
     bool log_errors;

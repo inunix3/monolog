@@ -5,6 +5,7 @@
  * (see LICENSE.md in the root of project).
  */
 
+#include <monolog/cli.h>
 #include <monolog/interp.h>
 #include <monolog/lexer.h>
 #include <monolog/parser.h>
@@ -20,14 +21,15 @@
 
 static void
 highlighter(ic_highlight_env_t *henv, const char *input, void *arg) {
-    (void)arg;
+    (void) arg;
 
-    static const char *keywords[] = {"break",   "continue", "return", "print",
-                                     "println", "exit",     NULL};
+    static const char *keywords[] = {"break",     "continue",     "return",
+                                     "print",     "println",      "exit",
+                                     "input_int", "input_string", NULL};
     static const char *controls[] = {"if", "else", "while", "for", NULL};
     static const char *types[] = {"int", "string", "void", NULL};
 
-    long len = (long)strlen(input);
+    long len = (long) strlen(input);
 
     for (long i = 0; i < len; ++i) {
         switch (input[i]) {
@@ -99,63 +101,23 @@ highlighter(ic_highlight_env_t *henv, const char *input, void *arg) {
     }
 }
 
-static void cmd_tokenize(char *buf, size_t size) {
-    Vector tokens;
-    vec_init(&tokens, sizeof(Token));
+int cmd_run(int argc, char **argv) {
+    UNUSED(argc);
 
-    lexer_lex(buf, size, &tokens);
+    const char *filename = argv[2];
 
-    for (size_t i = 0; i < tokens.len; ++i) {
-        const Token *toks = tokens.data;
-        const Token *tok = &toks[i];
+    char *input = read_file(filename);
 
-        printf("Token %zu:\n", i + 1);
-        printf("  kind: %s (%d)\n", token_kind_to_str(tok->kind), tok->kind);
-        printf("  len: %zu\n", tok->len);
-        printf("  src excerpt: '%.*s'\n", (int)tok->len, tok->src);
+    if (!input) {
+        perror("error: cannot read input file");
+
+        return -1;
     }
 
-    vec_deinit(&tokens);
-}
-
-static void cmd_parse(char *buf, size_t size) {
     Vector tokens;
     vec_init(&tokens, sizeof(Token));
 
-    lexer_lex(buf, size, &tokens);
-
-    Parser parser = parser_new(tokens.data, tokens.len);
-    parser.log_errors = true;
-
-    Ast ast = parser_parse(&parser);
-    ast_dump(&ast, stdout);
-
-    if (!parser.error_state) {
-        TypeSystem types;
-        type_system_init(&types);
-
-        SemChecker semck;
-        semck_init(&semck, &types);
-        semck_check(&semck, &ast, NULL, NULL);
-
-        DiagnosticMessage *dmsgs = semck.dmsgs.data;
-
-        for (size_t i = 0; i < semck.dmsgs.len; ++i) {
-            printf("error: %s\n", dmsg_to_str(&dmsgs[i]));
-        }
-
-        semck_deinit(&semck);
-        type_system_deinit(&types);
-    }
-
-    vec_deinit(&tokens);
-}
-
-static int cmd_run(char *buf, size_t size) {
-    Vector tokens;
-    vec_init(&tokens, sizeof(Token));
-
-    lexer_lex(buf, size, &tokens);
+    lexer_lex(input, strlen(input), &tokens);
 
     Parser parser = parser_new(tokens.data, tokens.len);
     parser.log_errors = true;
@@ -165,16 +127,21 @@ static int cmd_run(char *buf, size_t size) {
     TypeSystem types;
     type_system_init(&types);
 
-    bool has_error = parser.error_state;
-    if (!has_error) {
+    bool had_error = parser.had_error;
 
+    if (!had_error) {
         SemChecker semck;
         semck_init(&semck, &types);
-        has_error = !semck_check(&semck, &ast, NULL, NULL);
+        had_error = !semck_check(&semck, &ast, NULL, NULL);
         DiagnosticMessage *dmsgs = semck.dmsgs.data;
 
         for (size_t i = 0; i < semck.dmsgs.len; ++i) {
-            printf("error: %s\n", dmsg_to_str(&dmsgs[i]));
+            const DiagnosticMessage *dmsg = &dmsgs[i];
+
+            printf(
+                "%d:%d: error: %s\n", dmsg->src_info.line, dmsg->src_info.col,
+                dmsg_to_str(dmsg)
+            );
         }
 
         semck_deinit(&semck);
@@ -182,7 +149,7 @@ static int cmd_run(char *buf, size_t size) {
 
     int exit_code = -1;
 
-    if (!has_error) {
+    if (!had_error) {
         Interpreter interp;
         interp_init(&interp, &ast, &types);
         interp.log_errors = true;
@@ -199,16 +166,101 @@ static int cmd_run(char *buf, size_t size) {
     return exit_code;
 }
 
-static void print_help(void) {
-    printf("usage: monolog COMMAND FILENAME\n"
-           "\n"
-           "COMMAND can be one of:\n"
-           "  tokenize - print tokens after lexing and exit\n"
-           "  parse - print the AST after parsing and exit\n"
-           "  help - print this message and exit\n");
+int cmd_scan(int argc, char **argv) {
+    UNUSED(argc);
+
+    const char *filename = argv[2];
+
+    char *input = read_file(filename);
+
+    if (!input) {
+        perror("error: cannot read input file");
+
+        return -1;
+    }
+
+    Vector tokens;
+    vec_init(&tokens, sizeof(Token));
+    lexer_lex(input, strlen(input), &tokens);
+
+    for (size_t i = 0; i < tokens.len; ++i) {
+        const Token *toks = tokens.data;
+        const Token *tok = &toks[i];
+
+        printf("Token %zu:\n", i + 1);
+        printf("  kind: %s (%d)\n", token_kind_to_str(tok->kind), tok->kind);
+        printf("  len: %zu\n", tok->len);
+        printf("  src: '%.*s'\n", (int) tok->len, tok->src);
+    }
+
+    vec_deinit(&tokens);
+
+    return 0;
 }
 
-static void cmd_repl(void) {
+int cmd_parse(int argc, char **argv) {
+    UNUSED(argc);
+
+    const char *filename = argv[2];
+
+    char *input = read_file(filename);
+
+    if (!input) {
+        perror("error: cannot read input file");
+
+        return -1;
+    }
+
+    Vector tokens;
+    vec_init(&tokens, sizeof(Token));
+
+    lexer_lex(input, strlen(input), &tokens);
+
+    Parser parser = parser_new(tokens.data, tokens.len);
+    parser.log_errors = true;
+
+    Ast ast = parser_parse(&parser);
+    ast_dump(&ast, stdout);
+
+    if (!parser.had_error) {
+        TypeSystem types;
+        type_system_init(&types);
+
+        SemChecker semck;
+        semck_init(&semck, &types);
+        semck_check(&semck, &ast, NULL, NULL);
+
+        DiagnosticMessage *dmsgs = semck.dmsgs.data;
+
+        for (size_t i = 0; i < semck.dmsgs.len; ++i) {
+            const DiagnosticMessage *dmsg = &dmsgs[i];
+
+            printf(
+                "%d:%d: error: %s\n", dmsg->src_info.line, dmsg->src_info.col,
+                dmsg_to_str(dmsg)
+            );
+        }
+
+        semck_deinit(&semck);
+        type_system_deinit(&types);
+    }
+
+    vec_deinit(&tokens);
+
+    return parser.had_error ? -1 : 0;
+}
+
+static void print_help(void) {
+    printf("usage: monolog [run] FILENAME\n"
+           "       monolog scan FILENAME\n"
+           "       monolog parse FILENAME\n"
+           "       monolog repl\n");
+}
+
+int cmd_repl(int argc, char **argv) {
+    UNUSED(argc);
+    UNUSED(argv);
+
     Vector tokens;
     vec_init(&tokens, sizeof(Token));
 
@@ -218,97 +270,92 @@ static void cmd_repl(void) {
     TypeSystem types;
     type_system_init(&types);
 
+    SemChecker semck;
+    semck_init(&semck, &types);
+
     Interpreter interp;
     interp_init(&interp, NULL, &types);
     interp.log_errors = true;
 
     char *input;
     while ((input = ic_readline(""))) {
-        bool stop = strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0;
+        interp.had_error = false;
+        interp.halt = false;
 
-        if (!stop) {
-            lexer_lex(input, strlen(input), &tokens);
-            Parser parser = parser_new(tokens.data, tokens.len);
-            parser.log_errors = true;
-            Ast ast = parser_parse(&parser);
-            bool has_error = parser.error_state;
+        lexer_lex(input, strlen(input), &tokens);
 
-            if (!has_error) {
-                SemChecker semck;
-                semck_init(&semck, &types);
-                has_error = !semck_check(
-                    &semck, &ast, &interp.env.global_scope->vars,
-                    &interp.env.funcs
+        Parser parser = parser_new(tokens.data, tokens.len);
+        parser.log_errors = true;
+
+        Ast ast = parser_parse(&parser);
+        bool had_error = parser.had_error;
+
+        if (!had_error) {
+            semck_reset(&semck);
+
+            had_error = !semck_check(
+                &semck, &ast, &interp.env.global_scope->vars, &interp.env.funcs
+            );
+
+            DiagnosticMessage *dmsgs = semck.dmsgs.data;
+
+            for (size_t i = 0; i < semck.dmsgs.len; ++i) {
+                const DiagnosticMessage *dmsg = &dmsgs[i];
+
+                printf(
+                    "%d:%d: error: %s\n", dmsg->src_info.line,
+                    dmsg->src_info.col, dmsg_to_str(dmsg)
                 );
-
-                DiagnosticMessage *dmsgs = semck.dmsgs.data;
-
-                for (size_t i = 0; i < semck.dmsgs.len; ++i) {
-                    printf("error: %s\n", dmsg_to_str(&dmsgs[i]));
-                }
-
-                semck_deinit(&semck);
             }
-
-            if (!has_error) {
-                interp.had_error = false;
-                interp.ast = &ast;
-                interp_walk(&interp);
-
-                if (interp.halt) {
-                    exit(interp.exit_code);
-                }
-            }
-
-            ast_destroy(&ast);
         }
 
+        if (!had_error) {
+            interp.ast = &ast;
+            interp_walk(&interp);
+        }
+
+        ast_destroy(&ast);
         free(input);
         vec_clear(&tokens);
 
-        if (stop) {
+        if (!interp.had_error && interp.halt) {
             break;
         }
     }
 
+    interp_deinit(&interp);
+    semck_deinit(&semck);
     type_system_deinit(&types);
     vec_deinit(&tokens);
+
+    return 0;
 }
 
+static CliCommand g_cmds[] = {
+    {.name = "run", .args = 1, .fn = cmd_run},
+    {.name = "scan", .args = 1, .fn = cmd_scan},
+    {.name = "parse", .args = 1, .fn = cmd_parse},
+    {.name = "repl", .args = 0, .fn = cmd_repl}
+};
+
 int main(int argc, char **argv) {
+    /* monolog run FILENAME */
     if (argc < 2) {
         print_help();
 
-        return EXIT_FAILURE;
+        return -1;
     }
 
     const char *cmd = argv[1];
 
-    if (strcmp(cmd, "repl") == 0) {
-        cmd_repl();
-
-        return EXIT_SUCCESS;
+    for (size_t i = 0; i < ARRAY_SIZE(g_cmds); ++i) {
+        if (strcmp(g_cmds[i].name, cmd) == 0) {
+            return g_cmds[i].fn(argc, argv);
+        }
     }
 
-    const char *filename = argv[2];
+    fprintf(stderr, "error: invalid command %s\n", cmd);
+    print_help();
 
-    char *input = read_file(filename);
-    size_t size = strlen(input);
-
-    if (strcmp(cmd, "tokenize") == 0) {
-        cmd_tokenize(input, size);
-    } else if (strcmp(cmd, "parse") == 0) {
-        cmd_parse(input, size);
-    } else if (strcmp(cmd, "run") == 0) {
-        int exit_code = cmd_run(input, size);
-        free(input);
-
-        return exit_code;
-    } else {
-        fprintf(stderr, "bad command\n");
-    }
-
-    free(input);
-
-    return EXIT_SUCCESS;
+    return -1;
 }

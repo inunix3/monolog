@@ -72,10 +72,7 @@ void *vec_emplace(Vector *self) {
         return NULL;
     }
 
-    void *block = self->data + self->len++ * self->element_size;
-    memset(block, 0, self->element_size);
-
-    return block;
+    return self->data + self->len++ * self->element_size;
 }
 
 void vec_pop(Vector *self) {

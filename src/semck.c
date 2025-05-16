@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #include <monolog/semck.h>
 #include <monolog/type.h>
 #include <monolog/utils.h>
@@ -24,7 +31,7 @@ static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
     case AST_NODE_GROUPING:
         return expr_is_mutable(self, node->grouping.expr);
     case AST_NODE_UNARY:
-        return node->unary.op == TOKEN_OP_MUL
+        return node->unary.op.kind == TOKEN_MUL
                    ? expr_is_mutable(self, node->unary.right)
                    : false;
     case AST_NODE_SUBSCRIPT:
@@ -35,7 +42,7 @@ static bool expr_is_mutable(SemChecker *self, const AstNode *node) {
 }
 
 static Type *check_binary(SemChecker *self, const AstNode *node) {
-    TokenKind op = node->binary.op;
+    TokenKind op = node->binary.op.kind;
     Type *t1 = check_expr(self, node->binary.left);
     Type *t2 = check_expr(self, node->binary.right);
 
@@ -44,7 +51,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
     }
 
     switch (op) {
-    case TOKEN_OP_PLUS:
+    case TOKEN_PLUS:
         if (type_equal(t1, self->types->builtin_int) &&
             type_equal(t2, self->types->builtin_int)) {
             return self->types->builtin_int;
@@ -61,8 +68,8 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
             return self->types->error_type;
         }
-    case TOKEN_OP_EQUAL:
-    case TOKEN_OP_NOT_EQUAL:
+    case TOKEN_EQUAL:
+    case TOKEN_NOT_EQUAL:
         if (t1->id == TYPE_OPTION && t2->id == TYPE_OPTION) {
             /* opt1 == opt2 */
             return self->types->builtin_int;
@@ -79,16 +86,16 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         /* Fallthrough */
-    case TOKEN_OP_MINUS:
-    case TOKEN_OP_MUL:
-    case TOKEN_OP_DIV:
-    case TOKEN_OP_MOD:
-    case TOKEN_OP_LESS:
-    case TOKEN_OP_GREATER:
-    case TOKEN_OP_LESS_EQUAL:
-    case TOKEN_OP_GREATER_EQUAL:
-    case TOKEN_OP_AND:
-    case TOKEN_OP_OR:
+    case TOKEN_MINUS:
+    case TOKEN_MUL:
+    case TOKEN_DIV:
+    case TOKEN_MOD:
+    case TOKEN_LESS:
+    case TOKEN_GREATER:
+    case TOKEN_LESS_EQUAL:
+    case TOKEN_GREATER_EQUAL:
+    case TOKEN_AND:
+    case TOKEN_OR:
         if (type_equal(t1, self->types->builtin_int) &&
             type_equal(t2, self->types->builtin_int)) {
             return self->types->builtin_int;
@@ -103,9 +110,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
             return self->types->error_type;
         }
-    case TOKEN_OP_ASSIGN:
+    case TOKEN_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+            };
 
             error(self, &dmsg);
 
@@ -113,7 +122,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         if (!type_convertable(t2, t1)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_MISMATCHED_TYPES, node->binary.op.src_info, {0}
+            };
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = t2;
 
@@ -123,9 +134,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         return t1;
-    case TOKEN_OP_ADD_ASSIGN:
+    case TOKEN_ADD_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+            };
 
             error(self, &dmsg);
 
@@ -133,7 +146,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         if (t1->id != TYPE_LIST) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPECTED_LIST, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPECTED_LIST, node->binary.left->tok.src_info, {0}
+            };
             dmsg.type_mismatch.found = t2;
 
             error(self, &dmsg);
@@ -142,7 +157,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         if (!type_convertable(t2, t1->list_type.type)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_MISMATCHED_TYPES,
+                node->binary.right->tok.src_info,
+                {0}
+            };
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = self->types->builtin_int;
 
@@ -152,9 +171,13 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         return self->types->builtin_void;
-    case TOKEN_OP_SUB_ASSIGN:
+    case TOKEN_SUB_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                node->binary.left->tok.src_info,
+                {0}
+            };
 
             error(self, &dmsg);
 
@@ -162,7 +185,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         if (t1->id != TYPE_LIST) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPECTED_LIST, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPECTED_LIST, node->binary.left->tok.src_info, {0}
+            };
             dmsg.type_mismatch.found = t2;
 
             error(self, &dmsg);
@@ -171,7 +196,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         }
 
         if (!type_convertable(t2, self->types->builtin_int)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_MISMATCHED_TYPES,
+                node->binary.left->tok.src_info,
+                {0}
+            };
             dmsg.type_mismatch.expected = t1;
             dmsg.type_mismatch.found = self->types->builtin_int;
 
@@ -182,7 +211,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         return self->types->builtin_void;
     default: {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_INTERNAL_ERROR, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_INTERNAL_ERROR, node->binary.op.src_info, {0}
+        };
         error(self, &dmsg);
 
         return self->types->error_type;
@@ -191,7 +222,7 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 }
 
 static Type *check_unary(SemChecker *self, const AstNode *node) {
-    TokenKind op = node->unary.op;
+    TokenKind op = node->unary.op.kind;
     Type *type = check_expr(self, node->unary.right);
 
     if (type->id == TYPE_ERROR) {
@@ -199,25 +230,20 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
     }
 
     switch (op) {
-    case TOKEN_OP_PLUS:
-    case TOKEN_OP_MINUS:
-    case TOKEN_OP_EXCL:
+    case TOKEN_PLUS:
+    case TOKEN_MINUS:
+    case TOKEN_EXCL:
         if (type_equal(type, self->types->builtin_int)) {
             return self->types->builtin_int;
         } else {
-            DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
-            };
-            dmsg.unary_op_comb.op = op;
-            dmsg.unary_op_comb.type = type;
-            error(self, &dmsg);
-
-            return self->types->error_type;
+            goto bad_unary_operand;
         }
-    case TOKEN_OP_INC:
-    case TOKEN_OP_DEC:
+    case TOKEN_INC:
+    case TOKEN_DEC:
         if (!expr_is_mutable(self, node->unary.right)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+            };
 
             error(self, &dmsg);
 
@@ -225,67 +251,58 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         }
 
         if (type->id != TYPE_INT) {
-            DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
-            };
-            dmsg.unary_op_comb.op = op;
-            dmsg.unary_op_comb.type = type;
-            error(self, &dmsg);
-
-            return self->types->error_type;
+            goto bad_unary_operand;
         }
 
         return type;
-    case TOKEN_OP_HASHTAG:
+    case TOKEN_HASHTAG:
         if (type->id != TYPE_LIST && type->id != TYPE_STRING) {
-            DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
-            };
-            dmsg.unary_op_comb.op = op;
-            dmsg.unary_op_comb.type = type;
-            error(self, &dmsg);
-
-            return self->types->error_type;
+            goto bad_unary_operand;
         }
 
         return self->types->builtin_int;
-    case TOKEN_OP_DOLAR:
+    case TOKEN_DOLAR:
         if (type->id != TYPE_INT) {
-            DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
-            };
-            dmsg.unary_op_comb.op = op;
-            dmsg.unary_op_comb.type = type;
-            error(self, &dmsg);
-
-            return self->types->error_type;
+            goto bad_unary_operand;
         }
 
         return self->types->builtin_string;
-    case TOKEN_OP_MUL:
+    case TOKEN_MUL:
         if (type->id != TYPE_OPTION) {
-            DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION, {0}
-            };
-            dmsg.unary_op_comb.op = op;
-            dmsg.unary_op_comb.type = type;
-            error(self, &dmsg);
-
-            return self->types->error_type;
+            goto bad_unary_operand;
         }
 
         return type->opt_type.type;
     default: {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_INTERNAL_ERROR, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_INTERNAL_ERROR, node->unary.op.src_info, {0}
+        };
         error(self, &dmsg);
 
         return self->types->error_type;
     }
     }
+
+bad_unary_operand: {
+    DiagnosticMessage dmsg = {
+        .kind = DIAGNOSTIC_BAD_UNARY_OPERAND,
+        .src_info = node->unary.right->tok.src_info,
+        {
+            .unary_op_comb =
+                {
+                    .op = op,
+                    .type = type,
+                },
+        },
+    };
+    error(self, &dmsg);
+
+    return self->types->error_type;
+}
 }
 
 static Type *check_suffix(SemChecker *self, const AstNode *node) {
-    TokenKind op = node->suffix.op;
+    TokenKind op = node->suffix.op.kind;
     Type *type = check_expr(self, node->suffix.left);
 
     if (type->id == TYPE_ERROR) {
@@ -293,10 +310,14 @@ static Type *check_suffix(SemChecker *self, const AstNode *node) {
     }
 
     switch (op) {
-    case TOKEN_OP_INC:
-    case TOKEN_OP_DEC:
+    case TOKEN_INC:
+    case TOKEN_DEC:
         if (!expr_is_mutable(self, node->suffix.left)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_MUTABLE, {0}};
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                .src_info = node->suffix.left->tok.src_info,
+                {0}
+            };
 
             error(self, &dmsg);
 
@@ -321,7 +342,9 @@ static Type *check_suffix(SemChecker *self, const AstNode *node) {
 
 static bool check_var(SemChecker *self, const Variable *var, char *name) {
     if (!var) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_UNDECLARED_VARIABLE, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_UNDECLARED_VARIABLE, .src_info = {0}
+        };
         dmsg.undef_sym.name = name;
 
         error(self, &dmsg);
@@ -414,7 +437,9 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
     if (left_type->id == TYPE_ERROR) {
         return self->types->error_type;
     } else if (left_type->id != TYPE_LIST && left_type->id != TYPE_STRING) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_EXPR_NOT_INDEXABLE, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_EXPR_NOT_INDEXABLE, left->tok.src_info, {0}
+        };
 
         error(self, &dmsg);
 
@@ -500,11 +525,13 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
     const AstNode *rvalue = node->var_decl.rvalue;
 
     if (rvalue) {
-        Type *value_type = check_expr(self, node->var_decl.rvalue);
+        Type *value_type = check_expr(self, rvalue);
 
         if (value_type->id != TYPE_ERROR &&
             !type_convertable(value_type, type)) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_MISMATCHED_TYPES, rvalue->tok.src_info, {0}
+            };
             dmsg.type_mismatch.expected = type;
             dmsg.type_mismatch.found = value_type;
 
@@ -524,6 +551,15 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
 static void check_node(SemChecker *self, const AstNode *node);
 
 static void check_fn_decl(SemChecker *self, const AstNode *node) {
+    if (self->env.curr_fn) {
+        DiagnosticMessage dmsg;
+        dmsg.kind = DIAGNOSTIC_FN_BAD_PLACE;
+
+        error(self, &dmsg);
+
+        return;
+    }
+
     Type *type = parse_type(self, node->fn_decl.type);
     char *name = node->fn_decl.name->ident.str.data;
     AstNode *body = node->fn_decl.body;
@@ -618,7 +654,9 @@ static void check_if(SemChecker *self, const AstNode *node) {
     Type *cond_type = check_expr(self, cond);
 
     if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_MISMATCHED_TYPES, cond->tok.src_info, {0}
+        };
         dmsg.type_mismatch.expected = self->types->builtin_int;
         dmsg.type_mismatch.found = cond_type;
 
@@ -641,9 +679,15 @@ static void check_while(SemChecker *self, const AstNode *node) {
     Type *cond_type = check_expr(self, cond);
 
     if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
-        dmsg.type_mismatch.expected = self->types->builtin_int;
-        dmsg.type_mismatch.found = cond_type;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+            .src_info = cond->tok.src_info,
+            .type_mismatch =
+                {
+                    .expected = self->types->builtin_int,
+                    .found = cond_type,
+                },
+        };
 
         error(self, &dmsg);
     }
@@ -669,7 +713,9 @@ static void check_for(SemChecker *self, const AstNode *node) {
         Type *cond_type = check_expr(self, cond);
 
         if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_MISMATCHED_TYPES, cond->tok.src_info, {0}
+            };
             dmsg.type_mismatch.expected = self->types->builtin_int;
             dmsg.type_mismatch.found = cond_type;
 
@@ -692,7 +738,9 @@ static void check_return(SemChecker *self, const AstNode *node) {
     const AstNode *expr = node->kw_return.expr;
 
     if (!self->env.curr_fn) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION, node->tok.src_info, {0}
+        };
 
         error(self, &dmsg);
 
@@ -708,11 +756,15 @@ static void check_return(SemChecker *self, const AstNode *node) {
 
     if (!type_convertable(ret_type, self->types->builtin_void) &&
         expected == self->types->builtin_void) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_VOID_RETURN, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_VOID_RETURN, expr->tok.src_info, {0}
+        };
 
         error(self, &dmsg);
     } else if (!type_convertable(ret_type, expected)) {
-        DiagnosticMessage dmsg = {DIAGNOSTIC_MISMATCHED_TYPES, {0}};
+        DiagnosticMessage dmsg = {
+            DIAGNOSTIC_MISMATCHED_TYPES, expr->tok.src_info, {0}
+        };
         dmsg.type_mismatch.expected = self->env.curr_fn->type;
         dmsg.type_mismatch.found = ret_type;
 
@@ -748,7 +800,9 @@ static void check_node(SemChecker *self, const AstNode *node) {
         break;
     case AST_NODE_BREAK:
         if (self->loop_depth <= 0) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_BREAK_OUTSIDE_LOOP, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_BREAK_OUTSIDE_LOOP, node->tok.src_info, {0}
+            };
 
             error(self, &dmsg);
         }
@@ -756,7 +810,9 @@ static void check_node(SemChecker *self, const AstNode *node) {
         break;
     case AST_NODE_CONTINUE:
         if (self->loop_depth <= 0) {
-            DiagnosticMessage dmsg = {DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP, {0}};
+            DiagnosticMessage dmsg = {
+                DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP, node->tok.src_info, {0}
+            };
 
             error(self, &dmsg);
         }
@@ -853,4 +909,9 @@ bool semck_check(
     return !self->had_error;
 }
 
-void semck_reset(SemChecker *self) { env_reset(&self->env); }
+void semck_reset(SemChecker *self) {
+    self->had_error = false;
+    self->loop_depth = 0;
+    vec_clear(&self->dmsgs);
+    env_reset(&self->env);
+}

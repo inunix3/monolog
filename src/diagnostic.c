@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #include <monolog/diagnostic.h>
 #include <monolog/type.h>
 
@@ -19,7 +26,7 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         );
 
         break;
-    case DIAGNOSTIC_BAD_UNARY_OPERAND_COMBINATION:
+    case DIAGNOSTIC_BAD_UNARY_OPERAND:
         snprintf(
             g_buf, BUFFER_SIZE, "bad operand type for unary %s: %s",
             token_kind_to_str(dmsg->unary_op_comb.op),
@@ -88,6 +95,12 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         );
 
         break;
+    case DIAGNOSTIC_FN_BAD_PLACE:
+        snprintf(
+            g_buf, BUFFER_SIZE, "function can't be declared inside other function"
+        );
+
+        break;
     case DIAGNOSTIC_TOO_FEW_ARGS:
         snprintf(
             g_buf, BUFFER_SIZE, "too few arguments: expected %zu, supplied %zu",
@@ -142,15 +155,15 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
 
         break;
     case DIAGNOSTIC_BREAK_OUTSIDE_LOOP:
-        snprintf(g_buf, BUFFER_SIZE, "break cannot be outside loop");
+        snprintf(g_buf, BUFFER_SIZE, "break must be inside loop");
 
         break;
     case DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP:
-        snprintf(g_buf, BUFFER_SIZE, "continue cannot be outside loop");
+        snprintf(g_buf, BUFFER_SIZE, "continue must be inside loop");
 
         break;
     case DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION:
-        snprintf(g_buf, BUFFER_SIZE, "return cannot be outside function");
+        snprintf(g_buf, BUFFER_SIZE, "return must be inside function");
 
         break;
     case DIAGNOSTIC_VOID_RETURN:

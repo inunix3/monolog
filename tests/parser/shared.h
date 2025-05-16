@@ -46,7 +46,7 @@ assert_string_against_file(const char *input, const char *golden_file_name) {
     parse(input);
 
 #if PARSER_SHOULD_FAIL
-    ASSERT_EQ(true, g_parser.error_state);
+    ASSERT_EQ(true, g_parser.had_error);
 #endif
 
     FILE *tmp = tmpfile();

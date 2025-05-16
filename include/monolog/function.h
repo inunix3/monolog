@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
 #include "ast.h"
@@ -11,7 +18,7 @@ typedef struct FnParam {
 } FnParam;
 
 typedef struct Interpreter Interpreter;
-typedef ExprResult (*FnBuiltin)(Interpreter *self, Value *args);
+typedef ExprResult (*FnBuiltin)(Interpreter *self, Value *args, const AstNode *node);
 
 typedef struct Function {
     Type *type;

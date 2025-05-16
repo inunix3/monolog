@@ -1,6 +1,14 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #include <monolog/utils.h>
 
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -30,7 +38,7 @@ char *read_file_stream(FILE *file) {
         return NULL;
     }
 
-    char *buf = mem_alloc((size_t)size + 1);
+    char *buf = mem_alloc((size_t) size + 1);
 
     if (!buf) {
         fprintf(stderr, "cannot allocate buffer: %s\n", strerror(errno));
@@ -39,7 +47,7 @@ char *read_file_stream(FILE *file) {
         return NULL;
     }
 
-    fread(buf, sizeof(*buf), (size_t)size, file);
+    fread(buf, sizeof(*buf), (size_t) size, file);
     buf[size] = 0;
 
     return buf;
@@ -59,6 +67,20 @@ char *read_file(const char *filename) {
     fclose(file);
 
     return buf;
+}
+
+bool str_to_i64(const char *str, int64_t *out) {
+    char *rem = NULL;
+    long val = strtol(str, &rem, 10);
+
+    if (rem == str || *rem != '\0' ||
+        ((val == LONG_MIN || val == LONG_MAX) && errno == ERANGE)) {
+        return false;
+    }
+
+    *out = val;
+
+    return true;
 }
 
 char *cstr_dup_n(const char *str, size_t len) {

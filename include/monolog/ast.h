@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
 #include "lexer.h"
@@ -38,6 +45,7 @@ typedef enum AstNodeKind {
 
 typedef struct AstNode {
     AstNodeKind kind;
+    Token tok;
 
     union {
         union {
@@ -50,18 +58,18 @@ typedef struct AstNode {
         } ident;
 
         struct {
-            TokenKind op;
+            Token op;
             struct AstNode *right;
         } unary;
 
         struct {
-            TokenKind op;
+            Token op;
             struct AstNode *left;
             struct AstNode *right;
         } binary;
 
         struct {
-            TokenKind op;
+            Token op;
             struct AstNode *left;
         } suffix;
 
@@ -133,7 +141,7 @@ typedef struct AstNode {
     };
 } AstNode;
 
-AstNode *astnode_new(AstNodeKind kind);
+AstNode *astnode_new(AstNodeKind kind, const Token *tok);
 void astnode_destroy(AstNode *self);
 
 typedef struct Ast {

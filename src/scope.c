@@ -1,11 +1,18 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #include <monolog/scope.h>
 
 #include <stdlib.h>
 
 void scope_init(Scope *self) {
     vec_init(&self->values, sizeof(Value));
-    vec_init(&self->strings, sizeof(StrBuf *));
-    vec_init(&self->lists, sizeof(Vector *));
+    vec_init(&self->strings, sizeof(StrBuf));
+    vec_init(&self->lists, sizeof(Vector));
 
     hashmap_init(&self->vars);
 }
@@ -74,18 +81,12 @@ Value *scope_new_value(Scope *self, Type *type) {
 }
 
 StrBuf *scope_new_string(Scope *self) {
-    StrBuf *str = vec_emplace(&self->strings);
-
-    vec_push(&self->strings, str);
-
-    return str;
+    return vec_emplace(&self->strings);
 }
 
 Vector *scope_new_list(Scope *self) {
     Vector *list = vec_emplace(&self->lists);
     vec_init(list, sizeof(Value));
-
-    vec_push(&self->lists, list);
 
     return list;
 }

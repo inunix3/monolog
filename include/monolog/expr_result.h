@@ -1,5 +1,13 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
+#include "ast.h"
 #include "variable.h"
 #include "value.h"
 
@@ -14,6 +22,7 @@ typedef enum ExprResultKind {
 
 typedef struct ExprResult {
     ExprResultKind kind;
+    const AstNode *node;
 
     union {
         Value val;

@@ -89,6 +89,12 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
+    fn_in_for_init_clause,
+    "for (void foo() {}; 1; 2);",
+    "fn-in-for-init-clause.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
     var_with_bad_name,
     "int 324 = 5; string @~`; int +; int int; string int;",
     "var-with-bad-name.txt"
@@ -170,6 +176,10 @@ SUITE(SUITE_NAME) {
     RUN_TEST(list_subscript_bad_expression_2);
     RUN_TEST(unterminated_string);
     RUN_TEST(if_missing_cond);
+    RUN_TEST(extra_else);
+    RUN_TEST(while_missing_cond);
+    RUN_TEST(for_missing_all);
+    RUN_TEST(fn_in_for_init_clause);
     RUN_TEST(var_with_bad_name);
     RUN_TEST(var_with_bad_assign);
     RUN_TEST(var_with_bad_value);

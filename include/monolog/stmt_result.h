@@ -1,5 +1,13 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #pragma once
 
+#include "ast.h"
 #include "value.h"
 
 typedef enum StmtResultKind {
@@ -13,5 +21,6 @@ typedef enum StmtResultKind {
 
 typedef struct StmtResult {
     StmtResultKind kind;
+    const AstNode *node;
     Value ret_val;
 } StmtResult;

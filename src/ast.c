@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025-present inunix3
+ *
+ * This file is licensed under the MIT License (Expat)
+ * (see LICENSE.md in the root of project).
+ */
+
 #include <monolog/ast.h>
 #include <monolog/utils.h>
 
@@ -5,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-AstNode *astnode_new(AstNodeKind kind) {
+AstNode *astnode_new(AstNodeKind kind, const Token *tok) {
     AstNode *node = mem_alloc(sizeof(*node));
 
     if (!node) {
@@ -13,6 +20,7 @@ AstNode *astnode_new(AstNodeKind kind) {
     }
 
     node->kind = kind;
+    node->tok = *tok;
 
     return node;
 }
@@ -217,18 +225,18 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
 
         break;
     case AST_NODE_UNARY:
-        fprintf(out, "unary (%s):\n", token_kind_to_str(node->unary.op));
+        fprintf(out, "unary (%s):\n", token_kind_to_str(node->unary.op.kind));
         print_node(node->unary.right, out, indent + 1);
 
         break;
     case AST_NODE_BINARY:
-        fprintf(out, "binary (%s):\n", token_kind_to_str(node->binary.op));
+        fprintf(out, "binary (%s):\n", token_kind_to_str(node->binary.op.kind));
         print_node(node->binary.left, out, indent + 1);
         print_node(node->binary.right, out, indent + 1);
 
         break;
     case AST_NODE_SUFFIX:
-        fprintf(out, "suffix (%s):\n", token_kind_to_str(node->suffix.op));
+        fprintf(out, "suffix (%s):\n", token_kind_to_str(node->suffix.op.kind));
         print_node(node->suffix.left, out, indent + 1);
 
         break;
