@@ -143,6 +143,9 @@ void astnode_destroy(AstNode *self) {
         astnode_destroy(self->list_type.type);
         self->list_type.type = NULL;
 
+        astnode_destroy(self->list_type.size);
+        self->list_type.size = NULL;
+
         break;
     case AST_NODE_VAR_DECL:
         astnode_destroy(self->var_decl.type);
@@ -324,6 +327,7 @@ static void print_node(const AstNode *node, FILE *out, int indent) {
     case AST_NODE_LIST_TYPE:
         fprintf(out, "list-type:\n");
         print_node(node->list_type.type, out, indent + 1);
+        print_node(node->list_type.size, out, indent + 1);
 
         break;
     case AST_NODE_VAR_DECL:

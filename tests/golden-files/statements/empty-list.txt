@@ -1,5 +1,6 @@
 var-decl:
   list-type:
     int-type
+    null
   identifier my_list
   null

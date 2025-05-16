@@ -115,6 +115,8 @@ typedef struct AstNode {
 
         struct {
             struct AstNode *type;
+            /* NOT part of the type */
+            struct AstNode *size;
         } list_type;
 
         struct {

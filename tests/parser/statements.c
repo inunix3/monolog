@@ -313,6 +313,12 @@ TEST_STRING_AGAINST_FILE(
 )
 
 TEST_STRING_AGAINST_FILE(
+    list_with_initial_size,
+    "[int, 2 + 5 * 9] foo;",
+    "list-with-initial-size.txt"
+)
+
+TEST_STRING_AGAINST_FILE(
     fn_decl_empty_without_params,
     "int foo() {}",
     "fn-decl-empty-without-params.txt"
@@ -408,6 +414,7 @@ SUITE(SUITE_NAME) {
     RUN_TEST(nested_option_type);
     RUN_TEST(empty_list);
     RUN_TEST(nested_lists);
+    RUN_TEST(list_with_initial_size);
     RUN_TEST(fn_decl_empty_without_params);
     RUN_TEST(fn_decl_empty_with_1_param);
     RUN_TEST(fn_decl_empty_with_params);

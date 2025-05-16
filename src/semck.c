@@ -521,6 +521,25 @@ static Type *parse_type(SemChecker *self, const AstNode *node) {
 
 static void check_var_decl(SemChecker *self, const AstNode *node) {
     Type *type = parse_type(self, node->var_decl.type);
+    AstNode *list_size_node = node->var_decl.type->list_type.size;
+
+    if (type->id == TYPE_LIST && list_size_node) {
+        Type *size_type = check_expr(self, list_size_node);
+
+        if (size_type->id != TYPE_INT) {
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = list_size_node->tok.src_info,
+                {
+                    .type_mismatch.expected = self->types->builtin_int,
+                    .type_mismatch.found = size_type,
+                },
+            };
+
+            error(self, &dmsg);
+        }
+    }
+
     const char *name = node->var_decl.name->ident.str.data;
     const AstNode *rvalue = node->var_decl.rvalue;
 

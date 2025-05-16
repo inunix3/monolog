@@ -229,7 +229,10 @@ clone_list(Interpreter *self, Value *dest, const Value *src, Scope *scope) {
     assert(type_convertable(dest->type, src->type));
 
     Vector *values = scope_new_list(scope);
-    vec_init(values, sizeof(Value));
+
+    if (dest->list.values) {
+        vec_deinit(dest->list.values);
+    }
 
     dest->list.values = values;
 
@@ -237,6 +240,7 @@ clone_list(Interpreter *self, Value *dest, const Value *src, Scope *scope) {
 
     for (size_t i = 0; i < src->list.values->len; ++i) {
         Value *elem = vec_emplace(values);
+        elem->type = src_values[i].type;
 
         implicitly_clone_value(self, elem, &src_values[i], scope);
     }
@@ -1326,9 +1330,43 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
+static ExprResult
+exec_list_size(Interpreter *self, const AstNode *node) {
+    ExprResult expr_res = {0};
+    ExprResult size_res = exec_expr(self, node, false);
+    EXPR_RETURN_ON_HALT(node);
+
+    Value val = expr_get_value(self, &size_res);
+    assert(val.type == self->types->builtin_int);
+
+    if (val.i < 0) {
+        error(self, node->tok.src_info, "list size cannot be negative");
+        expr_res.kind = EXPR_ERROR;
+
+        return expr_res;
+    }
+
+    expr_res.kind = EXPR_VALUE;
+    expr_res.node = node;
+    new_value(self, &expr_res.val, self->types->builtin_int, self->env.curr_scope);
+    expr_res.val.i = val.i;
+
+    return expr_res;
+}
+
 static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, .node = node, {0}};
     Type *type = process_type(self, node->var_decl.type);
+    Value list_size = {0};
+
+    const AstNode *size_node = node->var_decl.type->list_type.size;
+    if (type->id == TYPE_LIST && size_node) {
+        ExprResult expr = exec_list_size(self, size_node);
+        STMT_RETURN_ON_HALT(size_node);
+
+        list_size = expr_get_value(self, &expr);
+    }
+
     Value val = {type, self->env.curr_scope, {0}};
 
     if (node->var_decl.rvalue) {
@@ -1362,6 +1400,14 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
         }
     } else {
         new_value(self, &val, type, self->env.curr_scope);
+    }
+
+    /* Initialize list with empty values, if the size was given at declaration */
+    if (type->id == TYPE_LIST && list_size.i > 0) {
+        for (Int i = 0; i < list_size.i; ++i) {
+            Value *elem = vec_emplace(val.list.values);
+            new_value(self, elem, type->list_type.type, self->env.curr_scope);
+        }
     }
 
     Variable *var = mem_alloc(sizeof(*var));

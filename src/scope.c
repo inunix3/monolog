@@ -7,6 +7,7 @@
 
 #include <monolog/scope.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 
 void scope_init(Scope *self) {
@@ -50,7 +51,7 @@ void scope_clear(Scope *self) {
 
     Vector *lists = self->lists.data;
 
-    for (size_t i = 0; i < lists->len; ++i) {
+    for (size_t i = 0; i < self->lists.len; ++i) {
         vec_deinit(&lists[i]);
     }
 

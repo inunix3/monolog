@@ -1238,9 +1238,9 @@ TEST fn_recursion_fibonacci(void) {
     PASS();
 }
 
-TEST array(void) {
-    run("[int, 5] a;");
-    run("[int, 6] b = a;");
+TEST list(void) {
+    run("[int] a;");
+    run("[int] b = a;");
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(0, g_interp.exit_code);
@@ -1317,12 +1317,12 @@ TEST if_false(void) {
 }
 
 TEST stmt_else_if(void) {
-    run("if (5 < 3) {\n"
-        "    exit(1);\n"
-        "} else if (5 == 5) {\n"
-        "    exit(2);\n"
-        "} else {\n"
-        "    exit(3);\n"
+    run("if (5 < 3) {"
+        "    exit(1);"
+        "} else if (5 == 5) {"
+        "    exit(2);"
+        "} else {"
+        "    exit(3);"
         "}");
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -1334,12 +1334,12 @@ TEST stmt_else_if(void) {
 }
 
 TEST stmt_else(void) {
-    run("if (5 < 3) {\n"
-        "    exit(1);\n"
-        "} else if (4 == 5) {\n"
-        "    exit(2);\n"
-        "} else {\n"
-        "    exit(3);\n"
+    run("if (5 < 3) {"
+        "    exit(1);"
+        "} else if (4 == 5) {"
+        "    exit(2);"
+        "} else {"
+        "    exit(3);"
         "}");
 
     ASSERT_EQ(&g_ast, g_interp.ast);
@@ -1352,11 +1352,11 @@ TEST stmt_else(void) {
 
 TEST stmt_while(void) {
     run(
-        "int i = 0;\n"
-        "while (i < 10000) {\n"
-        "  ++i;\n"
-        "}\n"
-        "\n"
+        "int i = 0;"
+        "while (i < 10000) {"
+        "  ++i;"
+        "}"
+        ""
         "exit(i);"
     );
 
@@ -1370,11 +1370,11 @@ TEST stmt_while(void) {
 
 TEST stmt_for(void) {
     run(
-        "int outer_i = 0;\n"
-        "for (int i = 0; i < 10000; i++) {\n"
-        "  outer_i = i;\n"
-        "}\n"
-        "\n"
+        "int outer_i = 0;"
+        "for (int i = 0; i < 10000; i++) {"
+        "  outer_i = i;"
+        "}"
+        ""
         "exit(outer_i);"
     );
 
@@ -1388,11 +1388,11 @@ TEST stmt_for(void) {
 
 TEST for_without_init(void) {
     run(
-        "int i = 0;\n"
-        "for (; i < 10000; ++i) {\n"
-        "  i + 1;\n"
-        "}\n"
-        "\n"
+        "int i = 0;"
+        "for (; i < 10000; ++i) {"
+        "  i + 1;"
+        "}"
+        ""
         "exit(i);"
     );
 
@@ -1406,9 +1406,9 @@ TEST for_without_init(void) {
 
 TEST for_without_cond(void) {
     run(
-        "for (int i = 0;; ++i) {\n"
-        "  if (i >= 2) exit(i);\n"
-        "  i = i + 1;\n"
+        "for (int i = 0;; ++i) {"
+        "  if (i >= 2) exit(i);"
+        "  i = i + 1;"
         "}"
     );
 
@@ -1422,12 +1422,12 @@ TEST for_without_cond(void) {
 
 TEST for_without_iter(void) {
     run(
-        "int outer_i = 0;\n"
-        "for (int i = 0; i < 10000;) {\n"
-        "  i = i + 1;\n"
-        "  outer_i = i;\n"
-        "}\n"
-        "\n"
+        "int outer_i = 0;"
+        "for (int i = 0; i < 10000;) {"
+        "  i = i + 1;"
+        "  outer_i = i;"
+        "}"
+        ""
         "exit(outer_i);"
     );
 
@@ -1441,17 +1441,136 @@ TEST for_without_iter(void) {
 
 TEST infinite_for(void) {
     run(
-        "int i = 0;\n"
-        "for (;;) {\n"
-        "  if (i >= 10000) exit(i);\n"
+        "int i = 0;"
+        "for (;;) {"
+        "  if (i >= 10000) exit(i);"
         "  ++i;"
-        "}\n"
+        "}"
     );
 
     ASSERT_EQ(&g_ast, g_interp.ast);
     ASSERT_EQ(10000, g_interp.exit_code);
     ASSERT_EQ(false, g_interp.had_error);
     ASSERT_EQ(true, g_interp.halt);
+
+    PASS();
+}
+
+TEST list_push(void) {
+    run(
+        "[int] list;"
+        "list += 5;"
+        "list += 3;"
+    );
+
+    Value v1 = eval("#list");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(2, v1.i);
+
+    Value v2 = eval("list[0]");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(5, v2.i);
+
+    Value v3 = eval("list[1]");
+
+    ASSERT_EQ(TYPE_INT, v3.type->id);
+    ASSERT_EQ(3, v3.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST list_pop(void) {
+    run(
+        "[int] list;"
+        "list += 115;"
+        "list += 94;"
+        "list += 5;"
+        "list += 10;"
+        "list -= 3;"
+    );
+
+    Value v1 = eval("#list");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(1, v1.i);
+
+    Value v2 = eval("list[0]");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(115, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST list_iter(void) {
+    run(
+        "[int] list;"
+        "list += 115;"
+        "list += 94;"
+        "list += 5;"
+        "list += 10;"
+        "int sum = 0;"
+        "for (int i = 0; i < #list; ++i) {"
+        "  sum = sum + list[i];"
+        "}"
+    );
+
+    Value v1 = eval("#list");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(4, v1.i);
+
+    Value v2 = eval("sum");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(224, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
+
+    PASS();
+}
+
+TEST list_with_initial_size_iter(void) {
+    run(
+        "[int, 5] list;"
+        "for (int i = 0; i < #list; ++i) {"
+        "  list[i] = 115 * i;"
+        "}"
+        "int sum = 0;"
+        "for (int i = 0; i < #list; ++i) {"
+        "  sum = sum + list[i];"
+        "}"
+    );
+
+    Value v1 = eval("#list");
+
+    ASSERT_EQ(TYPE_INT, v1.type->id);
+    ASSERT_EQ(5, v1.i);
+
+    Value v2 = eval("sum");
+
+    ASSERT_EQ(TYPE_INT, v2.type->id);
+    ASSERT_EQ(1150, v2.i);
+
+    ASSERT_EQ(&g_ast, g_interp.ast);
+    ASSERT_EQ(0, g_interp.exit_code);
+    ASSERT_EQ(false, g_interp.had_error);
+    ASSERT_EQ(false, g_interp.halt);
 
     PASS();
 }
@@ -1532,7 +1651,7 @@ SUITE(valid) {
     RUN_TEST(fn_early_return);
     RUN_TEST(fn_recursion_factorial);
     RUN_TEST(fn_recursion_fibonacci);
-    RUN_TEST(array);
+    RUN_TEST(list);
     RUN_TEST(print);
     RUN_TEST(println);
     RUN_TEST(print_line_buffering);
@@ -1547,4 +1666,8 @@ SUITE(valid) {
     RUN_TEST(for_without_cond);
     RUN_TEST(for_without_iter);
     RUN_TEST(infinite_for);
+    RUN_TEST(list_push);
+    RUN_TEST(list_pop);
+    RUN_TEST(list_iter);
+    RUN_TEST(list_with_initial_size_iter);
 }

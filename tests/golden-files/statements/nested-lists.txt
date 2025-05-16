@@ -3,5 +3,8 @@ var-decl:
     list-type:
       list-type:
         int-type
+        null
+      null
+    null
   identifier foo
   null

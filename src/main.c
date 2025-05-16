@@ -159,9 +159,9 @@ int cmd_run(int argc, char **argv) {
     }
 
     type_system_deinit(&types);
-
     ast_destroy(&ast);
     vec_deinit(&tokens);
+    free(input);
 
     return exit_code;
 }
@@ -194,6 +194,7 @@ int cmd_scan(int argc, char **argv) {
     }
 
     vec_deinit(&tokens);
+    free(input);
 
     return 0;
 }
@@ -246,6 +247,7 @@ int cmd_parse(int argc, char **argv) {
     }
 
     vec_deinit(&tokens);
+    free(input);
 
     return parser.had_error ? -1 : 0;
 }

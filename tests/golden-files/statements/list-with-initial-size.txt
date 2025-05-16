@@ -1,0 +1,10 @@
+var-decl:
+  list-type:
+    int-type
+    binary (+):
+      literal 2
+      binary (*):
+        literal 5
+        literal 9
+  identifier foo
+  null

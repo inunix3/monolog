@@ -820,12 +820,25 @@ static AstNode *parse_type(Parser *self) {
             sync(self, SYNC_TO_RBRACKET_KEEP);
         }
 
+        AstNode *size = NULL;
+
+        if (match(self, TOKEN_COMMA)) {
+            advance(self);
+
+            size = expression(self, PREC_NONE);
+
+            if (size->kind == AST_NODE_ERROR) {
+                sync(self, SYNC_TO_RBRACKET_KEEP);
+            }
+        }
+
         if (!expect(self, TOKEN_RBRACKET)) {
             sync(self, SYNC_TO_RBRACKET_SKIP);
         }
 
         node = astnode_new(type_id, &type_tok);
         node->list_type.type = type;
+        node->list_type.size = size;
     } else {
         node = astnode_new(type_id, &type_tok);
     }

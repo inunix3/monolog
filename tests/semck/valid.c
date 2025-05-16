@@ -16,6 +16,7 @@ CHECK_EXPR(var_opt, "string? var = \"Hello\" + \", World\" + \"!\"")
 CHECK_EXPR(var_opt_nil, "int? var = nil")
 CHECK_EXPR(var_list, "[int] var;")
 CHECK_EXPR(var_list_nested, "[[[[[int]]]]] var;")
+CHECK_EXPR(var_list_with_initial_size, "[int, 5] var;")
 CHECK_EXPR(var_usage, "int a = 5; int b = a + 5")
 CHECK_EXPR(var_assign, "int a = 5; a = 5; a = a * 2");
 CHECK_EXPR(undef_var_assign, "int a; a = 5; int b = a + 5");
@@ -175,6 +176,7 @@ SUITE(valid) {
     RUN_TEST(var_opt_nil);
     RUN_TEST(var_list);
     RUN_TEST(var_list_nested);
+    RUN_TEST(var_list_with_initial_size);
     RUN_TEST(var_usage);
     RUN_TEST(var_scope);
     RUN_TEST(var_assign);
