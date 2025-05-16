@@ -4,9 +4,12 @@ author: Alexey Kachaev, E1
 include-before:
 - '`\newpage{}`{=latex}'
 header-includes:
+- '\usepackage{fancyhdr}'
 - '\usepackage{amssymb}'
 - '\usepackage{enumitem}'
 - '\setlist[itemize,1]{label=\tiny$\blacksquare$}'
+- '\pagestyle{fancy}'
+- '\fancyhead[R]{\thepage}'
 ---
 
 \newpage
@@ -19,50 +22,11 @@ počítam s možnými výtkami a návrhy pro vylepšení.
 Implementace neodpovídá 100% původnímu zadání, ale odchylka je velice malá, a implementoval jsem
 dokonce trochu víc, než mělo být.
 
-\newpage
+Kapitola [Kompilace interpretátoru ze zdrojového kodu] popisuje jak zkompilovat projekt.
 
-# Úvod
+Kapitola [Detaily implementace] popisuje implementaci.
 
-Monolog je jednoduchý, interpretovaný jazyk, podobný C svou syntaxi a konstrukcemi.
-
-```c
-// Minimální hello world
-
-println("Hello, World!");
-```
-
-## Stručný popis programu
-
-Běh programu probíha následovně:
-
-1. Načtení zdrojového kodu (ze souboru nebo klavesnice)
-2. Lexikální analýza *(lexing)*
-3. Syntaxová analýza *(parsing)*
-4. Semantická analýza a vygenerování syntaxového stromu (AST) *(semantic analysis)*
-5. Interpretace prochazením AST *(tree-walk interpretation)*
-
-Program podporuje režim REPL a vykonávaní ze specifikováného souboru.
-
-```
-1. monolog FILENAME
-2. monolog scan FILENAME
-3. monolog parse FILENAME
-4. monolog repl
-```
-
-1. Spustí soubor s názvem `FILENAME`. V příkazovém řádku vratí 0 v případě uspěchu, poslední hodnotu
-předanou zabudované funkcí `void exit(int exit_code)`, nebo -1 v případě chyby za běhu.
-
-2. Načté soubor `FILENAME` a vypíše posloupnost tokenů.
-
-3. Načté soubor `FILENAME` a vypíše jeho syntaxový strom.
-
-4. Spustí v režímu REPL. V tomto režímu uživatel interaktivně zadává příkazy, program pak každý
-zpracovává a vykonává. Veškere proměnné a funkce jsou pamatováný a použitelný mezi přikazama.
-
-Také v režímu REPL interpretátor hned se neukončí v připadě chyby.
-
-## Originální zadání
+## Původní zadání
 
 - Aritmetické operátory (`+, -, *, /, %`)
 
@@ -123,6 +87,50 @@ seznamu.
 
 - Zabudovaná funkce `input_string` teď ma navratový typ `string?`. Vrací `nil` v případě chyby ve
 čtení vstupu.
+
+\newpage
+\part{Př
+
+# Úvod
+
+Monolog je jednoduchý, interpretovaný jazyk, podobný C svou syntaxi a konstrukcemi.
+
+```c
+// Minimální hello world
+
+println("Hello, World!");
+```
+
+## Stručný popis programu
+
+Běh programu probíha následovně:
+
+1. Načtení zdrojového kodu (ze souboru nebo klavesnice)
+2. Lexikální analýza *(lexing)*
+3. Syntaxová analýza *(parsing)*
+4. Semantická analýza a vygenerování syntaxového stromu (AST) *(semantic analysis)*
+5. Interpretace prochazením AST *(tree-walk interpretation)*
+
+Program podporuje režim REPL a vykonávaní ze specifikováného souboru.
+
+```
+1. monolog FILENAME
+2. monolog scan FILENAME
+3. monolog parse FILENAME
+4. monolog repl
+```
+
+1. Spustí soubor s názvem `FILENAME`. V příkazovém řádku vratí 0 v případě uspěchu, poslední hodnotu
+předanou zabudované funkcí `void exit(int exit_code)`, nebo -1 v případě chyby za běhu.
+
+2. Načté soubor `FILENAME` a vypíše posloupnost tokenů.
+
+3. Načté soubor `FILENAME` a vypíše jeho syntaxový strom.
+
+4. Spustí v režímu REPL. V tomto režímu uživatel interaktivně zadává příkazy, program pak každý
+zpracovává a vykonává. Veškere proměnné a funkce jsou pamatováný a použitelný mezi přikazama.
+
+Také v režímu REPL interpretátor hned se neukončí v připadě chyby.
 
 # Kompilace interpretátoru ze zdrojového kodu
 
@@ -283,6 +291,17 @@ a seznam bude prazdný.
 index. Důležitý je, že hodnota indexu musí být v rozmezí $\left[0, N\right)$, kde N je počet prvků
 v danném seznamu.
 
+## Operátory pro volitelné typy
+
+### Unární
+
+| Pravá strana | Operátor | Operace                         | Vedlejší učínky | Výsledný typ |
+|:------------:|:--------:|---------------------------------|:---------------:|:------------:|
+| `T?`         | ` *`     | vytěží data z volitelného typu  | NE              | `T`          |
+
+- **POZNÁMKA**: použití tohoto operátoru je zakázáno v případě, jestli objekt volitelného typu
+je prázdný.
+
 ## Řetězcové operátory
 
 ### Binární
@@ -375,9 +394,9 @@ if-statement ::= 'if' '(' expression ')' statement? else-statement?
 else-statement ::= 'else' statement?
 ```
 
-1. Ověří, jestli podmínka je pravdivá. Pokud ano, vykoná se tělo.
+- Ověří, jestli podmínka je pravdivá. Pokud ano, vykoná se tělo.
 
-2. Pokud podmínka není pravdivá, vykoná se alternativní tělo, dané větví `else`.
+- Pokud podmínka není pravdivá, vykoná se alternativní tělo, dané větví `else`.
 
 ## while
 
@@ -385,9 +404,9 @@ else-statement ::= 'else' statement?
 while-statement ::= 'while' '(' expression ')' statement?
 ```
 
-1. Ověří, jestli podmínka je pravdivá.. Pokud ano, vykoná se tělo.
+- Ověří, jestli podmínka je pravdivá.. Pokud ano, vykoná se tělo.
 
-2. Po vykonání těla, Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
+- Po vykonání těla, Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
 zopakuje. Pokud není, cyklus se ukončí.
 
 ## for
@@ -399,16 +418,16 @@ condition ::= expression
 iter-expr ::= expression
 ```
 
-1. Pokud `init-clause` je dán, nejdřív vykona jeho.
+- Pokud `init-clause` je dán, nejdřív vykona jeho.
 
-2. Pokud výraz `condition` je dán, ověří zda je podmínka pravdivá. Pokud `condition` není, jeho vychozí
+- Pokud výraz `condition` je dán, ověří zda je podmínka pravdivá. Pokud `condition` není, jeho vychozí
 hodnotou bude čislo 1.
 
-3. Pokud podmínka je pravdivá, vykoná tělo.
+- Pokud podmínka je pravdivá, vykoná tělo.
 
-4. Hned po vykonávání těla, vykoná výraz `iter-expr`, pokud je dán.
+- Hned po vykonávání těla, vykoná výraz `iter-expr`, pokud je dán.
 
-5. Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
+- Opětovně ověří podmínku. V případě, že je stále pravdivá, tento proces se
 zopakuje. Pokud není, cyklus se ukončí.
 
 ## return
@@ -488,9 +507,14 @@ int c = a + b;
 // deklarace proměnné typu string s jmenem "city", hodnotou je řetězec "Prague".
 string city = "Prague";
 
+// volitelná proměnná, je prazdná (vychozí hodnota je `nil`).
+string? jmeno = nil;
+jmeno = "ahoj";
+
 // deklarace proměnné typu seznamu, který obsahuje seznam prvku volitelného typu int.
 [[int?]] matrix;
 ```
+
 ## Funkce
 
 ```
@@ -513,6 +537,39 @@ předáváný tzv. argumenty, a interpretátor pak vytvoří proměnné s názve
 přislušného argumentu, a kód funkce pak bude moci využit tyto proměnné (parametry).
 
 Při volání funkce, typ každého argumentu se musí schodovat s typem parametru, jehož pozici zaujímá.
+
+```c
+// Funkce s názvem foo, bez parametrů, návratový typ je void,
+// tělem je blok (viz následujicí sekce).
+void foo() {
+    println("Hello, World!");
+}
+
+// Funkce s parametry a návratovým typem int.
+int max(int a, int b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+// Vyvolání funkce
+foo();
+
+// Vyvolání funkce s parametry
+int m = max(115, 94); // argumenty jsou a = 115, b = 94.
+
+void bar() {
+    // Použití proměnné a funkce uvnitř funkce, 
+    // deklarované v globálním rozsahu. (viz následujicí sekce).
+    if (max(m, 5)) {
+        println("A");
+    } else {
+        println("B");
+    }
+}
+```
 
 # Rozsah platnosti
 
@@ -743,3 +800,198 @@ string? input_string();
 Načté řetězec ze standárdního vstupu. V případě chyby vstupu/výstupu, vratí `nil`.
 
 Tato funkce je blokovací.
+
+\newpage
+\part{Detaily implementace}
+
+Interpretátor je napsan v jazyce C, použitá norma je C11 (ISO/IEC 9899:2011).
+
+Implementace nevyuživá rozšíření pro specifické konkretní kompilátor, proto kod by mělo být možný
+zkompilovat i pomocí jiných kompilátorů jako MSVC. GCC a Clang jsou podporovány.
+
+Struktura projektu:
+
+```
+docs/                  dokumentace
+  Makefile             Makefile pro generování PDF tohoto dokumentu
+  prirucka.md          zdrojový kod tohoto dokumentu
+include/
+  monolog/             .h soubory projektu
+    ...
+src/                   .c soubory projektu
+  ...
+tests/                 testovací programy
+  ...
+third-party/           knihovny třetích stran
+  ...
+CMakeLists.txt         hlavní kompilační soubor
+```
+
+# Lexer
+
+Související hlavičkové soubory: `ast.h, lexer.h, source_info.h`
+
+Související zdrojové soubory: `ast.c, lexer.c`
+
+Úkolem **lexeru** je převest zdrojový kod (text, nejspíše psaný člověkem) do podoby, se kterou se dá
+jednoduše pracovat. Rovnou s textem není vhodný, protože to by komplikovalo kód a není to triviální.
+
+Lexer převádí text na posloupnost tzv. **tokenů**. Laicky řečeno, token je v podstatě slovo -
+nejmenší jednotka v gramatice jazyku, která ma smysl.
+
+Token je struktura, která uchovává odkaz na výskyt slova, druh slova (číslo, název atd.), číslo
+řádku a kolonky, a případně jiné informace:
+
+```c
+/* Druh tokenu */
+typedef enum TokenKind {
+    TOKEN_EOF,
+    TOKEN_INTEGER,
+    TOKEN_IDENTIFIER,
+    ...
+} TokenKind;
+
+typedef struct SourceInfo {
+    int line; /* rádek */
+    int col; /* kolonka */
+} SourceInfo;
+
+typedef struct Token {
+    /* druh */
+    TokenKind kind;
+    /* odkaz na výskyt ve zdrojovém kodu */
+    const char *src;
+    /* délka slova */
+    size_t len;
+    /* jestli je to validní token */
+    bool valid;
+    /* řádek, kolonka */
+    SourceInfo src_info;
+} Token;
+```
+
+Lexer funguje velice jednoduše: ověřuje současný znak, a podle něj určuje, jak to má pokračovat.
+Např. pokud slovo začíná na čislici, zřejmě se jedná o číslo.
+
+```c
+Token next_token(Lexer *self) {
+    /* přeskočit bílé znáky */
+    find_begin_of_data(self);
+
+    if (at_eof(self)) {
+        return token_eof;
+    } else if (is_digit(self->ch)) {
+        return integer(self);
+    } else if (is_identifier(self->ch)) {
+        return identifier(self);
+    } else if (is_operator(self->ch)) {
+        return operator(self);
+    } else if (self->ch == '"') {
+        return string(self);
+    }
+
+    return invalid(self);
+}
+```
+
+Ukázka funkce `integer()`, která lexuje číslo. Na stejným principu jsou založený ostatní.
+
+```c
+Token integer(Lexer *self) {
+    Token tok = new_token(TOKEN_INTEGER);
+
+    while (!at_eof(self) && /* jestli lexer není na konci kódu */
+           !is_ws(self->ch) && /* jestli aktuální znak není bílý znak */
+           !is_operator(self->ch)) /* jestli aktuální znak není operátor */
+    {
+        /* jestli jsme našli, znak který není čislici,
+         * číslo není ve validní formě
+         */
+        if (!is_digit(self->ch)) {
+            tok.valid = false;
+        }
+
+        /* získat další znak */
+        advance(self);
+        ++tok.len;
+    }
+
+    return tok;
+}
+```
+
+Ve výsledku, lexer vratí pole tokenů, které pak bude potřebovat parser.
+
+# Parser
+
+Parser vytvoří tzv. **syntaxový strom** (dále AST, z anglického *abstract syntax tree*).
+
+AST je stromová datová struktura, kde každý uzel vysokourovňově reprezentuje určitou část kodu.
+
+Například, výraz `println(a + 5)` jde reprezentovat jako uzel `BinaryOp`, který reprezentuje
+binární operaci. On by měl dva uzly - levý operand a pravý operand - a pak znak operátoru.
+
+![Ukázka AST](docs/images/ast.png){ width=50% }
+
+\newpage
+
+Uzel ve stromu je reprezentovan strukturou `AstNode`:
+
+```c
+typedef enum AstNodeKind {
+    AST_NODE_INTEGER,
+    AST_NODE_STRING,
+    AST_NODE_BINARY,
+    ...
+} AstNodeKind;
+
+typedef struct AstNode {
+    AstNodeKind kind;
+    Token tok;
+
+    /* anonymní union */
+    union {
+        union {
+            int64_t i;
+            char *str;
+        } literal;
+
+        struct {
+            Token op;
+            struct AstNode *left;
+            struct AstNode *right;
+        } binary;
+
+        ...
+    };
+} AstNode;
+```
+
+Tady pravě je využitá jedná z výhod C11, a konkretněji **anonymní union** - v některých
+případech nemá moc smysl uvádět jméno struktury ve struktuře, a tím pádem její členy jako by se
+vloží do rodičovské struktury, a zároveň kód pak bude čitelnější a kratší.
+
+## Způsob parsování
+
+Parser je výhradně **rekurzivní a sestupný**. To znamená, že parsing probíha odzhora dolů, a využívá
+rekurzi. Každá funkce reprezentuje jeden z pravidel gramatiky.
+
+Například, tato funkce parsuje binární operace:
+
+```c
+AstNode *binary(Parser *self, AstNode *left) {
+    ParseRule *op_rule = &rules[self->prev->kind];
+
+    AstNode *node = astnode_new(AST_NODE_BINARY);
+    node->binary.op = self->prev;
+    node->binary.left = left;
+    node->binary.right = expression(self, op_rule->prec);
+
+    return node;
+}
+```
+
+Přitom samotná funkce `binary()` se vyvolává ve funkci `expression()` (která parsuje jakykoliv
+výraz), takže je vidět, že se uplatňuje rekurze.
+
+### Prattův parser 
