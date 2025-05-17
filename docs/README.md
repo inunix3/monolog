@@ -1120,7 +1120,7 @@ AST je stromová datová struktura, kde každý uzel vysokoúrovňově reprezent
 Například, výraz `println(a + 5)` jde reprezentovat jako uzel `BinaryOp`, který reprezentuje
 binární operaci. On by měl dva uzly - levý operand a pravý operand - a pak znak operátoru.
 
-![Ukázka AST](docs/images/ast.png){ width=50% }
+![Ukázka AST](images/ast.png){ width=50% }
 
 \newpage
 
