@@ -193,7 +193,7 @@ mkdir build
 cd build
 ```
 
-3. Pro sestavení, doporučuju tento příkaz:
+3. Pro generaci:
 
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Release -G "VÁŠ GENERÁTOR" ..
@@ -213,7 +213,9 @@ Zvolení generátoru:
 - Pokud chcete použit Ninja, napíšte "Ninja".
 - Jinak můžete zkusit vynechat parametr `-G`, a CMake zvolí si sám.
 
-4. Pokud kompilace proběhla úspěšně, ve složce `src` (uvnitř složky `build`) měl by být soubor
+4. Zadejte `cmake --build .` aby zkompilovat, případně vyvolejte přímo sestavovácí systém.
+
+5. Pokud kompilace proběhla úspěšně, ve složce `src` (uvnitř složky `build`) měl by být soubor
 `monolog.exe` (na Linuxu bez připony).
 
 \newpage
