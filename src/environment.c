@@ -49,16 +49,18 @@ static void add_builtin_funcs(HashMap *funcs, TypeSystem *types) {
         types->builtin_void, /* exit */
         opt_int,             /* input_int */
         opt_string,          /* input_string */
+        types->builtin_int,  /* random */
+        types->builtin_int,  /* random_range */
     };
 
-    static const char *fn_names[] = {
-        "print", "println", "exit", "input_int", "input_string"
-    };
+    static const char *fn_names[] = {"print",       "println",      "exit",
+                                     "input_int",   "input_string", "random",
+                                     "random_range"};
 
-    static FnBuiltin builtins[] = {
-        builtin_print, builtin_println, builtin_exit, builtin_input_int,
-        builtin_input_string
-    };
+    static FnBuiltin builtins[] = {builtin_print,        builtin_println,
+                                   builtin_exit,         builtin_input_int,
+                                   builtin_input_string, builtin_random,
+                                   builtin_random_range};
 
     for (size_t i = 0; i < ARRAY_SIZE(fn_names); ++i) {
         if (hashmap_get(funcs, fn_names[i])) {
@@ -71,10 +73,13 @@ static void add_builtin_funcs(HashMap *funcs, TypeSystem *types) {
     Function *print_fn = hashmap_get(funcs, "print");
     Function *println_fn = hashmap_get(funcs, "println");
     Function *exit_fn = hashmap_get(funcs, "exit");
+    Function *random_range_fn = hashmap_get(funcs, "random_range");
 
     add_param(print_fn, types->builtin_string);
     add_param(println_fn, types->builtin_string);
-    add_param(exit_fn, types->builtin_int);
+    add_param(exit_fn, types->builtin_int);         /* int exit_code */
+    add_param(random_range_fn, types->builtin_int); /* int min */
+    add_param(random_range_fn, types->builtin_int); /* int max */
 }
 
 void env_init(Environment *self, TypeSystem *types) {

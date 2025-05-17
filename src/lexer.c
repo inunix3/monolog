@@ -94,6 +94,8 @@ static TokenKind double_operator_kind(char ch1, char ch2) {
         return TOKEN_ADD_ASSIGN;
     } else if (ch1 == '-' && ch2 == '=') {
         return TOKEN_SUB_ASSIGN;
+    } else if (ch1 == '#' && ch2 == '=') {
+        return TOKEN_HASHTAG_ASSIGN;
     }
 
     return TOKEN_UNKNOWN;
@@ -341,16 +343,16 @@ void lexer_lex(const char *data, size_t len, Vector *tokens) {
 
 const char *token_kind_to_str(TokenKind kind) {
     static const char *strs[] = {
-        "unknown", "EOF",      "integer", "identifier", "string literal",
-        ",",       ";",        "(",       ")",          "[",
-        "]",       "{",        "}",       "+",          "-",
-        "*",       "/",        "%",       "++",         "--",
-        "!",       "<",        ">",       "=",          "+=",
-        "-=",      "==",       "!=",      "<=",         ">=",
-        "&&",      "||",       "?",       "#",          "$",
-        "if",      "else",     "for",     "while",      "return",
-        "break",   "continue", "nil",     "int",        "void",
-        "string"
+        "unknown", "EOF",   "integer",  "identifier", "string literal",
+        ",",       ";",     "(",        ")",          "[",
+        "]",       "{",     "}",        "+",          "-",
+        "*",       "/",     "%",        "++",         "--",
+        "!",       "<",     ">",        "=",          "+=",
+        "-=",      "#=",    "==",       "!=",         "<=",
+        ">=",      "&&",    "||",       "?",          "#",
+        "$",       "if",    "else",     "for",        "while",
+        "return",  "break", "continue", "nil",        "int",
+        "void",    "string"
     };
 
     return strs[kind];
@@ -384,6 +386,7 @@ const char *token_kind_to_name(TokenKind kind) {
         "assign",
         "add-assign",
         "sub-assign",
+        "hashtag-assign",
         "equal",
         "not equal",
         "less or equal",

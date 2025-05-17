@@ -12,7 +12,6 @@
 
 typedef struct Scope {
     HashMap vars; /* HashMap<char *, Variable *> */
-    Vector allocated_values; /* Vector<Value *> */
     Vector values; /* Vector<Value *> */
     Vector strings; /* Vector<StrBuf *> */
     Vector lists; /* Vector<Vector<Value> *> */

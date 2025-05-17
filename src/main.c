@@ -223,29 +223,7 @@ int cmd_parse(int argc, char **argv) {
     Ast ast = parser_parse(&parser);
     ast_dump(&ast, stdout);
 
-    if (!parser.had_error) {
-        TypeSystem types;
-        type_system_init(&types);
-
-        SemChecker semck;
-        semck_init(&semck, &types);
-        semck_check(&semck, &ast, NULL, NULL);
-
-        DiagnosticMessage *dmsgs = semck.dmsgs.data;
-
-        for (size_t i = 0; i < semck.dmsgs.len; ++i) {
-            const DiagnosticMessage *dmsg = &dmsgs[i];
-
-            printf(
-                "%d:%d: error: %s\n", dmsg->src_info.line, dmsg->src_info.col,
-                dmsg_to_str(dmsg)
-            );
-        }
-
-        semck_deinit(&semck);
-        type_system_deinit(&types);
-    }
-
+    ast_destroy(&ast);
     vec_deinit(&tokens);
     free(input);
 
@@ -253,7 +231,7 @@ int cmd_parse(int argc, char **argv) {
 }
 
 static void print_help(void) {
-    printf("usage: monolog [run] FILENAME\n"
+    printf("usage: monolog run FILENAME\n"
            "       monolog scan FILENAME\n"
            "       monolog parse FILENAME\n"
            "       monolog repl\n");

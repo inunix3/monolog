@@ -21,3 +21,5 @@ DECLARE_BUILTIN(println);
 DECLARE_BUILTIN(exit);
 DECLARE_BUILTIN(input_int);
 DECLARE_BUILTIN(input_string);
+DECLARE_BUILTIN(random);
+DECLARE_BUILTIN(random_range);

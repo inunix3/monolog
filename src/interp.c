@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define CASE_BINARY_INT(_op, _v1, _v2)                                         \
     val.i = (_v1)->i _op(_v2)->i;                                              \
@@ -103,6 +104,9 @@ static Value expr_get_value(const Interpreter *self, ExprResult *expr) {
         return val;
     }
     }
+
+    /* satisfy gcc */
+    return err_val;
 }
 
 static void expr_set_value(ExprResult *expr, const Value *val) {
@@ -406,11 +410,21 @@ static Value exec_binary_string(
     Interpreter *self, TokenKind op, Value *v1, const Value *v2
 ) {
     Value val = *v1;
-    val.type = self->types->builtin_string;
 
     switch (op) {
     case TOKEN_PLUS:
+        val.type = self->types->builtin_string;
         str_cat(val.s, v2->s);
+
+        break;
+    case TOKEN_EQUAL:
+        val.type = self->types->builtin_int;
+        val.i = str_equal(v1->s, v2->s);
+
+        break;
+    case TOKEN_NOT_EQUAL:
+        val.type = self->types->builtin_int;
+        val.i = !str_equal(v1->s, v2->s);
 
         break;
     default:
@@ -502,23 +516,23 @@ static Value exec_binary_nil(
 static Value
 exec_binary_list(Interpreter *self, Token op, Value *v1, const Value *v2) {
     Value val = *v1;
-    Type *type = v1->type->list_type.type;
-    val.type = type;
+    Type *inner_type = v1->type->list_type.type;
+    val.type = inner_type;
 
     Vector *values = v1->list.values;
 
     switch (op.kind) {
     case TOKEN_ADD_ASSIGN: {
-        assert(type_equal(type, v2->type));
+        assert(type_equal(inner_type, v2->type));
 
         Value *elem = vec_emplace(values);
-        elem->type = type;
+        elem->type = inner_type;
 
         implicitly_clone_value(self, elem, v2, v1->scope);
 
         break;
     }
-    case TOKEN_SUB_ASSIGN: {
+    case TOKEN_SUB_ASSIGN:
         assert(type_equal(self->types->builtin_int, v2->type));
 
         if (v2->i < 0) {
@@ -537,6 +551,32 @@ exec_binary_list(Interpreter *self, Token op, Value *v1, const Value *v2) {
 
         for (Int i = 0; i < v2->i; ++i) {
             vec_pop(values);
+        }
+
+        break;
+    case TOKEN_HASHTAG_ASSIGN: {
+        assert(type_equal(self->types->builtin_int, v2->type));
+
+        if (v2->i < 0) {
+            error(self, op.src_info, "the right side cannot be negative");
+            val.type = self->types->error_type;
+
+            break;
+        }
+
+        size_t size = (size_t) v2->i;
+
+        if (size > values->len) {
+            while (values->len != size) {
+                Value *elem = vec_emplace(val.list.values);
+                new_value(
+                    self, elem, inner_type, self->env.curr_scope
+                );
+            }
+        } else if (size < values->len) {
+            while (values->len != size) {
+                vec_pop(values);
+            }
         }
 
         break;
@@ -568,7 +608,7 @@ static Value exec_unary_int(Interpreter *self, TokenKind op, const Value *v1) {
     case TOKEN_MINUS:
         CASE_UNARY_INT(-, v1);
     case TOKEN_EXCL:
-        val.i = !val.i;
+        val.i = !v1->i;
 
         break;
     case TOKEN_DOLAR: {
@@ -810,6 +850,9 @@ static bool expr_assignable(ExprResult expr) {
     case EXPR_CHAR_REF:
         return true;
     }
+
+    /* satisfy gcc */
+    return false;
 }
 
 static ExprResult exec_binary(Interpreter *self, const AstNode *node) {
@@ -1089,7 +1132,7 @@ pass_args_builtin(Interpreter *self, Function *fn, const AstNode **args) {
             type_convertable(arg_val.type, param->type)) {
             make_opt(self, arg, param->type, &arg_val, self->env.curr_scope);
         } else {
-            *arg = shallowly_clone_value(self, &arg_val);
+            *arg = arg_val;
         }
     }
 
@@ -1123,6 +1166,7 @@ exec_builtin(Interpreter *self, Function *fn, const AstNode *node) {
     expr_res = fn->builtin(self, args, node);
 
 finish:
+    vec_clear(&self->builtin_fn_args);
     env_leave_fn(&self->env);
     self->env.curr_scope = saved_scope;
     self->env.caller_scope = saved_caller;
@@ -1330,8 +1374,7 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
     return stmt_res;
 }
 
-static ExprResult
-exec_list_size(Interpreter *self, const AstNode *node) {
+static ExprResult exec_list_size(Interpreter *self, const AstNode *node) {
     ExprResult expr_res = {0};
     ExprResult size_res = exec_expr(self, node, false);
     EXPR_RETURN_ON_HALT(node);
@@ -1348,7 +1391,9 @@ exec_list_size(Interpreter *self, const AstNode *node) {
 
     expr_res.kind = EXPR_VALUE;
     expr_res.node = node;
-    new_value(self, &expr_res.val, self->types->builtin_int, self->env.curr_scope);
+    new_value(
+        self, &expr_res.val, self->types->builtin_int, self->env.curr_scope
+    );
     expr_res.val.i = val.i;
 
     return expr_res;
@@ -1402,7 +1447,8 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
         new_value(self, &val, type, self->env.curr_scope);
     }
 
-    /* Initialize list with empty values, if the size was given at declaration */
+    /* Initialize list with empty values, if the size was given at declaration
+     */
     if (type->id == TYPE_LIST && list_size.i > 0) {
         for (Int i = 0; i < list_size.i; ++i) {
             Value *elem = vec_emplace(val.list.values);
@@ -1417,7 +1463,7 @@ static StmtResult exec_var_decl(Interpreter *self, const AstNode *node) {
     var->is_param = false;
     var->scope = self->env.curr_scope;
 
-    hashmap_add(&self->env.curr_scope->vars, var->name, var);
+    env_add_local_var(&self->env, var);
 
     return stmt_res;
 }
@@ -1645,6 +1691,8 @@ void interp_init(Interpreter *self, Ast *ast, TypeSystem *types) {
     self->halt = false;
     self->had_error = false;
     self->log_errors = false;
+
+    srand((unsigned) time(NULL));
 }
 
 void interp_deinit(Interpreter *self) {
@@ -1795,6 +1843,32 @@ builtin_input_string(Interpreter *self, Value *args, const AstNode *node) {
             self, &expr_res.val, opt_string, &temp_val, self->env.caller_scope
         );
     }
+
+    return expr_res;
+}
+
+ExprResult builtin_random(Interpreter *self, Value *args, const AstNode *node) {
+    UNUSED(args);
+
+    ExprResult expr_res = {EXPR_VALUE, .node = node, {0}};
+    expr_res.val.type = self->types->builtin_int;
+    expr_res.val.scope = self->env.caller_scope;
+
+    expr_res.val.i = rand();
+
+    return expr_res;
+}
+
+ExprResult
+builtin_random_range(Interpreter *self, Value *args, const AstNode *node) {
+    ExprResult expr_res = {EXPR_VALUE, .node = node, {0}};
+    expr_res.val.type = self->types->builtin_int;
+    expr_res.val.scope = self->env.caller_scope;
+
+    Value *min = &args[0];
+    Value *max = &args[1];
+
+    expr_res.val.i = rand() % ((int) max->i + 1 - (int) min->i) + (int) min->i;
 
     return expr_res;
 }

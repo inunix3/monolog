@@ -222,10 +222,10 @@ TEST single_operators(void) {
 }
 
 TEST double_operators(void) {
-    const char *input = "!= == <= >= ++ -- && ||";
+    const char *input = "!= == <= >= ++ -- && || += -= #=";
     lexer_lex(input, strlen(input), &g_tokens);
 
-    ASSERT_EQ(9, g_tokens.len);
+    ASSERT_EQ(12, g_tokens.len);
 
     Token expected[] = {
         {TOKEN_NOT_EQUAL, input, 2, true, {1, 1}},
@@ -236,7 +236,10 @@ TEST double_operators(void) {
         {TOKEN_DEC, input + 15, 2, true, {1, 16}},
         {TOKEN_AND, input + 18, 2, true, {1, 19}},
         {TOKEN_OR, input + 21, 2, true, {1, 22}},
-        {TOKEN_EOF, input + strlen(input), 0, true, {1, 24}}
+        {TOKEN_ADD_ASSIGN, input + 24, 2, true, {1, 25}},
+        {TOKEN_SUB_ASSIGN, input + 27, 2, true, {1, 28}},
+        {TOKEN_HASHTAG_ASSIGN, input + 30, 2, true, {1, 31}},
+        {TOKEN_EOF, input + strlen(input), 0, true, {1, 33}}
     };
 
     for (int i = 0; i < g_tokens.len; ++i) {

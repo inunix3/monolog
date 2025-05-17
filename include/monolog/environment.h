@@ -18,8 +18,8 @@
 
 typedef struct Environment {
     Vector scopes; /* Vector<Scope> */
-    Scope *global_scope;
     HashMap funcs; /* HashMap<char *, Function *> */
+    Scope *global_scope;
     Scope *caller_scope;
     Scope *curr_scope;
     Scope *old_scope;

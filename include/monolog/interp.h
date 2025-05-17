@@ -17,6 +17,8 @@
 typedef struct Interpreter {
     Environment env;
     TypeSystem *types;
+
+    /* Temporary storage for function's arguments */
     Vector builtin_fn_args;
 
     Ast *ast;

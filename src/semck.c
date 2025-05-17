@@ -59,11 +59,14 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
                    type_equal(t2, self->types->builtin_string)) {
             return self->types->builtin_string;
         } else {
-            DiagnosticMessage dmsg;
-            dmsg.kind = DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION;
-            dmsg.binary_op_comb.op = op;
-            dmsg.binary_op_comb.t1 = t1;
-            dmsg.binary_op_comb.t2 = t2;
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION,
+                .src_info = node->tok.src_info,
+                .binary_op_comb.op = op,
+                .binary_op_comb.t1 = t1,
+                .binary_op_comb.t2 = t2,
+            };
+
             error(self, &dmsg);
 
             return self->types->error_type;
@@ -100,11 +103,13 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
             type_equal(t2, self->types->builtin_int)) {
             return self->types->builtin_int;
         } else {
-            DiagnosticMessage dmsg;
-            dmsg.kind = DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION;
-            dmsg.binary_op_comb.op = op;
-            dmsg.binary_op_comb.t1 = t1;
-            dmsg.binary_op_comb.t2 = t2;
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_BAD_BINARY_OPERAND_COMBINATION,
+                .src_info = node->tok.src_info,
+                .binary_op_comb.op = op,
+                .binary_op_comb.t1 = t1,
+                .binary_op_comb.t2 = t2,
+            };
 
             error(self, &dmsg);
 
@@ -113,7 +118,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
     case TOKEN_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+                .kind = DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                .src_info = node->binary.op.src_info,
+                {0},
             };
 
             error(self, &dmsg);
@@ -123,10 +130,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         if (!type_convertable(t2, t1)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_MISMATCHED_TYPES, node->binary.op.src_info, {0}
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = node->binary.op.src_info,
+                .type_mismatch.expected = t1,
+                .type_mismatch.found = t2
             };
-            dmsg.type_mismatch.expected = t1;
-            dmsg.type_mismatch.found = t2;
 
             error(self, &dmsg);
 
@@ -137,7 +145,9 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
     case TOKEN_ADD_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+                .kind = DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                .src_info = node->binary.op.src_info,
+                {0}
             };
 
             error(self, &dmsg);
@@ -147,9 +157,10 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         if (t1->id != TYPE_LIST) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPECTED_LIST, node->binary.left->tok.src_info, {0}
+                .kind = DIAGNOSTIC_EXPECTED_LIST,
+                .src_info = node->binary.left->tok.src_info,
+                .type_mismatch.found = t2
             };
-            dmsg.type_mismatch.found = t2;
 
             error(self, &dmsg);
 
@@ -158,12 +169,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         if (!type_convertable(t2, t1->list_type.type)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_MISMATCHED_TYPES,
-                node->binary.right->tok.src_info,
-                {0}
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = node->binary.right->tok.src_info,
+                .type_mismatch.expected = t1,
+                .type_mismatch.found = self->types->builtin_int
             };
-            dmsg.type_mismatch.expected = t1;
-            dmsg.type_mismatch.found = self->types->builtin_int;
 
             error(self, &dmsg);
 
@@ -172,10 +182,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         return self->types->builtin_void;
     case TOKEN_SUB_ASSIGN:
+    case TOKEN_HASHTAG_ASSIGN:
         if (!expr_is_mutable(self, node->binary.left)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPR_NOT_MUTABLE,
-                node->binary.left->tok.src_info,
+                .kind = DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                .src_info = node->binary.left->tok.src_info,
                 {0}
             };
 
@@ -186,9 +197,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         if (t1->id != TYPE_LIST) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPECTED_LIST, node->binary.left->tok.src_info, {0}
+                .kind = DIAGNOSTIC_EXPECTED_LIST,
+                .src_info = node->binary.left->tok.src_info,
+                .type_mismatch.found = t2,
+
             };
-            dmsg.type_mismatch.found = t2;
 
             error(self, &dmsg);
 
@@ -197,12 +210,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
 
         if (!type_convertable(t2, self->types->builtin_int)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_MISMATCHED_TYPES,
-                node->binary.left->tok.src_info,
-                {0}
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = node->binary.left->tok.src_info,
+                .type_mismatch.expected = t1,
+                .type_mismatch.found = self->types->builtin_int,
             };
-            dmsg.type_mismatch.expected = t1;
-            dmsg.type_mismatch.found = self->types->builtin_int;
 
             error(self, &dmsg);
 
@@ -212,8 +224,11 @@ static Type *check_binary(SemChecker *self, const AstNode *node) {
         return self->types->builtin_void;
     default: {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_INTERNAL_ERROR, node->binary.op.src_info, {0}
+            .kind = DIAGNOSTIC_INTERNAL_ERROR,
+            .src_info = node->binary.op.src_info,
+            {0}
         };
+
         error(self, &dmsg);
 
         return self->types->error_type;
@@ -242,7 +257,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
     case TOKEN_DEC:
         if (!expr_is_mutable(self, node->unary.right)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_EXPR_NOT_MUTABLE, node->binary.op.src_info, {0}
+                .kind = DIAGNOSTIC_EXPR_NOT_MUTABLE,
+                .src_info = node->binary.op.src_info,
+                {0}
             };
 
             error(self, &dmsg);
@@ -275,7 +292,9 @@ static Type *check_unary(SemChecker *self, const AstNode *node) {
         return type->opt_type.type;
     default: {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_INTERNAL_ERROR, node->unary.op.src_info, {0}
+            .kind = DIAGNOSTIC_INTERNAL_ERROR,
+            .src_info = node->unary.op.src_info,
+            {0}
         };
         error(self, &dmsg);
 
@@ -287,14 +306,10 @@ bad_unary_operand: {
     DiagnosticMessage dmsg = {
         .kind = DIAGNOSTIC_BAD_UNARY_OPERAND,
         .src_info = node->unary.right->tok.src_info,
-        {
-            .unary_op_comb =
-                {
-                    .op = op,
-                    .type = type,
-                },
-        },
+        .unary_op_comb.op = op,
+        .unary_op_comb.type = type
     };
+
     error(self, &dmsg);
 
     return self->types->error_type;
@@ -325,10 +340,13 @@ static Type *check_suffix(SemChecker *self, const AstNode *node) {
         }
 
         if (type->id != TYPE_INT) {
-            DiagnosticMessage dmsg;
-            dmsg.kind = DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION;
-            dmsg.suffix_op_comb.op = op;
-            dmsg.suffix_op_comb.type = type;
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_BAD_SUFFIX_OPERAND_COMBINATION,
+                .src_info = node->suffix.left->tok.src_info,
+                .suffix_op_comb.op = op,
+                .suffix_op_comb.type = type
+            };
+
             error(self, &dmsg);
 
             return self->types->error_type;
@@ -340,25 +358,20 @@ static Type *check_suffix(SemChecker *self, const AstNode *node) {
     }
 }
 
-static bool check_var(SemChecker *self, const Variable *var, char *name) {
+static Type *check_ident(SemChecker *self, const AstNode *node) {
+    char *name = node->ident.str.data;
+
+    Variable *var = env_find_var(&self->env, name);
+
     if (!var) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_UNDECLARED_VARIABLE, .src_info = {0}
+            DIAGNOSTIC_UNDECLARED_VARIABLE,
+            .src_info = node->tok.src_info,
+            .undef_sym.name = name,
         };
-        dmsg.undef_sym.name = name;
 
         error(self, &dmsg);
 
-        return false;
-    }
-
-    return true;
-}
-
-static Type *check_ident(SemChecker *self, const AstNode *node) {
-    Variable *var = env_find_var(&self->env, node->ident.str.data);
-
-    if (!check_var(self, var, node->ident.str.data)) {
         return self->types->error_type;
     }
 
@@ -370,9 +383,11 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
     Function *fn = hashmap_get(&self->env.funcs, name);
 
     if (!fn) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_UNDECLARED_FUNCTION;
-        dmsg.undef_sym.name = name;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_UNDECLARED_FUNCTION,
+            .src_info = node->fn_call.name->tok.src_info,
+            .undef_sym.name = name
+        };
 
         error(self, &dmsg);
 
@@ -383,19 +398,23 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
     const Vector *values_vec = &node->fn_call.values;
 
     if (values_vec->len < fn->params.len) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_TOO_FEW_ARGS;
-        dmsg.bad_arg_count.expected = fn->params.len;
-        dmsg.bad_arg_count.supplied = values_vec->len;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_TOO_FEW_ARGS,
+            .src_info = node->fn_call.name->tok.src_info,
+            .bad_arg_count.expected = fn->params.len,
+            .bad_arg_count.supplied = values_vec->len
+        };
 
         error(self, &dmsg);
 
         return type;
     } else if (values_vec->len > fn->params.len) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_TOO_MANY_ARGS;
-        dmsg.bad_arg_count.expected = fn->params.len;
-        dmsg.bad_arg_count.supplied = values_vec->len;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_TOO_MANY_ARGS,
+            .src_info = node->fn_call.name->tok.src_info,
+            .bad_arg_count.expected = fn->params.len,
+            .bad_arg_count.supplied = values_vec->len
+        };
 
         error(self, &dmsg);
 
@@ -416,10 +435,12 @@ static Type *check_fn_call(SemChecker *self, const AstNode *node) {
         }
 
         if (!type_convertable(value_type, param->type)) {
-            DiagnosticMessage dmsg;
-            dmsg.kind = DIAGNOSTIC_BAD_ARG_TYPE;
-            dmsg.bad_arg_type.expected = param->type;
-            dmsg.bad_arg_type.found = value_type;
+            DiagnosticMessage dmsg = {
+                .kind = DIAGNOSTIC_BAD_ARG_TYPE,
+                .src_info = value->tok.src_info,
+                .bad_arg_type.expected = param->type,
+                .bad_arg_type.found = value_type,
+            };
 
             error(self, &dmsg);
         }
@@ -438,7 +459,9 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
         return self->types->error_type;
     } else if (left_type->id != TYPE_LIST && left_type->id != TYPE_STRING) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_EXPR_NOT_INDEXABLE, left->tok.src_info, {0}
+            .kind = DIAGNOSTIC_EXPR_NOT_INDEXABLE,
+            .src_info = left->tok.src_info,
+            {0}
         };
 
         error(self, &dmsg);
@@ -449,9 +472,11 @@ static Type *check_subscript(SemChecker *self, const AstNode *node) {
     Type *expr_type = check_expr(self, expr);
 
     if (expr_type->id != TYPE_ERROR && expr_type->id != TYPE_INT) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_BAD_INDEX_TYPE;
-        dmsg.bad_index_type.found = expr_type;
+        DiagnosticMessage dmsg = {
+            .src_info = expr->tok.src_info,
+            .kind = DIAGNOSTIC_BAD_INDEX_TYPE,
+            .bad_index_type.found = expr_type
+        };
 
         error(self, &dmsg);
     }
@@ -530,10 +555,8 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
             DiagnosticMessage dmsg = {
                 .kind = DIAGNOSTIC_MISMATCHED_TYPES,
                 .src_info = list_size_node->tok.src_info,
-                {
-                    .type_mismatch.expected = self->types->builtin_int,
-                    .type_mismatch.found = size_type,
-                },
+                .type_mismatch.expected = self->types->builtin_int,
+                .type_mismatch.found = size_type,
             };
 
             error(self, &dmsg);
@@ -549,10 +572,11 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
         if (value_type->id != TYPE_ERROR &&
             !type_convertable(value_type, type)) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_MISMATCHED_TYPES, rvalue->tok.src_info, {0}
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = rvalue->tok.src_info,
+                .type_mismatch.expected = type,
+                .type_mismatch.found = value_type,
             };
-            dmsg.type_mismatch.expected = type;
-            dmsg.type_mismatch.found = value_type;
 
             error(self, &dmsg);
         }
@@ -571,8 +595,11 @@ static void check_node(SemChecker *self, const AstNode *node);
 
 static void check_fn_decl(SemChecker *self, const AstNode *node) {
     if (self->env.curr_fn) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_FN_BAD_PLACE;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_FN_BAD_PLACE,
+            .src_info = node->tok.src_info,
+            {0},
+        };
 
         error(self, &dmsg);
 
@@ -584,9 +611,11 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
     AstNode *body = node->fn_decl.body;
 
     if (hashmap_get(&self->env.funcs, name)) {
-        DiagnosticMessage dmsg;
-        dmsg.kind = DIAGNOSTIC_FN_REDEFINITION;
-        dmsg.fn_redef.name = name;
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_FN_REDEFINITION,
+            .src_info = node->tok.src_info,
+            .fn_redef.name = name
+        };
 
         error(self, &dmsg);
 
@@ -617,9 +646,11 @@ static void check_fn_decl(SemChecker *self, const AstNode *node) {
             const FnParam *param = fn->params.data;
 
             if (strcmp(name, param[j].name) == 0) {
-                DiagnosticMessage dmsg;
-                dmsg.kind = DIAGNOSTIC_PARAM_REDECLARATION;
-                dmsg.param_redecl.name = name;
+                DiagnosticMessage dmsg = {
+                    .kind = DIAGNOSTIC_PARAM_REDECLARATION,
+                    .src_info = param_node->tok.src_info,
+                    .param_redecl.name = name
+                };
 
                 error(self, &dmsg);
 
@@ -674,10 +705,11 @@ static void check_if(SemChecker *self, const AstNode *node) {
 
     if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_MISMATCHED_TYPES, cond->tok.src_info, {0}
+            .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+            .src_info = cond->tok.src_info,
+            .type_mismatch.expected = self->types->builtin_int,
+            .type_mismatch.found = cond_type
         };
-        dmsg.type_mismatch.expected = self->types->builtin_int;
-        dmsg.type_mismatch.found = cond_type;
 
         error(self, &dmsg);
     }
@@ -701,11 +733,8 @@ static void check_while(SemChecker *self, const AstNode *node) {
         DiagnosticMessage dmsg = {
             .kind = DIAGNOSTIC_MISMATCHED_TYPES,
             .src_info = cond->tok.src_info,
-            .type_mismatch =
-                {
-                    .expected = self->types->builtin_int,
-                    .found = cond_type,
-                },
+            .type_mismatch.expected = self->types->builtin_int,
+            .type_mismatch.found = cond_type,
         };
 
         error(self, &dmsg);
@@ -733,10 +762,11 @@ static void check_for(SemChecker *self, const AstNode *node) {
 
         if (cond_type->id != TYPE_ERROR && cond_type->id != TYPE_INT) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_MISMATCHED_TYPES, cond->tok.src_info, {0}
+                .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+                .src_info = cond->tok.src_info,
+                .type_mismatch.expected = self->types->builtin_int,
+                .type_mismatch.found = cond_type
             };
-            dmsg.type_mismatch.expected = self->types->builtin_int;
-            dmsg.type_mismatch.found = cond_type;
 
             error(self, &dmsg);
         }
@@ -758,7 +788,9 @@ static void check_return(SemChecker *self, const AstNode *node) {
 
     if (!self->env.curr_fn) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION, node->tok.src_info, {0}
+            .kind = DIAGNOSTIC_RETURN_OUTSIDE_FUNCTION,
+            .src_info = node->tok.src_info,
+            {0}
         };
 
         error(self, &dmsg);
@@ -776,16 +808,19 @@ static void check_return(SemChecker *self, const AstNode *node) {
     if (!type_convertable(ret_type, self->types->builtin_void) &&
         expected == self->types->builtin_void) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_VOID_RETURN, expr->tok.src_info, {0}
+            .kind = DIAGNOSTIC_VOID_RETURN,
+            .src_info = expr->tok.src_info,
+            {0},
         };
 
         error(self, &dmsg);
     } else if (!type_convertable(ret_type, expected)) {
         DiagnosticMessage dmsg = {
-            DIAGNOSTIC_MISMATCHED_TYPES, expr->tok.src_info, {0}
+            .kind = DIAGNOSTIC_MISMATCHED_TYPES,
+            .src_info = expr->tok.src_info,
+            .type_mismatch.expected = self->env.curr_fn->type,
+            .type_mismatch.found = ret_type
         };
-        dmsg.type_mismatch.expected = self->env.curr_fn->type;
-        dmsg.type_mismatch.found = ret_type;
 
         error(self, &dmsg);
     }
@@ -820,7 +855,9 @@ static void check_node(SemChecker *self, const AstNode *node) {
     case AST_NODE_BREAK:
         if (self->loop_depth <= 0) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_BREAK_OUTSIDE_LOOP, node->tok.src_info, {0}
+                .kind = DIAGNOSTIC_BREAK_OUTSIDE_LOOP,
+                .src_info = node->tok.src_info,
+                {0},
             };
 
             error(self, &dmsg);
@@ -830,7 +867,9 @@ static void check_node(SemChecker *self, const AstNode *node) {
     case AST_NODE_CONTINUE:
         if (self->loop_depth <= 0) {
             DiagnosticMessage dmsg = {
-                DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP, node->tok.src_info, {0}
+                .kind = DIAGNOSTIC_CONTINUE_OUTSIDE_LOOP,
+                .src_info = node->tok.src_info,
+                {0},
             };
 
             error(self, &dmsg);

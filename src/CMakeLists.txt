@@ -53,6 +53,7 @@ add_executable(monolog-bin "${SRC_DIR}/main.c" $<TARGET_OBJECTS:monolog-obj>)
 if (COMPILER STREQUAL "gcc" OR COMPILER STREQUAL "clang")
   set(COMPILE_OPTIONS
       -Wall -Wextra -Wconversion -Wsign-conversion -Wshadow -fstack-clash-protection
+      -Wno-missing-braces
   )
 
   set(COMPILE_OPTIONS ${COMPILE_OPTIONS} $<$<CONFIG:Debug>:-O0>)
