@@ -6,4 +6,7 @@ int factorial(int n) {
   return n * factorial(n - 1);
 }
 
-println($factorial(30));
+println("0! = " + $factorial(0));
+println("1! = " + $factorial(1));
+println("5! = " + $factorial(5));
+println("20! = " + $factorial(20));
