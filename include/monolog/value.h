@@ -22,16 +22,16 @@ typedef struct Value {
 
     union {
         Int i;
-        /* Pointer to a string, allocated inside interpreter */
+        /* Pointer to a string, allocated inside scope */
         StrBuf *s;
 
         struct {
-            /* Pointer to a Vector<Value>, allocated inside interpreter */
+            /* Pointer to a Vector<Value>, allocated inside scope */
             Vector *values; /* Vector<Value> */
         } list;
 
         struct {
-            /* Pointer to a value, allocated inside interpreter */
+            /* Pointer to a value, allocated inside scope */
             struct Value *val;
         } opt;
     };

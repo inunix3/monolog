@@ -1,0 +1,33 @@
+print("Zadejte pocet prvku: ");
+int? num_cnt = input_int();
+
+if (num_cnt == nil) {
+    println("Chyba");
+    exit(-1);
+}
+
+int num_cnt = *num_cnt;
+[int, num_cnt] nums;
+
+println("Zadejte prvky:");
+
+for (int i = 0; i < num_cnt; ++i) {
+    int? num = input_int();
+
+    if (num == nil) {
+        println("Chyba");
+        exit(-1);
+    }
+
+    int num = *num;
+
+    nums[i] = num;
+}
+
+print("Prvky opacne: ");
+
+for (int i = 0; i < #nums; ++i) {
+    print($nums[#nums - i - 1] + " ");
+}
+
+println("");

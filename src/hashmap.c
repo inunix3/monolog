@@ -125,7 +125,6 @@ bool hashmap_add(HashMap *self, const char *key, void *value) {
     }
 
     Bucket *bucket = find_bucket(self->buckets, self->cap, key);
-    // bool new_bucket = !bucket->key && bucket->value != TOMBSTONE;
     bool new_bucket = !bucket->key;
 
     bucket->key = key;

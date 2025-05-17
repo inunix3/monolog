@@ -1073,7 +1073,7 @@ exec_subscript(Interpreter *self, const AstNode *node, bool assigning) {
     return expr_res;
 }
 
-static StmtResult exec_node(Interpreter *self, AstNode *node);
+static StmtResult exec_stmt(Interpreter *self, AstNode *node);
 
 static bool fill_fn_params_values(Interpreter *self, const AstNode **args) {
     const FnParam *params = self->env.curr_fn->params.data;
@@ -1194,7 +1194,7 @@ exec_fn_body(Interpreter *self, Function *fn, const AstNode *node) {
     }
 
     self->env.caller_scope = saved_scope;
-    StmtResult body_res = exec_node(self, fn->body);
+    StmtResult body_res = exec_stmt(self, fn->body);
 
     if (self->had_error) {
         expr_res.kind = EXPR_ERROR;
@@ -1359,7 +1359,7 @@ static StmtResult exec_block(Interpreter *self, const AstNode *node) {
     env_enter_scope(&self->env);
 
     for (size_t i = 0; i < node->block.nodes.len; ++i) {
-        StmtResult res = exec_node(self, nodes[i]);
+        StmtResult res = exec_stmt(self, nodes[i]);
 
         /* Support for break, continue and return statements */
         if (res.kind != STMT_VOID) {
@@ -1516,9 +1516,9 @@ static StmtResult exec_if(Interpreter *self, const AstNode *node) {
     Value cond_val = expr_get_value(self, &cond);
 
     if (cond_val.i) {
-        return exec_node(self, node->kw_if.body);
+        return exec_stmt(self, node->kw_if.body);
     } else if (node->kw_if.else_body) {
-        return exec_node(self, node->kw_if.else_body);
+        return exec_stmt(self, node->kw_if.else_body);
     }
 
     StmtResult stmt_res = {STMT_VOID, .node = node, {0}};
@@ -1534,7 +1534,7 @@ static StmtResult exec_while(Interpreter *self, const AstNode *node) {
     Value cond_val = expr_get_value(self, &cond);
 
     while (cond_val.i) {
-        StmtResult res = exec_node(self, node->kw_while.body);
+        StmtResult res = exec_stmt(self, node->kw_while.body);
 
         if (self->halt) {
             return stmt_res;
@@ -1572,7 +1572,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
     env_enter_scope(&self->env);
 
     if (init) {
-        StmtResult stmt = exec_node(self, init);
+        StmtResult stmt = exec_stmt(self, init);
         STMT_RETURN_ON_HALT(stmt.node);
     }
 
@@ -1589,7 +1589,7 @@ static StmtResult exec_for(Interpreter *self, const AstNode *node) {
         }
 
         if (body) {
-            StmtResult res = exec_node(self, body);
+            StmtResult res = exec_stmt(self, body);
 
             switch (res.kind) {
             case STMT_VOID:
@@ -1643,7 +1643,7 @@ static StmtResult exec_return(Interpreter *self, const AstNode *node) {
     return res;
 }
 
-static StmtResult exec_node(Interpreter *self, AstNode *node) {
+static StmtResult exec_stmt(Interpreter *self, AstNode *node) {
     StmtResult stmt_res = {STMT_VOID, .node = node, {0}};
 
     switch (node->kind) {
@@ -1704,7 +1704,7 @@ int interp_walk(Interpreter *self) {
     AstNode **nodes = self->ast->nodes.data;
 
     for (size_t i = 0; i < self->ast->nodes.len; ++i) {
-        exec_node(self, nodes[i]);
+        exec_stmt(self, nodes[i]);
 
         if (self->had_error) {
             self->exit_code = -1;

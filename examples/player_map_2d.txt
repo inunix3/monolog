@@ -1,0 +1,77 @@
+int WIDTH = 10;
+int HEIGHT = 10;
+
+int clamp(int x, int min, int max) {
+    if (x < min) {
+        return min;
+    } else if (x > max) {
+        return max;
+    } else {
+        return x;
+    }
+}
+
+int rand_direction() {
+    return random_range(-1, 1);
+}
+
+void draw_area([int] player_x, [int] player_y, int player_cnt) {
+    for (int i = 0; i < HEIGHT; ++i) {
+        for (int j = 0; j < WIDTH; ++j) {
+            int place_player_tile = 0;
+
+            for (int k = 0; k < player_cnt && !place_player_tile; ++k) {
+                place_player_tile = i == player_y[k] && j == player_x[k];
+            }
+
+            if (place_player_tile) {
+                print("@");
+            } else {
+                print(".");
+            }
+        }
+
+        println("");
+    }
+}
+
+print("Pocet hracu: ");
+int? player_cnt = input_int();
+
+if (player_cnt == nil) {
+    println("CHYBA");
+    exit(-1);
+}
+
+int player_cnt = *player_cnt;
+
+[int, player_cnt] player_x;
+[int, player_cnt] player_y;
+
+for (int i = 0;; ++i) {
+    println($(i + 1) + ". KROK");
+    draw_area(player_x, player_y, player_cnt);
+
+    print("Chcete pokracovat? (1 = ANO, 0 = NE) ");
+    string? choice = input_string();
+
+    if (choice == nil) {
+        println("CHYBA");
+        exit(-1);
+    }
+
+    if (*choice == "1") {
+        for (int i = 0; i < player_cnt; ++i) {
+            player_x[i] = clamp(player_x[i] + rand_direction(), 0, WIDTH - 1);
+            player_y[i] = clamp(player_y[i] + rand_direction(), 0, HEIGHT - 1);
+        }
+    } else if (*choice == "0") {
+        println("KONEC SIMULACE");
+
+        break;
+    } else {
+        println("Spatny vstup!");
+
+        exit(-1);
+    }
+}

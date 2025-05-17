@@ -1,0 +1,33 @@
+print("Napiste zaklad: ");
+int? zaklad = input_int();
+
+if (zaklad == nil) {
+    println("Chyba vstupu");
+    exit(-1);
+}
+
+print("Napiste prirozeny exponent: ");
+int? exponent = input_int();
+
+if (exponent == nil) {
+    println("Chyba vstupu");
+    exit(-1);
+}
+
+int zaklad = *zaklad;
+int exponent = *exponent;
+
+int result;
+
+if (exponent > 0) {
+    result = zaklad;
+
+    for (int i = 1; i < exponent; ++i) {
+        result = zaklad * result;
+    }
+} else {
+    result = -1;
+    println("spatny exponent");
+}
+
+println("vysledek: " + $result);

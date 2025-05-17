@@ -1,0 +1,17 @@
+void fizzbuzz() {
+    for (int i = 1; i <= 100; ++i) {
+        print($i + "... ");
+
+        if ((i % 3) == 0 && (i % 5) == 0) {
+            println("fizz buzz");
+        } else if ((i % 3) == 0) {
+            println("fizz");
+        } else if ((i % 5) == 0) {
+            println("buzz");
+        } else {
+            println("");
+        }
+    }
+}
+
+fizzbuzz();

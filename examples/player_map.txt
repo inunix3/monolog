@@ -1,0 +1,50 @@
+int rand_direction() {
+    return random_range(-1, 1);
+}
+
+void print_players([int] player_x, [int] player_y, int player_cnt) {
+    for (int i = 0; i < player_cnt; ++i) {
+        println("- Pozice " + $(i + 1) + " hrace: [" + $player_x[i] + ", " + $player_y[i] + "]");
+    }
+}
+
+print("Pocet hracu: ");
+int? player_cnt = input_int();
+
+if (player_cnt == nil) {
+    println("CHYBA");
+    exit(-1);
+}
+
+int player_cnt = *player_cnt;
+
+[int, player_cnt] player_x;
+[int, player_cnt] player_y;
+
+for (int i = 0;; ++i) {
+    println($(i + 1) + ". KROK");
+    print_players(player_x, player_y, player_cnt);
+
+    print("Chcete pokracovat? (1 = ANO, 0 = NE) ");
+    string? choice = input_string();
+
+    if (choice == nil) {
+        println("CHYBA");
+        exit(-1);
+    }
+
+    if (*choice == "1") {
+        for (int i = 0; i < player_cnt; ++i) {
+            player_x[i] = player_x[i] + rand_direction();
+            player_y[i] = player_y[i] + rand_direction();
+        }
+    } else if (*choice == "0") {
+        println("KONEC SIMULACE");
+
+        break;
+    } else {
+        println("Spatny vstup!");
+
+        exit(-1);
+    }
+}

@@ -1,0 +1,104 @@
+void error() {
+    println("chyba");
+    exit(-1);
+}
+
+string prompt_string(string what) {
+    print(what + ": ");
+
+    string? input = input_string();
+
+    if (input == nil) {
+        error();
+    }
+
+    return *input;
+}
+
+int prompt_int(string what) {
+    print(what + ": ");
+
+    int? input = input_int();
+
+    if (input == nil) {
+        error();
+    }
+
+    return *input;
+}
+
+void fill_pattern1([[int]] pattern, int w, int h) {
+    int fill_idx = 0;
+    int step = 1;
+
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            if (j == fill_idx) {
+                pattern[i][j] = 1;
+            } else {
+                pattern[i][j] = 0;
+            }
+        }
+
+        if (fill_idx >= w - 1) {
+            step = -1;
+        } else if (fill_idx <= 0) {
+            step = 1;
+        }
+
+        fill_idx = fill_idx + step;
+    }
+}
+
+void fill_pattern2([[int]] pattern, int w, int h) {
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            if (i % 2 == 0) {
+                if (j % 2 == 0) {
+                    pattern[i][j] = 1;
+                } else {
+                    pattern[i][j] = 0;
+                }
+            } else {
+                if (j % 2 != 0) {
+                    pattern[i][j] = 1;
+                } else {
+                    pattern[i][j] = 0;
+                }
+            }
+        }
+    }
+}
+
+void print_pattern([[int]] pattern, int w, int h) {
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            print($pattern[i][j] + " ");
+        }
+
+        println("");
+    }
+}
+
+string choice = prompt_string("Vyberte obrazec, ktery chcete vykreslit (1 nebo 2)");
+int w = prompt_int("Zadejte sirku");
+int h = prompt_int("Zadejte vysku");
+
+[[int], h] pattern;
+
+for (int i = 0; i < h; ++i) {
+    pattern[i] #= w;
+}
+
+println($#pattern);
+println($#pattern[0]);
+
+if (choice == "1") {
+    fill_pattern1(pattern, w, h);
+} else if (choice == "2") {
+    fill_pattern2(pattern, w, h);
+} else {
+    error();
+}
+
+print_pattern(pattern, w, h);
