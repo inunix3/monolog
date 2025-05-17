@@ -32,14 +32,25 @@ set(PARSER_SOURCES
 
 create_test(parser_test ${PARSER_SOURCES})
 
-add_custom_command(
-  TARGET parser_test
-  POST_BUILD
-  COMMAND
-    ${CMAKE_COMMAND} -E create_symlink
-    "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
-    "$<TARGET_FILE_DIR:parser_test>/golden-files"
-)
+if (NOT WIN32)
+    add_custom_command(
+      TARGET parser_test
+      POST_BUILD
+      COMMAND
+        ${CMAKE_COMMAND} -E create_symlink
+        "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
+        "$<TARGET_FILE_DIR:parser_test>/golden-files"
+    )
+else()
+    add_custom_command(
+      TARGET parser_test
+      POST_BUILD
+      COMMAND
+        ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/golden-files"
+        "$<TARGET_FILE_DIR:parser_test>/golden-files"
+    )
+endif()
 
 set(SEMCK_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/semck/invalid.c"

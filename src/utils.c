@@ -71,7 +71,7 @@ char *read_file(const char *filename) {
 
 bool str_to_i64(const char *str, int64_t *out) {
     char *rem = NULL;
-    long val = strtol(str, &rem, 10);
+    int64_t val = strtoll(str, &rem, 10);
 
     if (rem == str || *rem != '\0' ||
         ((val == LONG_MIN || val == LONG_MAX) && errno == ERANGE)) {

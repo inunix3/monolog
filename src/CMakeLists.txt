@@ -69,10 +69,6 @@ elseif (USE_UBSAN)
   target_link_options(monolog-bin PRIVATE -fsanitize=undefined)
 endif()
 
-if (WIN32)
-    set_target_properties(monolog-bin PROPERTIES WIN32_EXECUTABLE $<IF:$<CONFIG:Release>,ON,OFF>)
-endif()
-
 target_compile_options(monolog-obj PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(monolog-obj PRIVATE "${PROJECT_SOURCE_DIR}/include")
 

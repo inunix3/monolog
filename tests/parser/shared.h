@@ -49,9 +49,10 @@ assert_string_against_file(const char *input, const char *golden_file_name) {
     ASSERT_EQ(true, g_parser.had_error);
 #endif
 
-    FILE *tmp = tmpfile();
+    FILE *tmp = fopen(".temp.txt", "w+");
 
     if (!tmp) {
+        perror("cannot create .temp.txt");
         free(expected);
 
         FAIL();
@@ -78,9 +79,6 @@ assert_string_against_file(const char *input, const char *golden_file_name) {
     PASS();
 }
 
-// #define XSTRINGIFY(a) #a
-// #define STRINGIFY(a) XSTRINGIFY(a)
-
 #define XSTRINGIFY(a) #a
 #define STRINGIFY(a) XSTRINGIFY(a)
 
@@ -99,6 +97,3 @@ assert_string_against_file(const char *input, const char *golden_file_name) {
         );                                                                     \
     }
 #endif
-
-// #undef STRINGIFY
-// #undef XSTRINGIFY
