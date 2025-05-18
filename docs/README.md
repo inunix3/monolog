@@ -23,7 +23,7 @@ Kapitola [Sestavení] popisuje jak zkompilovat projekt.
 
 Část \nameref{part:implementation} popisuje implementaci, a také strukturu projektu.
 
-Dokument byl napsan v Markdownu, a převeden do PDF pomocí nástroje [Pandoc](https://pandoc.org/).
+Dokument byl napsán v Markdownu, a převeden do PDF pomocí nástroje [Pandoc](https://pandoc.org/).
 
 ## Původní zadání
 
@@ -371,7 +371,7 @@ Každý typ ma uřcitou sadu podporovaných operatorů.
 | `int`       | `int`        | `-`      | provede odčítání              | NE              | `int`        |
 | `int`       | `int`        | `*`      | provede násobení              | NE              | `int`        |
 | `int`       | `int`        | `/`      | provede dělení                | NE              | `int`        |
-| `int`       | `int`        | `%`      | provede dělení a vratí zbytek | NE              | `int`        |
+| `int`       | `int`        | `%`      | provede dělení a vrátí zbytek | NE              | `int`        |
 
 ### Unární
 
@@ -392,8 +392,8 @@ Tyto operace vracejí 1 pokud výraz je pravdivý, 0 pokud ne.
 | `int`       | `int`        | `!=`     | jestli hodnoty operandů nejsou stejné            | NE              | `int`        |
 | `int`       | `int`        | `<`      | pokud první operand je menší než druhý           | NE              | `int`        |
 | `int`       | `int`        | `>`      | pokud první operand je větší než druhý           | NE              | `int`        |
-| `int`       | `int`        | `<=`     | pokud první operand je menší nebo rovný druhýmu  | NE              | `int`        |
-| `int`       | `int`        | `>=`     | pokud první operand je větší nebo rovný druhýmu  | NE              | `int`        |
+| `int`       | `int`        | `<=`     | pokud první operand je menší nebo rovný druhému  | NE              | `int`        |
+| `int`       | `int`        | `>=`     | pokud první operand je větší nebo rovný druhému  | NE              | `int`        |
 | `int`       | `int`        | `&&`     | provede logickou konjunkcí                       | NE              | `int`        |
 | `int`       | `int`        | `||`     | provede logickou disjunkcí                       | NE              | `int`        |
 
@@ -429,7 +429,7 @@ nadbytek bude smazán.
 
 | Levá strana  | Operátor  | Operace                                 | Vedlejší účinky | Výsledný typ |
 |:------------:|:---------:|-----------------------------------------|:---------------:|:------------:|
-| `[T]`        | `[int]`   | vratí odkaz na prvek, uložený v seznamu   | NE            | `T`          |
+| `[T]`        | `[int]`   | vrátí odkaz na prvek, uložený v seznamu   | NE            | `T`          |
 
 - `[int]`: tento operátor je **indexovací** a očekává uvnitř výraz typu `int`, který je požadovaný
 index. Důležitý je, že hodnota indexu musí být v rozmezí $\left[0, N\right)$, kde N je počet prvků
@@ -491,7 +491,7 @@ dá se změnit hodnotu, která je umístěna v destinaci.
 | proměnná typu `T`                    | `T`          | `=`      | změní hodnotu proměnné                      | ANO             | `T`           |
 | prvek v poli typu `T`                | `T`          | `=`      | změní hodnotu uloženou v poli               | ANO             | `T`           |
 | proměnná nebo prvek v poli typu `T?` | `T`          | `=`      | uloží hodnotu do volitelného typu           | ANO             | `T`           |
-| proměnná nebo prvek v poli typu `T?` | `nil`        | `==`     | ověří, zda levá straná je prazdná           | ANO             | `T`           |
+| proměnná nebo prvek v poli typu `T?` | `nil`        | `==`     | ověří, zda levá strana je prázdná           | ANO             | `T`           |
 | znak v řetězci                       | `int`        | `=`      | změní specifikovaný znak                    | ANO             | `int`         |
 
 Při přiřazování hodnoty, hodnota se **kopíruje**. Takže, když například proměnné `b` přiřadíme
@@ -641,19 +641,21 @@ Pokud proměnná je deklarovaná bez počáteční hodnoty, její výchozí hodn
 
 Použití proměnné ve výrazu dosadí její hodnotu.
 
+Proměnná nemůže být typu `void`. Je to považováno za sémantickou chybu.
+
 ```c
-// deklarace proměnné typu int s jmenem "a", vychozí hodnota je 0.
+// deklarace proměnné typu int s jménem "a", výchozí hodnota je 0.
 int a;
 
-// deklarace proměnné typu int s jmenem "c", hodnotou které je součet hodnot proměnných a, b.
+// deklarace proměnné typu int s jménem "c", hodnotou které je součet hodnot proměnných a, b.
 int c = a + b;
 
-// deklarace proměnné typu string s jmenem "city", hodnotou je řetězec "Prague".
+// deklarace proměnné typu string s jménem "city", hodnotou je řetězec "Prague".
 string city = "Prague";
 
-// volitelná proměnná, je prazdná (vychozí hodnota je `nil`).
-string? jmeno = nil;
-jmeno = "ahoj";
+// volitelná proměnná, je prázdná (výchozí hodnota je `nil`).
+string? jméno = nil;
+jméno = "ahoj";
 
 // deklarace proměnné typu seznamu, který obsahuje seznam prvku volitelného typu int.
 [[int?]] matrix;
@@ -664,7 +666,7 @@ jmeno = "ahoj";
 Při deklaraci seznamu, je možné uvést počáteční rozměr pole:
 
 ```c
-[int, 5] pole; // bude mit 5 vynulovanych prvku, kazdy je typu int
+[int, 5] pole; // bude mít 5 vynulovaných prvku, každý je typu int
 ```
 
 Je to zkratka pro tento zápis:
@@ -716,7 +718,7 @@ Při volání funkce, typ každého argumentu se musí schodovat s typem paramet
 
 ```c
 // Funkce s názvem foo, bez parametrů, návratový typ je void,
-// tělem je blok (viz následujicí sekce).
+// tělem je blok (viz následující sekce).
 void foo() {
     println("Hello, World!");
 }
@@ -738,7 +740,7 @@ int m = max(115, 94); // argumenty jsou a = 115, b = 94.
 
 void bar() {
     // Použití proměnné a funkce uvnitř funkce, 
-    // deklarované v globálním rozsahu. (viz následujicí sekce).
+    // deklarované v globálním rozsahu. (viz následující sekce).
     if (max(m, 5)) {
         println("A");
     } else {
@@ -993,6 +995,24 @@ int random_range(int min, int max);
 
 Vrátí náhodné číslo v intervalu $\left[min, max\right]$.
 
+## chr
+
+```c
+string chr(int ch);
+```
+
+Vrátí řetězec, obsahující znak, jehož pozice v ASCII tabulce odpovídá `ch`.
+
+## ord
+
+```c
+int ord(string ch);
+```
+
+Vrátí pozici v ASCII tabulce prvního znaku v řetězci `ch`.
+
+Prázdný řetězec vrátí 0.
+
 \newpage
 \part{Detaily implementace}
 \label{part:implementation}
@@ -1043,14 +1063,14 @@ typedef enum TokenKind {
 } TokenKind;
 
 typedef struct SourceInfo {
-    int line; /* rádek */
+    int line; /* řádek */
     int col; /* kolonka */
 } SourceInfo;
 
 typedef struct Token {
     /* druh */
     TokenKind kind;
-    /* odkaz na výskyt ve zdrojovém kodu */
+    /* odkaz na výskyt ve zdrojovém kódu */
     const char *src;
     /* délka slova */
     size_t len;
@@ -1066,7 +1086,7 @@ Např. pokud slovo začíná na číslici, zřejmě se jedná o číslo.
 
 ```c
 Token next_token(Lexer *self) {
-    /* přeskočit bílé znáky */
+    /* přeskočit bílé znaky */
     find_begin_of_data(self);
 
     if (at_eof(self)) {
@@ -1095,7 +1115,7 @@ Token integer(Lexer *self) {
            !is_ws(self->ch) && /* jestli aktuální znak není bílý znak */
            !is_operator(self->ch)) /* jestli aktuální znak není operátor */
     {
-        /* jestli jsme našli, znak který není čislici,
+        /* jestli jsme našli, znak který není číslici,
          * číslo není ve validní formě
          */
         if (!is_digit(self->ch)) {
@@ -1304,9 +1324,9 @@ typedef enum PrecedenceLevel {
 } PrecedenceLevel;
 
 typedef struct ParseRule {
-    AstNode *(prefix)(Parser *self);
-    AstNode *(infix)(Parser *self, AstNode *left);
-    AstNode *(suffix)(Parser *self, AstNode *left);
+    AstNode *(*prefix)(Parser *self);
+    AstNode *(*infix)(Parser *self, AstNode *left);
+    AstNode *(*suffix)(Parser *self, AstNode *left);
 
     /* priorita (vázací síla) */
     PrecedenceLevel prec;
@@ -1509,9 +1529,9 @@ typedef struct Scope {
 } Scope;
 ```
 
-Každý `Scope` obsahuje alokováné proměnné, řetězce, seznamy a trvalé hodnoty pro volitelné typy.
+Každý `Scope` obsahuje alokované proměnné, řetězce, seznamy a trvalé hodnoty pro volitelné typy.
 
-Hodnoty, ať použivané rovnou ve výrazech nebo uchováváné v proměnných, jsou reprezentovány
+Hodnoty, ať používané rovnou ve výrazech nebo uchovávané v proměnných, jsou reprezentovány
 strukturou `Value`:
 
 ```c
@@ -1573,11 +1593,11 @@ typedef struct Type {
 } Type;
 ```
 
-Kdyby Monolog obsahoval jenom primitivný typy, typy šlo by uchovávát staticky. Ale jelikož Monolog
-obsahuje i složené datové typy, je potřeba uchovávát typy dynamicky a mít způsob nacházet nutný
+Kdyby Monolog obsahoval jenom primitivní typy, typy šlo by uchovávat staticky. Ale jelikož Monolog
+obsahuje i složené datové typy, je potřeba uchovávat typy dynamicky a mít způsob nacházet nutný
 po jménu.
 
-Na to slouží struktura `TypeSystem`, která je zodpovědná za spravu typu:
+Na to slouží struktura `TypeSystem`, která je zodpovědná za správu typu:
 
 ```c
 typedef struct TypeSystem {
@@ -1596,16 +1616,16 @@ typedef struct TypeSystem {
 
 # Implementace hašovací tabulky
 
-Implementace hašové tabulky je velice jednoduchá, ale postačujicí.
+Implementace hašovací tabulky je velice jednoduchá, ale postačující.
 
-Hašová tabulka neuchovává níc. Klíče jsou ukazatele na `char`, data jsou ukazatele na libovolná
+Hašovací tabulka neuchovává nic. Klíče jsou ukazatele na `char`, data jsou ukazatele na libovolná
 data (`void *`).
 
 Jako hašovací funkcí používá [FNV-1a](http://www.isthe.com/chongo/tech/comp/fnv/). Výhodou tyto
 funkce je, že je velice jednoduchá k implementaci, a má celkem dobré vlastnosti (kromě
 kryptografických, ale to je jedno pro tento projekt).
 
-Pro řešení kolizi, používá linear probing (*lineární zkoušení*), když algoritmus prochází celou
+Pro řešení kolizi používá linear probing (*lineární zkoušení*), když algoritmus prochází celou
 tabulkou, dokud nenajde prvek/místo pro vložení.
 
 # Limitace a možná vylepšení
@@ -1615,12 +1635,21 @@ Monolog je hračkářský jazyk, proto ve srovnání se skutečnými jazyky, nen
 - Zápis `[T, počáteční_rozměr]` nefunguje u vložených seznamů z důvodu zachovat kód interpretátora
 jednodušší.
 
-- Správa pamětí je velice primitivní a není moc efektivní. Lepší je přidat např. **reference counting**,
-aby data se uvolňovaly když už se nepoužívají, nebo složitější algoritmy pro garbage collection.
+- Garbage collection je velice primitivní a není moc efektivní. Lepší je přidat
+např. **reference counting**, aby data se uvolňovaly když už se nepoužívají.
 
-- Escape sekvence nejsou podporovány.
+- Pro zjednodušení kódu, správa pamětí není efektivní - mnoho se používá funkce `malloc()`.
+Většinu věcí je lepší předalokovat ve velkém poli, aby zmenšit fragmentaci pamětí a zvýšit
+výkon (datové struktury jako **memory pool** nebo **arena**).
 
-- Podpora jiných znaků, než ASCII, není dokonalá.
+- Když alokace nějaké pamětí nebude úspěšná, interpretátor hned ukonči. Velice to zjednodušuje kód
+a pro hračkářský jazyk je to jedno.
+
+- Interpretátor není odolný vůči přetečení zásobníku, když třeba vykonává rekurzivní funkce.
+
+- Escape sekvence nejsou podporovány, ale jde místo toho použit funkci [chr()](#chr).
+
+- Podpora jiných znaků kromě ASCII není dokonalá.
 
 \newpage
 \part{Appendix A}
