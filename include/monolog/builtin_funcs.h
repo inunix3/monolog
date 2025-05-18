@@ -23,3 +23,5 @@ DECLARE_BUILTIN(input_int);
 DECLARE_BUILTIN(input_string);
 DECLARE_BUILTIN(random);
 DECLARE_BUILTIN(random_range);
+DECLARE_BUILTIN(chr);
+DECLARE_BUILTIN(ord);

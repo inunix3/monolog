@@ -23,9 +23,12 @@ static void
 highlighter(ic_highlight_env_t *henv, const char *input, void *arg) {
     (void) arg;
 
-    static const char *keywords[] = {"break",     "continue",     "return",
-                                     "print",     "println",      "exit",
-                                     "input_int", "input_string", NULL};
+    static const char *keywords[] = {
+        "break",   "continue",     "return",    "print",
+        "println", "exit",         "input_int", "input_string",
+        "random",  "random_range", "chr",       "ord",
+        NULL
+    };
     static const char *controls[] = {"if", "else", "while", "for", NULL};
     static const char *types[] = {"int", "string", "void", NULL};
 
@@ -319,7 +322,6 @@ static CliCommand g_cmds[] = {
 };
 
 int main(int argc, char **argv) {
-    /* monolog run FILENAME */
     if (argc < 2) {
         print_help();
 

@@ -561,6 +561,13 @@ static void check_var_decl(SemChecker *self, const AstNode *node) {
 
             error(self, &dmsg);
         }
+    } else if (type->id == TYPE_VOID) {
+        DiagnosticMessage dmsg = {
+            .kind = DIAGNOSTIC_VOID_VAR,
+            .src_info = node->var_decl.type->tok.src_info,
+        };
+
+        error(self, &dmsg);
     }
 
     const char *name = node->var_decl.name->ident.str.data;

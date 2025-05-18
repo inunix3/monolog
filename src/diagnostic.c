@@ -170,6 +170,10 @@ const char *dmsg_to_str(const DiagnosticMessage *dmsg) {
         snprintf(g_buf, BUFFER_SIZE, "void function cannot return value");
 
         break;
+    case DIAGNOSTIC_VOID_VAR:
+        snprintf(g_buf, BUFFER_SIZE, "variable cannot be void");
+
+        break;
     }
 
     return g_buf;

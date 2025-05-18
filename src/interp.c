@@ -1865,10 +1865,39 @@ builtin_random_range(Interpreter *self, Value *args, const AstNode *node) {
     expr_res.val.type = self->types->builtin_int;
     expr_res.val.scope = self->env.caller_scope;
 
-    Value *min = &args[0];
-    Value *max = &args[1];
+    const Value *min = &args[0];
+    const Value *max = &args[1];
 
     expr_res.val.i = rand() % ((int) max->i + 1 - (int) min->i) + (int) min->i;
+
+    return expr_res;
+}
+
+ExprResult
+builtin_chr(Interpreter *self, Value *args, const AstNode *node) {
+    ExprResult expr_res = {EXPR_VALUE, .node = node, {0}};
+    expr_res.val.type = self->types->builtin_string;
+    expr_res.val.scope = self->env.caller_scope;
+
+    const Value *ch = &args[0];
+
+    StrBuf *str = scope_new_string(self->env.caller_scope);
+    str_init_n(str, 1);
+    str->data[0] = (char) ch->i;
+
+    expr_res.val.s = str;
+
+    return expr_res;
+}
+
+ExprResult
+builtin_ord(Interpreter *self, Value *args, const AstNode *node) {
+    ExprResult expr_res = {EXPR_VALUE, .node = node, {0}};
+    expr_res.val.type = self->types->builtin_int;
+    expr_res.val.scope = self->env.caller_scope;
+
+    const Value *ch = &args[0];
+    expr_res.val.i = ch->s->data[0];
 
     return expr_res;
 }
