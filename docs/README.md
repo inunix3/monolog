@@ -88,8 +88,12 @@ není nutno uvádět rozměr. Pokud je uveden, prvky budou vynulovány.
 
 - Nová zabudovaná funkce `int random()`, která vratí náhodné číslo.
 
-- Nová zabudovaná funkce `int random_range(int min, int max)`, která vratí náhodné číslo v
+- Nová zabudovaná funkce `int random_range(int min, int max)`, která vratí náhodné číslo v zadaném
 intervalu.
+
+- Nová zabudovaná funkce `string chr(int ch)` pro převod číselné hodnoty do ASCII znaku.
+
+- Nová zabudovaná funkce `int ord(string ch)` pro převod ASCII znaku do číselné hodnoty.
 
 - Zabudovaná funkce `input_string` teď ma navratový typ `string?`. Vrací `nil` v případě chyby ve
 čtení vstupu.
