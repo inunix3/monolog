@@ -26,6 +26,9 @@ Kapitola [Sestavení] popisuje jak zkompilovat projekt.
 
 Dokument byl napsán v Markdownu, a převeden do PDF pomocí nástroje [Pandoc](https://pandoc.org/).
 
+V kódu můžete najít komentáře s licenzi a s přezdívkou "inunix3". Je to moje přezdivka na GitHubu,
+plánuju tam zvěřejnit svuj projekt.
+
 ## Původní zadání
 
 - Aritmetické operátory (`+, -, *, /, %`)
@@ -80,9 +83,9 @@ není nutno uvádět rozměr. Pokud je uveden, prvky budou vynulovány.
 
 - Nový operátor `+=`: přidá prvek na konec seznamu.
 
-- Nový operátor `-=`: odstraní zadaný počet prvku z konce seznamu
+- Nový operátor `-=`: odstraní zadaný počet prvku z konce seznamu.
 
-- Nový operátor `#=`: nastaví rozmer seznamu na zadaný
+- Nový operátor `#=`: nastaví rozmer seznamu na zadaný.
 
 - Nová zabudovaná funkce `void exit(int code)`, která ukončí program uprostřed vykonávání.
 
@@ -114,14 +117,14 @@ Běh programu probíha následovně:
 
 1. Načtení zdrojového kodu (ze souboru nebo klavesnice)
 2. Lexikální analýza *(lexing)*
-3. Syntaktická analýza *(parsing)*
-4. Semantická analýza a vygenerování syntaxového stromu (AST) *(semantic analysis)*
+3. Syntaktická analýza a vygenerování syntaxového stromu (AST) *(parsing)*
+4. Semantická analýza *(semantic analysis)*
 5. Interpretace prochazením AST *(tree-walk interpretation)*
 
 Program podporuje REPL a vykonávaní ze specifikováného souboru.
 
 ```
-1.  monolog FILENAME
+1.  monolog run FILENAME
 2.  monolog scan FILENAME
 3.  monolog parse FILENAME
 4.  monolog repl
@@ -208,9 +211,7 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release -G "VÁŠ GENERÁTOR" ..
 ```
 
-Jestli použiváte MinGW, napíšte jako generátor "Unix Makefiles".
-
-- Pokud chcete použit jiný kompilátor, přidejte `-DCMAKE_C_COMPILER=cesta_ke_kompilatoru"`.
+- Pokud chcete použit jiný kompilátor, přidejte `-DCMAKE_C_COMPILER=cesta_k_souboru_kompilatoru"`.
 
 - Pokud chcete zkompilovat i testovací programy, přidejte `-DBUILD_TESTS=ON`.
 
@@ -263,7 +264,6 @@ identifier ::= ([a-zA-Z] | '_') ([a-zA-Z] | '_' | [0-9])*
 nil        ::= 'nil'
 
 binary   ::= expression binary-op expression
-             '-=' | '#=' | '<=' | '>=' | '==' | '!=' | '&&' | '||'
 unary    ::= unary-op expression
 suffix   ::= expression suffix-op
 grouping ::= '(' expression ')'
@@ -362,9 +362,10 @@ Seznam `[T]` je **složený datový typ**, který obsahuje prvky typu `T`, takž
 
 ```
 binary-op ::= '+' | '-' | '*' | '/' | '%' | '<' | '>' | '+=' |
+              '-=' | '#=' | '<=' | '>=' | '==' | '!=' | '&&' | '||'
 unary-op  ::= '-' | '+' | '*' | '!' | '#' | '$' | '++' | '--'
 suffix-op ::= '++' | '--'
-subscript ::= '[' expression ']'
+subscript ::= expression '[' expression ']'
 ```
 
 V Monologu jsou binární (`a + 2`), unární (`-b`) a sufixové operátory (`a++` nebo `list[5]`).
@@ -452,7 +453,9 @@ v daném seznamu.
 |:------------:|:--------:|---------------------------------|:---------------:|:------------:|
 | `T?`         | ` *`     | vytěží data z volitelného typu  | NE              | `T`          |
 
-- **POZNÁMKA**: použití tohoto operátoru je zakázáno v případě, jestli objekt volitelného typu
+- použití tohoto operátoru umožňuje měnít vnitřní hodnotu.
+
+- použití tohoto operátoru je zakázáno v případě, jestli objekt volitelného typu
 je prázdný.
 
 ## Řetězcové operátory
@@ -523,7 +526,7 @@ shora dolů, od nejvyšší priority po nejnižší.
 | 6        | `== !=`             | Rovnost, nerovnost  | zleva doprava |
 | 7        | `&&`                | Konjunkce           | zleva doprava |
 | 8        | `||`                | Disjunkce           | zleva doprava |
-| 9        | `=`                 | Přiřazování         | zprava doleva |
+| 9        | `=` `+=` `-=` `#=`  | Přiřazování         | zprava doleva |
 
 # Řídicí příkazy
 
@@ -566,7 +569,7 @@ zopakuje. Pokud není, cyklus se ukončí.
 
 ```
 for-statement ::= 'for' '(' init-clause? ';' condition? ';' iter-expr? ')' statement?
-init-clause   ::= expression | declaration
+init-clause   ::= expression | variable-declaration
 condition     ::= expression
 iter-expr     ::= expression
 ```
@@ -1037,8 +1040,8 @@ Struktura projektu:
 docs/                  dokumentace
   Makefile             Makefile pro generování PDF tohoto dokumentu
   prirucka.md          zdrojový kod tohoto dokumentu
-examples/
-  ...                  ukázkové programy
+examples/              ukázkové programy
+  ...
 include/
   monolog/             .h soubory projektu
     ...
@@ -1196,7 +1199,7 @@ případech nemá moc smysl uvádět jméno struktury ve struktuře, a tím pád
 vloží do rodičovské struktury, a zároveň kód pak bude čitelnější a kratší.
 
 Parser je **rekurzivní a sestupný**. To znamená, že parsing probíhá odshora dolů, a využívá
-rekurzi. Každá funkce reprezentuje jeden z pravidel gramatiky.
+rekurzi. Každá funkce implementuje jedno z pravidel gramatiky.
 
 Také je to $LL(1)$ parser, což znamená kolik tokenů parser zpracovává aby se rozhodnout, o jaké
 pravidlo se jedná.
@@ -1221,8 +1224,8 @@ výraz), takže je vidět, že se uplatňuje rekurze.
 
 ## Parsování infixové notace
 
-Monolog používá **infixovou notaci** pro zápis výrazu, na kterou člověk je zvyklý, protože binární
-operátory se zapisují mezi operandy.
+Monolog používá **infixovou notaci** pro zápis výrazu, kde binární operátory se zapisují mezi
+operandy.
 
 Ačkoliv člověk na tuto notaci je zvyklý, zpracovávat infixové výrazy pro stroj není jednoduchý kvůli 
 závorkám, prioritě operátoru a asociativitě.
@@ -1231,7 +1234,7 @@ Pro tento problem existuje spousta řešení. Jedno z populárních je převést
 notace** (také známá jako *reverzní polská notace* neboli RPN), když nejdřív následují operandy,
 a až pak operátor.
 
-Výhodou RPN je, že nevyřazuje závorky (priorita operátorů se vyjadřuje samotným zápisem výrazu).
+Výhodou RPN je, že nevyřaduje závorky (priorita operátorů se vyjadřuje samotným zápisem výrazu).
 
 Populární algoritmus pro konvertaci infixové notace do postfixové je
 [shunting yard algoritmus](https://cs.wikipedia.org/wiki/Algoritmus_shunting-yard), vyvinutý
@@ -1250,9 +1253,9 @@ Díky tomu, tento algoritmus je snazší implementovat.
 
 #### Popis
 
-Prattův parser funguje tak, že každý token může mít přiřazené tyto funkce (parsovací pravidla):
+Prattův parser funguje tak, že každý token může mít přiřazené dvě funkce (parsovací pravidla):
 
-- `prefix()` - začátek výrazu - čísla, jména, unární operátory
+- `prefix()` - začátek výrazu - literály, jména, unární operátory
 - `infix()` - uprostřed výrazu - binární operátory, sufixové, atd.
 
 Dále každý token má definovaný úroveň přednosti (v anglické literatuře se používá pojem
@@ -1395,9 +1398,9 @@ možné. Přitom chybové výrazy a tokeny jsou také částí AST (jejích kons
 `AST_NODE_ERROR`).
 
 Jaké body se považují za "bezpečné", závisí od kontextu (co konkretně ted se parsuje). Ale celkem,
-tyto tokeny jsou považovaná jako bezpečná:
+tyto tokeny jsou považovaná jako bezpečné:
 
-- Příkazy jako `if`, `else`, `while`, `for`, `break, `continue`, `return`.
+- Příkazy jako `if`, `else`, `while`, `for`, `break`, `continue`, `return`.
 - Blok `{`.
 - Názvy typu: `int`, `void`, `string`, seznamy (`[`).
 - Středník `;`
@@ -1485,6 +1488,7 @@ Sémantická analýza zahrnuje předcházení těmto situacím:
 - Hodnota indexu není celočíselná.
 - Pokus změnit hodnotu výrazu (je to možné jen u proměnných a prvku seznamu/řetězců).
 - Neindexovatelný výraz.
+- Deklarace proměnné jako `void`.
 
 Sémantická analýza probíhá také rekurzivním způsobem a není celkem pozoruhodná.
 
