@@ -1,6 +1,7 @@
 ---
 title: Monolog
 author: Alexey Kachaev, E1
+date: 18. května 2025
 include-before:
 - '`\newpage{}`{=latex}'
 header-includes:
