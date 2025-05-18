@@ -1,0 +1,37 @@
+int is_letter(int ch) {
+    return (ch >= ord("A") && ch <= ord("Z")) || (ch >= ord("a") && ch <= ord("z"));
+}
+
+int wc(string s) {
+    int total = 0;
+    int inside_word = 0;
+
+    for (int i = 0; i < #s; ++i) {
+        if (is_letter(s[i])) {
+            inside_word = 1;
+        }
+
+        if (inside_word && !is_letter(s[i])) {
+            ++total;
+            inside_word = 0;
+        }
+    }
+
+    if (inside_word) {
+        ++total;
+    }
+
+    return total;
+}
+
+print("Zadejte vetu: ");
+string? input = input_string();
+
+if (input == nil) {
+    println("Chyba");
+    exit(-1);
+}
+
+string input = *input;
+
+println("Pocet slov: " + $wc(input));

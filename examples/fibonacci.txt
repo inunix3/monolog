@@ -1,0 +1,26 @@
+int fib(int n) {
+    if (n == 1) {
+        return 0;
+    } else if (n == 2) {
+        return 1;
+    }
+
+    return fib(n - 1) + fib(n - 2);
+}
+
+print("Zadejte pocet clenu Fibonacciho posloupnosti: ");
+int? n = input_int();
+
+if (n == nil) {
+    println("Chyba!");
+    exit(-1);
+}
+
+int n = *n;
+
+if (n <= 0) {
+    println("Zadejte kladne cislo");
+} else {
+    println("F_" + $n + " = " + $fib(n));
+}
+

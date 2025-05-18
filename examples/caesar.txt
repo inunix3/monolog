@@ -1,0 +1,57 @@
+// A mathematical function for caesar cipher:
+//   En(x) = (x + n) mod 26
+
+int UPPER_BASIS = ord("A");
+int LOWER_BASIS = ord("a");
+int UPPER_LAST = ord("Z");
+int LOWER_LAST = ord("z");
+
+int is_upper(int ch) {
+    return ch >= UPPER_BASIS && ch <= UPPER_LAST;
+}
+
+int is_lower(int ch) {
+    return ch >= LOWER_BASIS && ch <= LOWER_LAST;
+}
+
+int caesar_char(int ch, int n) {
+    if (is_upper(ch)) {
+        return (ch - UPPER_BASIS + n) % 26 + UPPER_BASIS;
+    } else if (is_lower(ch)) {
+        return (ch - LOWER_BASIS + n) % 26 + LOWER_BASIS;
+    } else {
+        return ch;
+    }
+}
+
+string caesar(string s, int n) {
+    string out;
+
+    for (int i = 0; i < #s; ++i) {
+        out = out + chr(caesar_char(s[i], n));
+    }
+
+    return out;
+}
+
+print("Zadejte text: ");
+string? input = input_string();
+
+if (input == nil) {
+    println("Chyba!");
+    exit(-1);
+}
+
+string input = *input;
+
+print("Zadejte posunuti: ");
+int? n = input_int();
+
+if (n == nil) {
+    println("Chyba!");
+    exit(-1);
+}
+
+int n = *n;
+
+println("Zasifrovany text: " + caesar(input, n));
