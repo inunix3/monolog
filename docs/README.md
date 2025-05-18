@@ -139,6 +139,10 @@ zpracovává a vykonává. Veškere proměnné a funkce jsou pamatováný a pou�
 
 Také v režímu REPL interpretátor hned se neukončí v připadě chyby.
 
+Knihovna **isocline** přináší klavesové zkratky, které dovolují pohodlněji editovat text. Zkrátky
+jsou vypsany na
+[stránce knihovny](https://github.com/daanx/isocline/tree/main?tab=readme-ov-file#key-bindings).
+
 # Sestavení
 
 Monolog používá CMake pro kompilaci. K dispozici je na [jejích webu](https://cmake.org/), nebo,
