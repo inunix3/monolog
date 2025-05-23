@@ -2,8 +2,7 @@
 
 A simple, interpreted C-like programming language.
 
-This is a school project, so the language is toyish and the interpreter is pretty simply
-implemented.
+This was a school project, so the language is toyish and the interpreter is pretty simple.
 
 Anyway, created just for fun.
 
@@ -54,7 +53,7 @@ fizzbuzz(100);
 
 Example programs are located in `examples/`.
 
-Reference for the language you can find in `docs/`. The Czech version is intended for the teacher.
+Reference for the language you can find in `docs/`.
 
 ## Building
 
