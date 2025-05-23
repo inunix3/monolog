@@ -1,6 +1,6 @@
 # monolog
 
-A simple, interpreted C-like programming language.
+A simple interpreted C-like programming language.
 
 This was a school project, so the language is toyish and the interpreter is pretty simple.
 
@@ -39,7 +39,7 @@ fizzbuzz(100);
 - Arithmetic (`+, -, *, /, %`)
 - Logic (`!, ==, !=, <, >, <=, >=, &&, ||`)
 - Basic branching statements (`if, else`)
-- Loops (`while, for`)
+- Loops (`while, for, break, continue`)
 - Block statements
 - Functions
 - Builtin types:
