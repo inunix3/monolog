@@ -26,7 +26,7 @@ int check_winner([int] player_dists, int dist) {
 
 void draw([int] player_dists, int dist) {
     for (int i = 0; i < PLAYER_COUNT; ++i) {
-        print($(i + 1) + ". draha: ");
+        print($(i + 1) + ". player: ");
 
         for (int j = 0; j < dist; ++j) {
             if (player_dists[i] == j) {
@@ -40,11 +40,11 @@ void draw([int] player_dists, int dist) {
     }
 }
 
-print("Delka drahy: ");
+print("Distance: ");
 int? dist = input_int();
 
 if (dist == nil) {
-    println("CHYBA");
+    println("Error");
     exit(-1);
 }
 
@@ -58,17 +58,17 @@ for (int i = 0;; ++i) {
     int winner = check_winner(player_dists, dist);
 
     if (winner > -1) {
-        println("Hrac " + $(winner + 1) + " je vitez!");
+        println("Player " + $(winner + 1) + " has won!");
 
         break;
     }
 
-    print("Chcete pokracovat? (1 = ANO, 0 = NE) ");
+    print("Continue? (1 = YES, 0 = NO) ");
 
     string? choice = input_string();
 
     if (choice == nil) {
-        println("CHYBA");
+        println("Error");
         exit(-1);
     }
 
@@ -79,6 +79,6 @@ for (int i = 0;; ++i) {
     } else if (*choice == "0") {
         break;
     } else {
-        println("Spatny vstup!");
+        println("Bad input!");
     }
 }

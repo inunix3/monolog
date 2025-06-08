@@ -1,33 +1,33 @@
-print("Napiste zaklad: ");
-int? zaklad = input_int();
+print("Enter base: ");
+int? base = input_int();
 
-if (zaklad == nil) {
-    println("Chyba vstupu");
+if (base == nil) {
+    println("Input error");
     exit(-1);
 }
 
-print("Napiste prirozeny exponent: ");
+print("Enter natural exponent power: ");
 int? exponent = input_int();
 
 if (exponent == nil) {
-    println("Chyba vstupu");
+    println("Input error");
     exit(-1);
 }
 
-int zaklad = *zaklad;
+int base = *base;
 int exponent = *exponent;
 
 int result;
 
 if (exponent > 0) {
-    result = zaklad;
+    result = base;
 
     for (int i = 1; i < exponent; ++i) {
-        result = zaklad * result;
+        result = base * result;
     }
 } else {
     result = -1;
-    println("spatny exponent");
+    println("Bad exponent power");
 }
 
-println("vysledek: " + $result);
+println("Result: " + $result);

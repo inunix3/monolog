@@ -24,14 +24,14 @@ int wc(string s) {
     return total;
 }
 
-print("Zadejte vetu: ");
+print("Enter text: ");
 string? input = input_string();
 
 if (input == nil) {
-    println("Chyba");
+    println("Error");
     exit(-1);
 }
 
 string input = *input;
 
-println("Pocet slov: " + $wc(input));
+println("Word count: " + $wc(input));

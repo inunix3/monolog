@@ -4,15 +4,15 @@ int rand_direction() {
 
 void print_players([int] player_x, [int] player_y, int player_cnt) {
     for (int i = 0; i < player_cnt; ++i) {
-        println("- Pozice " + $(i + 1) + " hrace: [" + $player_x[i] + ", " + $player_y[i] + "]");
+        println("- Position of " + $(i + 1) + " player: [" + $player_x[i] + ", " + $player_y[i] + "]");
     }
 }
 
-print("Pocet hracu: ");
+print("Enter the number of players: ");
 int? player_cnt = input_int();
 
 if (player_cnt == nil) {
-    println("CHYBA");
+    println("Error");
     exit(-1);
 }
 
@@ -22,14 +22,14 @@ int player_cnt = *player_cnt;
 [int, player_cnt] player_y;
 
 for (int i = 0;; ++i) {
-    println($(i + 1) + ". KROK");
+    println($(i + 1) + ". STEP");
     print_players(player_x, player_y, player_cnt);
 
-    print("Chcete pokracovat? (1 = ANO, 0 = NE) ");
+    print("Continue? (1 = YES, 0 = NO) ");
     string? choice = input_string();
 
     if (choice == nil) {
-        println("CHYBA");
+        println("Error");
         exit(-1);
     }
 
@@ -39,11 +39,11 @@ for (int i = 0;; ++i) {
             player_y[i] = player_y[i] + rand_direction();
         }
     } else if (*choice == "0") {
-        println("KONEC SIMULACE");
+        println("END OF SIMULATION");
 
         break;
     } else {
-        println("Spatny vstup!");
+        println("Bad input!");
 
         exit(-1);
     }

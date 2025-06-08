@@ -3,13 +3,13 @@ int HEIGHT = 10;
 int available = WIDTH * HEIGHT;
 
 void error() {
-    println("chyba");
+    println("Error");
     exit(-1);
 }
 
 void reserve([[int]] auditorium, int x, int y) {
     if (auditorium[y][x]) {
-        println("Jiz zarezervovano!");
+        println("Already reserved!");
 
         return;
     }
@@ -20,7 +20,7 @@ void reserve([[int]] auditorium, int x, int y) {
 
 void unreserve([[int]] auditorium, int x, int y) {
     if (!auditorium[y][x]) {
-        println("Misto neni zarezervovano.");
+        println("The queried sit is not reserved.");
 
         return;
     }
@@ -84,16 +84,16 @@ for (int i = 0; i < #auditorium; ++i) {
     auditorium[i] #= WIDTH;
 }
 
-println("Vitejte v programu rezervaci mist v kinosalu Cinema City.");
+println("Welcome to Cinema City's reservation program");
 
 for (;;) {
     println("");
-    println("1. Zobrazit kinosal");
-    println("2. Rezervovat misto");
-    println("3. Odrezervovat misto");
-    println("4. Odrezervovat vsechna mista");
-    println("5. Pocet aktualne dostupnych mist");
-    println("6. Opustit");
+    println("1. Display sits");
+    println("2. Reserve sit");
+    println("3. Unreserve sit");
+    println("4. Unreserve all sits");
+    println("5. Print available sits");
+    println("6. Exit");
     println("");
 
     string choice = prompt_string("> ");
@@ -101,22 +101,22 @@ for (;;) {
     if (choice == "1") {
         draw_auditorium(auditorium);
     } else if (choice == "2") {
-        int y = prompt_int("Vertikalni pozice: ");
-        int x = prompt_int("Horizontalni pozice: ");
+        int y = prompt_int("Vertical coord: ");
+        int x = prompt_int("Horizontal coord: ");
 
         if (y < 0 || y >= HEIGHT || x < 0 || x >= WIDTH) {
-            println("Spatna pozice!");
+            println("Bad coord!");
 
             continue;
         }
 
         reserve(auditorium, x, y);
     } else if (choice == "3") {
-        int y = prompt_int("Vertikalni pozice: ");
-        int x = prompt_int("Horizontalni pozice: ");
+        int y = prompt_int("Vertical coord: ");
+        int x = prompt_int("Horizontal coord: ");
 
         if (y < 0 || y >= HEIGHT || x < 0 || x >= WIDTH) {
-            println("Spatna pozice!");
+            println("Bad coord!");
 
             continue;
         }
@@ -125,11 +125,11 @@ for (;;) {
     } else if (choice == "4") {
         unreserve_all(auditorium);
     } else if (choice == "5") {
-        println("Aktualne je dostupno " + $available + " mist");
+        println("There is available " + $available + " sits");
     } else if (choice == "6") {
         break;
     } else {
-        println("Spatny vyber");
+        println("Bad choice");
     }
 }
 

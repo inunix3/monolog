@@ -22,24 +22,24 @@ int min([int] list) {
     return min;
 }
 
-print("Zadejte pocet prvku: ");
+print("Enter the number of elements: ");
 int? num_cnt = input_int();
 
 if (num_cnt == nil) {
-    println("Chyba");
+    println("Error");
     exit(-1);
 }
 
 int num_cnt = *num_cnt;
 [int, num_cnt] nums;
 
-println("Zadejte prvky:");
+println("Enter the elements:");
 
 for (int i = 0; i < num_cnt; ++i) {
     int? num = input_int();
 
     if (num == nil) {
-        println("Chyba");
+        println("Error");
         exit(-1);
     }
 
@@ -48,5 +48,5 @@ for (int i = 0; i < num_cnt; ++i) {
     nums[i] = num;
 }
 
-println("Maximum: " + $max(nums));
-println("Minimum: " + $min(nums));
+println("Max: " + $max(nums));
+println("Min: " + $min(nums));

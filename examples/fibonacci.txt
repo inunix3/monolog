@@ -8,18 +8,18 @@ int fib(int n) {
     return fib(n - 1) + fib(n - 2);
 }
 
-print("Zadejte pocet clenu Fibonacciho posloupnosti: ");
+print("Enter the count of Fibonacci numbers: ");
 int? n = input_int();
 
 if (n == nil) {
-    println("Chyba!");
+    println("Error!");
     exit(-1);
 }
 
 int n = *n;
 
 if (n <= 0) {
-    println("Zadejte kladne cislo");
+    println("Enter a positive number");
 } else {
     println("F_" + $n + " = " + $fib(n));
 }

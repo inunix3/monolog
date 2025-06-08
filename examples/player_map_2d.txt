@@ -35,11 +35,11 @@ void draw_area([int] player_x, [int] player_y, int player_cnt) {
     }
 }
 
-print("Pocet hracu: ");
+print("Enter the number of players: ");
 int? player_cnt = input_int();
 
 if (player_cnt == nil) {
-    println("CHYBA");
+    println("Error");
     exit(-1);
 }
 
@@ -49,14 +49,14 @@ int player_cnt = *player_cnt;
 [int, player_cnt] player_y;
 
 for (int i = 0;; ++i) {
-    println($(i + 1) + ". KROK");
+    println($(i + 1) + ". STEP");
     draw_area(player_x, player_y, player_cnt);
 
-    print("Chcete pokracovat? (1 = ANO, 0 = NE) ");
+    print("Continue? (1 = YES, 0 = NO) ");
     string? choice = input_string();
 
     if (choice == nil) {
-        println("CHYBA");
+        println("Error");
         exit(-1);
     }
 
@@ -66,11 +66,11 @@ for (int i = 0;; ++i) {
             player_y[i] = clamp(player_y[i] + rand_direction(), 0, HEIGHT - 1);
         }
     } else if (*choice == "0") {
-        println("KONEC SIMULACE");
+        println("END OF SIMULATION");
 
         break;
     } else {
-        println("Spatny vstup!");
+        println("Bad input!");
 
         exit(-1);
     }

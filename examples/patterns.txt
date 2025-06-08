@@ -1,5 +1,5 @@
 void error() {
-    println("chyba");
+    println("Error");
     exit(-1);
 }
 
@@ -80,9 +80,9 @@ void print_pattern([[int]] pattern, int w, int h) {
     }
 }
 
-string choice = prompt_string("Vyberte obrazec, ktery chcete vykreslit (1 nebo 2)");
-int w = prompt_int("Zadejte sirku");
-int h = prompt_int("Zadejte vysku");
+string choice = prompt_string("Select a pattern to draw (1 or 2)");
+int w = prompt_int("Enter width");
+int h = prompt_int("Enter height");
 
 [[int], h] pattern;
 

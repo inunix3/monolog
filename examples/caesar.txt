@@ -34,24 +34,24 @@ string caesar(string s, int n) {
     return out;
 }
 
-print("Zadejte text: ");
+print("Enter text: ");
 string? input = input_string();
 
 if (input == nil) {
-    println("Chyba!");
+    println("Error!");
     exit(-1);
 }
 
 string input = *input;
 
-print("Zadejte posunuti: ");
+print("Enter shift: ");
 int? n = input_int();
 
 if (n == nil) {
-    println("Chyba!");
+    println("Error!");
     exit(-1);
 }
 
 int n = *n;
 
-println("Zasifrovany text: " + caesar(input, n));
+println("Encrypted text: " + caesar(input, n));
